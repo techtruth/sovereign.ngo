@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dirigo Auto Repair Shop</title>
+  <style>
+    :root { --bg:#f5f7fb; --panel:#ffffff; --primary:#c2410c; --accent:#dbeafe; --text:#1f2937; --muted:#475569; --line:#cbd5e1; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Verdana","Segoe UI",sans-serif; background:linear-gradient(180deg,#fff7ed,var(--bg)); color:var(--text); }
+    .wrap { max-width:920px; margin:2rem auto; padding:0 1rem; }
+    .hero, .panel { background:var(--panel); border-radius:16px; padding:1.2rem; border:1px solid var(--line); box-shadow:0 12px 28px rgba(15,23,42,.08); }
+    .hero { border-left:10px solid var(--primary); }
+    .tag { display:inline-block; background:var(--accent); color:var(--primary); padding:.25rem .7rem; border-radius:999px; font-weight:700; font-size:.9rem; }
+    h1 { margin:.6rem 0; color:var(--primary); letter-spacing:.02em; }
+    p { color:var(--muted); margin:.4rem 0; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+    ul { margin:.5rem 0 0 1rem; line-height:1.6; }
+    .workflow { margin-top:12px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:12px; padding:.9rem; }
+    .workflow h3 { margin:.2rem 0 .4rem; color:#1d4ed8; }
+    .chip { display:inline-block; margin-right:6px; margin-top:4px; padding:.2rem .55rem; border-radius:999px; font-size:.82rem; font-weight:700; background:#e2e8f0; color:#334155; border:1px solid #cbd5e1; }
+    @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="tag">Issuer: Car Repair Shop</span>
+      <h1>Dirigo Auto Repair Shop</h1>
+      <p>Independent auto center issuing maintenance and inspection credentials.</p>
+      <p><strong>Main purpose:</strong> Verify service history and certify road-readiness.</p>
+      <div class="workflow">
+        <h3>Identity and Record Flow</h3>
+        <p>1) Login with sovereign WebID in the issuer console</p>
+        <p>2) Subject DID is derived from that login session automatically</p>
+        <p>3) Run actions from the dropdown to issue signed service records</p>
+        <span class="chip">WebID Login</span>
+        <span class="chip">Session DID</span>
+        <span class="chip">Signed Records</span>
+      </div>
+    </section>
+    <section class="grid">
+      <article class="panel">
+        <h2>What We Issue</h2>
+        <ul>
+          <li>State inspection credential</li>
+          <li>Service completion credential</li>
+          <li>Parts replacement credential</li>
+          <li>Employment offer credential</li>
+          <li>Employment termination credential</li>
+          <li>Shop access badge credential</li>
+          <li>Badge revocation status checks</li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h2>Shop Details</h2>
+        <ul>
+          <li>Open: Mon-Sat, 7:00 AM - 7:00 PM</li>
+          <li>Bay priority for safety repairs</li>
+          <li>Issuer desk beside front office</li>
+          <li>Digital service records signed per action</li>
+        </ul>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

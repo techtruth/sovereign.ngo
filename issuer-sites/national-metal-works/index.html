@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Downeast Metal Works</title>
+  <style>
+    :root { --bg:#f3f4f6; --panel:#fff; --primary:#1f2937; --accent:#d1d5db; --text:#111827; --muted:#374151; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Tahoma","Segoe UI",sans-serif; background:linear-gradient(160deg,#e5e7eb,var(--bg)); color:var(--text); }
+    .wrap { max-width:920px; margin:2rem auto; padding:0 1rem; }
+    .hero, .panel { background:var(--panel); border-radius:16px; padding:1.2rem; box-shadow:0 12px 28px rgba(31,41,55,.14); }
+    .hero { border-top:10px solid #6b7280; }
+    .tag { display:inline-block; background:var(--accent); color:#111827; padding:.25rem .7rem; border-radius:999px; font-weight:700; font-size:.9rem; }
+    h1 { margin:.6rem 0; color:var(--primary); letter-spacing:.02em; }
+    p { color:var(--muted); margin:.4rem 0; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+    ul { margin:.5rem 0 0 1rem; line-height:1.6; }
+    .workflow { margin-top:12px; border:1px solid #d1d5db; background:#f9fafb; border-radius:12px; padding:.9rem; }
+    .workflow h3 { margin:.2rem 0 .4rem; color:#111827; }
+    .chip { display:inline-block; margin-right:6px; margin-top:4px; padding:.2rem .55rem; border-radius:999px; font-size:.82rem; font-weight:700; background:#e5e7eb; color:#1f2937; border:1px solid #d1d5db; }
+    @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="tag">Issuer: Manufacturing Enterprise</span>
+      <h1>Downeast Metal Works</h1>
+      <p>Industrial manufacturer issuing production, shipment, and compliance credentials.</p>
+      <p><strong>Main purpose:</strong> Verify vendor integrity and certify lot-level manufacturing records.</p>
+      <div class="workflow">
+        <h3>Identity and Record Flow</h3>
+        <p>1) Login with sovereign WebID in the issuer console</p>
+        <p>2) Subject DID is derived from that login session automatically</p>
+        <p>3) Run actions from the dropdown to issue signed manufacturing records</p>
+        <span class="chip">WebID Login</span>
+        <span class="chip">Session DID</span>
+        <span class="chip">Signed Records</span>
+      </div>
+    </section>
+    <section class="grid">
+      <article class="panel">
+        <h2>What We Issue</h2>
+        <ul>
+          <li>Shipment provenance credential</li>
+          <li>Material certificate credential</li>
+          <li>Vendor qualification credential</li>
+          <li>Employee status credential</li>
+          <li>Season ticket entitlement credential</li>
+          <li>Facility access badge credential (identity + ITAR + self-presence)</li>
+          <li>Address-based benefits eligibility credential (utility bill based)</li>
+          <li>Employment offer credential</li>
+          <li>Employment termination credential</li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h2>Plant Snapshot</h2>
+        <ul>
+          <li>ISO-aligned quality control workflows</li>
+          <li>24/6 fabrication operations</li>
+          <li>Credential office in Logistics Building A</li>
+          <li>Digital manufacturing records signed per action</li>
+        </ul>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

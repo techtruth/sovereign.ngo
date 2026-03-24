@@ -1,0 +1,926 @@
+const http = require('http');
+const crypto = require('crypto');
+
+const port = Number(process.env.PORT || 5000);
+const verifierProfile = process.env.VERIFIER_PROFILE || 'drivers_license';
+const verifierName = process.env.VERIFIER_NAME || 'Generic Verifier';
+const verifierDid = process.env.VERIFIER_DID || 'did:example:verifier:generic';
+const signingSecret = process.env.SIGNING_SECRET || 'local-dev-secret';
+const mockAlwaysAccept = (process.env.MOCK_ALWAYS_ACCEPT || 'true').toLowerCase() === 'true';
+const demoWebId = process.env.DEMO_WEBID || 'http://holder_sovereign:4000/profile/card#me';
+
+const sessions = new Map();
+
+const schemas = {
+  drivers_license: {
+    credentialType: 'DriversLicenseCredential',
+    requiredClaims: ['name', 'dob', 'address', 'eyes', 'hairColor', 'height', 'weight'],
+    schemaPath: '/schemas/drivers-license.json',
+    schemaName: 'Driver License Evidence Schema',
+    contextPath: '/contexts/drivers-license.jsonld',
+    standards: [
+      { name: 'W3C Verifiable Credentials Data Model v2.0', url: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+      { name: 'W3C vCard RDF Vocabulary', url: 'https://www.w3.org/TR/vcard-rdf/' },
+      { name: 'JSON Schema Draft 2020-12', url: 'https://json-schema.org/draft/2020-12' }
+    ]
+  },
+  utility_bill: {
+    credentialType: 'UtilityBillCredential',
+    requiredClaims: ['name', 'address', 'lastPaidDate', 'billingPeriod', 'provider'],
+    schemaPath: '/schemas/utility-bill.json',
+    schemaName: 'Utility Bill Evidence Schema',
+    contextPath: '/contexts/utility-bill.jsonld',
+    standards: [
+      { name: 'W3C Verifiable Credentials Data Model v2.0', url: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+      { name: 'W3C vCard RDF Vocabulary', url: 'https://www.w3.org/TR/vcard-rdf/' },
+      { name: 'JSON Schema Draft 2020-12', url: 'https://json-schema.org/draft/2020-12' }
+    ]
+  },
+  passport: {
+    credentialType: 'PassportCredential',
+    requiredClaims: ['name', 'dob', 'passportNumber', 'nationality', 'issuingCountry', 'expiryDate'],
+    schemaPath: '/schemas/passport.json',
+    schemaName: 'Passport Evidence Schema',
+    contextPath: '/contexts/passport.jsonld',
+    standards: [
+      { name: 'W3C Verifiable Credentials Data Model v2.0', url: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+      { name: 'W3C vCard RDF Vocabulary', url: 'https://www.w3.org/TR/vcard-rdf/' },
+      { name: 'JSON Schema Draft 2020-12', url: 'https://json-schema.org/draft/2020-12' }
+    ]
+  },
+  itar: {
+    credentialType: 'ITARComplianceCredential',
+    requiredClaims: ['name', 'citizenship', 'company', 'itarStatus', 'screeningDate'],
+    schemaPath: '/schemas/itar-compliance.json',
+    schemaName: 'ITAR Compliance Evidence Schema',
+    contextPath: '/contexts/itar-compliance.jsonld',
+    standards: [
+      { name: 'W3C Verifiable Credentials Data Model v2.0', url: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+      { name: 'W3C vCard RDF Vocabulary', url: 'https://www.w3.org/TR/vcard-rdf/' },
+      { name: 'JSON Schema Draft 2020-12', url: 'https://json-schema.org/draft/2020-12' }
+    ]
+  },
+  self_presence: {
+    credentialType: 'SelfPresenceCredential',
+    requiredClaims: ['name', 'presenceStatus', 'verifiedAt', 'verificationMethod'],
+    schemaPath: '/schemas/self-presence.json',
+    schemaName: 'Self Presence Evidence Schema',
+    contextPath: '/contexts/self-presence.jsonld',
+    standards: [
+      { name: 'W3C Verifiable Credentials Data Model v2.0', url: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+      { name: 'W3C vCard RDF Vocabulary', url: 'https://www.w3.org/TR/vcard-rdf/' },
+      { name: 'JSON Schema Draft 2020-12', url: 'https://json-schema.org/draft/2020-12' }
+    ]
+  }
+};
+
+const buildVerifierSchemas = () => ({
+  '/schemas/drivers-license.json': {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: `https://verifier.local${schemas.drivers_license.schemaPath}`,
+    title: schemas.drivers_license.schemaName,
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      name: { type: 'string' },
+      dob: { type: 'string', format: 'date' },
+      address: { type: 'string' },
+      eyes: { type: 'string' },
+      hairColor: { type: 'string' },
+      height: { type: 'string' },
+      weight: { type: 'string' },
+      organDonor: { type: ['boolean', 'string'] }
+    },
+    required: schemas.drivers_license.requiredClaims
+  },
+  '/schemas/utility-bill.json': {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: `https://verifier.local${schemas.utility_bill.schemaPath}`,
+    title: schemas.utility_bill.schemaName,
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      name: { type: 'string' },
+      address: { type: 'string' },
+      lastPaidDate: { type: 'string', format: 'date' },
+      billingPeriod: { type: 'string' },
+      provider: { type: 'string' },
+      accountNumber: { type: 'string' }
+    },
+    required: schemas.utility_bill.requiredClaims
+  },
+  '/schemas/passport.json': {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: `https://verifier.local${schemas.passport.schemaPath}`,
+    title: schemas.passport.schemaName,
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      name: { type: 'string' },
+      dob: { type: 'string', format: 'date' },
+      passportNumber: { type: 'string' },
+      nationality: { type: 'string' },
+      issuingCountry: { type: 'string' },
+      expiryDate: { type: 'string', format: 'date' }
+    },
+    required: schemas.passport.requiredClaims
+  },
+  '/schemas/itar-compliance.json': {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: `https://verifier.local${schemas.itar.schemaPath}`,
+    title: schemas.itar.schemaName,
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      name: { type: 'string' },
+      citizenship: { type: 'string' },
+      company: { type: 'string' },
+      itarStatus: { type: 'string' },
+      screeningDate: { type: 'string', format: 'date' },
+      clearanceLevel: { type: 'string' }
+    },
+    required: schemas.itar.requiredClaims
+  },
+  '/schemas/self-presence.json': {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: `https://verifier.local${schemas.self_presence.schemaPath}`,
+    title: schemas.self_presence.schemaName,
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      name: { type: 'string' },
+      presenceStatus: { type: 'string' },
+      verifiedAt: { type: 'string', format: 'date-time' },
+      verificationMethod: { type: 'string' },
+      identityBasisCredentialType: { type: 'string' }
+    },
+    required: schemas.self_presence.requiredClaims
+  }
+});
+
+const buildVerifierContexts = () => ({
+  '/contexts/drivers-license.jsonld': {
+    '@context': {
+      '@version': 1.1,
+      id: '@id',
+      type: '@type',
+      vcard: 'http://www.w3.org/2006/vcard/ns#',
+      schema: 'https://schema.org/',
+      identity: 'https://sovereign.ngo/ns/identity#',
+      xsd: 'http://www.w3.org/2001/XMLSchema#',
+      name: 'vcard:fn',
+      birthDate: { '@id': 'vcard:bday', '@type': 'xsd:date' },
+      address: 'vcard:hasAddress',
+      eyes: 'schema:eyeColor',
+      hairColor: 'schema:hairColor',
+      height: 'schema:height',
+      weight: 'schema:weight',
+      licenseNumber: 'schema:identifier',
+      state: 'schema:addressRegion',
+      stateIdType: 'identity:stateIdType',
+      stateIdFlags: 'identity:stateIdFlags',
+      isOver18: 'identity:isOver18',
+      isOver21: 'identity:isOver21',
+      organDonor: 'identity:organDonor'
+    }
+  },
+  '/contexts/utility-bill.jsonld': {
+    '@context': {
+      '@version': 1.1,
+      id: '@id',
+      type: '@type',
+      vcard: 'http://www.w3.org/2006/vcard/ns#',
+      schema: 'https://schema.org/',
+      identity: 'https://sovereign.ngo/ns/identity#',
+      xsd: 'http://www.w3.org/2001/XMLSchema#',
+      name: 'vcard:fn',
+      address: 'vcard:hasAddress',
+      lastPaidDate: { '@id': 'schema:paymentDueDate', '@type': 'xsd:date' },
+      billingPeriod: 'schema:billingPeriod',
+      provider: 'schema:provider',
+      accountNumber: 'schema:accountId'
+    }
+  },
+  '/contexts/passport.jsonld': {
+    '@context': {
+      '@version': 1.1,
+      id: '@id',
+      type: '@type',
+      vcard: 'http://www.w3.org/2006/vcard/ns#',
+      schema: 'https://schema.org/',
+      identity: 'https://sovereign.ngo/ns/identity#',
+      xsd: 'http://www.w3.org/2001/XMLSchema#',
+      name: 'vcard:fn',
+      birthDate: { '@id': 'vcard:bday', '@type': 'xsd:date' },
+      passportNumber: 'schema:identifier',
+      nationality: 'schema:nationality',
+      issuingCountry: 'schema:countryOfOrigin',
+      expiryDate: { '@id': 'identity:expiryDate', '@type': 'xsd:date' }
+    }
+  },
+  '/contexts/itar-compliance.jsonld': {
+    '@context': {
+      '@version': 1.1,
+      id: '@id',
+      type: '@type',
+      vcard: 'http://www.w3.org/2006/vcard/ns#',
+      schema: 'https://schema.org/',
+      identity: 'https://sovereign.ngo/ns/identity#',
+      xsd: 'http://www.w3.org/2001/XMLSchema#',
+      name: 'vcard:fn',
+      citizenship: 'schema:nationality',
+      company: 'vcard:organization-name',
+      itarStatus: 'identity:itarStatus',
+      screeningDate: { '@id': 'identity:screeningDate', '@type': 'xsd:date' },
+      clearanceLevel: 'identity:clearanceLevel'
+    }
+  },
+  '/contexts/self-presence.jsonld': {
+    '@context': {
+      '@version': 1.1,
+      id: '@id',
+      type: '@type',
+      vcard: 'http://www.w3.org/2006/vcard/ns#',
+      identity: 'https://sovereign.ngo/ns/identity#',
+      xsd: 'http://www.w3.org/2001/XMLSchema#',
+      name: 'vcard:fn',
+      presenceStatus: 'identity:presenceStatus',
+      verifiedAt: { '@id': 'identity:verifiedAt', '@type': 'xsd:dateTime' },
+      verificationMethod: 'identity:verificationMethod',
+      identityBasisCredentialType: 'identity:identityBasisCredentialType'
+    }
+  }
+});
+
+const mockClaimsByProfile = {
+  drivers_license: {
+    name: 'Alex Sovereign',
+    dob: '1990-01-15',
+    address: '742 Evergreen Terrace, Springfield, USA',
+    eyes: 'Brown',
+    hairColor: 'Black',
+    height: '5ft 11in',
+    weight: '180 lb',
+    licenseNumber: 'DL-000-123-456',
+    stateIdType: 'drivers_license',
+    state: 'NC',
+    organDonor: true
+  },
+  utility_bill: {
+    name: 'Alex Sovereign',
+    address: '742 Evergreen Terrace, Springfield, USA',
+    lastPaidDate: '2026-02-28',
+    billingPeriod: '2026-02',
+    provider: 'Mock Utility Electric Co.',
+    accountNumber: 'UTIL-998877'
+  },
+  passport: {
+    name: 'Alex Sovereign',
+    dob: '1990-01-15',
+    passportNumber: 'XK1200099',
+    nationality: 'US',
+    issuingCountry: 'US',
+    expiryDate: '2032-08-30'
+  },
+  itar: {
+    name: 'Alex Sovereign',
+    citizenship: 'US',
+    company: 'Sovereign Aerospace Systems',
+    itarStatus: 'Cleared',
+    screeningDate: '2026-03-01',
+    clearanceLevel: 'Technical Data Access'
+  },
+  self_presence: {
+    name: 'Alex Sovereign',
+    presenceStatus: 'present',
+    verifiedAt: new Date().toISOString(),
+    verificationMethod: 'live-selfie-upload'
+  }
+};
+
+const submitRouteByProfile = {
+  drivers_license: '/submit/drivers-license',
+  utility_bill: '/submit/utility-bill',
+  passport: '/submit/passport',
+  self_presence: '/submit/self-presence',
+  itar: '/submit/itar'
+};
+
+const activeSchema = schemas[verifierProfile] || schemas.drivers_license;
+const activeSubmitRoute = submitRouteByProfile[verifierProfile] || '/verify';
+
+const baseHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization'
+};
+
+const json = (res, status, payload) => {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...baseHeaders });
+  res.end(JSON.stringify(payload));
+};
+
+const readBody = (req) =>
+  new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+      if (data.length > 2_000_000) {
+        reject(new Error('Payload too large'));
+        req.destroy();
+      }
+    });
+    req.on('end', () => resolve(data));
+    req.on('error', reject);
+  });
+
+const getAuthToken = (req) => {
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ')) return auth.slice(7).trim();
+  return '';
+};
+
+const getSession = (req) => {
+  const token = getAuthToken(req);
+  if (!token) return null;
+  return sessions.get(token) || null;
+};
+
+const isBlank = (value) => value === undefined || value === null || String(value).trim() === '';
+
+const yearsBetween = (fromDate, toDate) => {
+  const from = new Date(fromDate);
+  if (Number.isNaN(from.getTime())) return null;
+
+  let age = toDate.getUTCFullYear() - from.getUTCFullYear();
+  const monthDiff = toDate.getUTCMonth() - from.getUTCMonth();
+  const dayDiff = toDate.getUTCDate() - from.getUTCDate();
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+  return age;
+};
+
+const buildStateIdFlags = (claims) => {
+  const now = new Date();
+  const age = yearsBetween(claims.dob, now);
+  const normalizedDonor =
+    claims.organDonor === true ||
+    String(claims.organDonor || '').toLowerCase() === 'yes' ||
+    String(claims.organDonor || '').toLowerCase() === 'true';
+
+  return {
+    isOver18: age !== null ? age >= 18 : true,
+    isOver21: age !== null ? age >= 21 : true,
+    organDonor: normalizedDonor
+  };
+};
+
+const signPayload = (payload) =>
+  crypto
+    .createHmac('sha256', signingSecret)
+    .update(JSON.stringify(payload))
+    .digest('base64url');
+
+const deriveSubjectDidFromWebId = (webId) => {
+  try {
+    const u = new URL(webId);
+    const joined = `${u.hostname}${u.pathname}`.replace(/\/+$/, '');
+    const sanitized = joined.replace(/[^a-zA-Z0-9]/g, ':').replace(/:+/g, ':').replace(/^:|:$/g, '');
+    return `did:web:${sanitized || 'subject'}`;
+  } catch {
+    const cleaned = String(webId || 'subject').replace(/[^a-zA-Z0-9]/g, ':').replace(/:+/g, ':').replace(/^:|:$/g, '');
+    return `did:web:${cleaned || 'subject'}`;
+  }
+};
+
+const buildCredential = ({ subjectDid, claims, evidenceSummary }) => {
+  const issuanceDate = new Date().toISOString();
+  const schemaUrl = `http://localhost:${port}${activeSchema.schemaPath}`;
+  const contextUrl = `http://localhost:${port}${activeSchema.contextPath}`;
+
+  const vc = {
+    '@context': ['https://www.w3.org/ns/credentials/v2', contextUrl],
+    id: `urn:uuid:${crypto.randomUUID()}`,
+    type: ['VerifiableCredential', activeSchema.credentialType],
+    issuer: { id: verifierDid, name: verifierName },
+    issuanceDate,
+    validFrom: issuanceDate,
+    credentialSchema: {
+      id: schemaUrl,
+      type: 'JsonSchema'
+    },
+    credentialSubject: {
+      id: subjectDid || 'did:example:subject:unknown',
+      ...claims
+    },
+    evidence: {
+      type: 'DocumentSubmission',
+      verifierProfile,
+      receivedAt: issuanceDate,
+      summary: evidenceSummary
+    }
+  };
+
+  vc.proof = {
+    type: 'HmacSignature2026',
+    created: issuanceDate,
+    proofPurpose: 'assertionMethod',
+    verificationMethod: `${verifierDid}#hmac-key-1`,
+    jws: signPayload(vc)
+  };
+
+  return vc;
+};
+
+const resolveWalletFromWebId = async (webId) => {
+  if (!webId) return { ok: false, reason: 'webId not provided' };
+
+  const docUrl = webId.split('#')[0];
+  try {
+    const response = await fetch(docUrl);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return { ok: false, reason: `webid document request failed (${response.status})` };
+
+    const walletApi = payload.walletApi || payload?.service?.walletApi || payload?.profile?.walletApi;
+    if (!walletApi) return { ok: false, reason: 'walletApi not present in webid document' };
+
+    return { ok: true, walletApi, source: 'webid-document', webIdDoc: docUrl, profile: payload };
+  } catch (err) {
+    return { ok: false, reason: err.message };
+  }
+};
+
+const storeCredentialToSovereignWallet = async (webId, credential) => {
+  if (!webId) return { ok: false, skipped: true, reason: 'webId not provided' };
+
+  const resolution = await resolveWalletFromWebId(webId);
+  if (!resolution.ok) {
+    return { ok: false, skipped: true, reason: `wallet discovery failed: ${resolution.reason}` };
+  }
+
+  const walletUrl = resolution.walletApi;
+  const resolutionMeta = { method: resolution.source, webIdDoc: resolution.webIdDoc };
+
+  try {
+    const response = await fetch(walletUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webId, credential })
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        skipped: false,
+        reason: payload.error || 'wallet storage failed',
+        walletUrl,
+        resolution: resolutionMeta,
+        detail: payload
+      };
+    }
+
+    return { ok: true, skipped: false, walletUrl, resolution: resolutionMeta, detail: payload };
+  } catch (err) {
+    return { ok: false, skipped: false, reason: err.message, walletUrl, resolution: resolutionMeta };
+  }
+};
+
+const fetchSovereignCredentials = async (webId) => {
+  const resolution = await resolveWalletFromWebId(webId);
+  if (!resolution.ok) {
+    return { ok: false, reason: `wallet discovery failed: ${resolution.reason}` };
+  }
+
+  try {
+    const walletUrl = new URL(resolution.walletApi);
+    walletUrl.searchParams.set('webId', webId);
+
+    const response = await fetch(walletUrl.toString());
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { ok: false, reason: payload.error || `wallet read failed (${response.status})` };
+    }
+
+    const credentials = Array.isArray(payload.credentials) ? payload.credentials : [];
+    return { ok: true, credentials };
+  } catch (err) {
+    return { ok: false, reason: err.message };
+  }
+};
+
+const credentialTypes = (credential) => {
+  const value = credential?.type;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string' && value) return [value];
+  return [];
+};
+
+const checkSelfPresencePrerequisite = async (webId) => {
+  const walletRead = await fetchSovereignCredentials(webId);
+  if (!walletRead.ok) {
+    return {
+      ok: false,
+      reason: walletRead.reason,
+      requiredAnyOf: ['DriversLicenseCredential', 'PassportCredential']
+    };
+  }
+
+  const matched = walletRead.credentials.find((cred) => {
+    const types = credentialTypes(cred);
+    return types.includes('DriversLicenseCredential') || types.includes('PassportCredential');
+  });
+
+  if (!matched) {
+    return {
+      ok: false,
+      reason: 'Missing identity credential in sovereign pod',
+      requiredAnyOf: ['DriversLicenseCredential', 'PassportCredential'],
+      walletCredentialCount: walletRead.credentials.length
+    };
+  }
+
+  const matchedCredentialType = credentialTypes(matched).find(
+    (t) => t === 'DriversLicenseCredential' || t === 'PassportCredential'
+  );
+
+  return {
+    ok: true,
+    matchedCredentialType,
+    walletCredentialCount: walletRead.credentials.length
+  };
+};
+
+const issueCredentialFromBody = async (body, session) => {
+  let claims = mockAlwaysAccept ? { ...mockClaimsByProfile[verifierProfile] } : body.claims || {};
+  const missingClaims = activeSchema.requiredClaims.filter((field) => isBlank(claims[field]));
+  if (!mockAlwaysAccept && missingClaims.length > 0) {
+    return {
+      ok: false,
+      status: 400,
+      payload: { ok: false, error: 'Missing required claims', verifierProfile, missingClaims }
+    };
+  }
+
+  let selfPresenceGate = null;
+  if (verifierProfile === 'self_presence') {
+    selfPresenceGate = await checkSelfPresencePrerequisite(session.webId);
+    if (!selfPresenceGate.ok) {
+      return {
+        ok: false,
+        status: 403,
+        payload: {
+          ok: false,
+          verifierProfile,
+          error: 'Self-presence verification requires Drivers License OR Passport credential in sovereign pod',
+          gate: selfPresenceGate
+        }
+      };
+    }
+
+    claims = {
+      ...claims,
+      verifiedAt: claims.verifiedAt || new Date().toISOString(),
+      identityBasisCredentialType: selfPresenceGate.matchedCredentialType
+    };
+  }
+
+  const evidenceSummary = {
+    imageProvided: Boolean(body.imageBase64 || body.imageUrl || body.image || body.file),
+    imageUrl: body.imageUrl || null,
+    submittedAt: new Date().toISOString(),
+    mockAlwaysAccept
+  };
+
+  const credential = buildCredential({
+    subjectDid: session.subjectDid,
+    claims,
+    evidenceSummary
+  });
+
+  const stateIdFlags = verifierProfile === 'drivers_license' ? buildStateIdFlags(claims) : undefined;
+  if (stateIdFlags) credential.credentialSubject.stateIdFlags = stateIdFlags;
+
+  const consentToStore = body.consentToStore === true;
+  const walletStore = consentToStore
+    ? await storeCredentialToSovereignWallet(session.webId, credential)
+    : { ok: true, skipped: true, reason: 'permission not granted to write to sovereign pod' };
+
+  return {
+    ok: true,
+    status: 200,
+    payload: {
+      ok: true,
+      verifierProfile,
+      verifierDid,
+      authenticatedWebId: session.webId,
+      subjectDid: session.subjectDid,
+      extractedData: claims,
+      stateIdFlags,
+      selfPresenceGate,
+      consentToStore,
+      credential,
+      walletStore
+    }
+  };
+};
+
+const renderHomePage = () => `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${verifierName}</title>
+  <style>
+    :root { --bg:#f8fafc; --panel:#ffffff; --line:#e2e8f0; --text:#1f2937; --muted:#64748b; --primary:#0f766e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Arial, sans-serif; background: linear-gradient(180deg, #eef5f6, var(--bg)); color: var(--text); }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 12px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    h1, h2 { margin-top: 0; }
+    p { color: var(--muted); }
+    label { display: block; margin: 8px 0 4px; font-weight: 700; }
+    input, button { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font: inherit; }
+    button { background: var(--primary); color: #fff; border: 0; font-weight: 700; cursor: pointer; margin-top: 10px; }
+    pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 10px; min-height: 180px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="panel">
+      <h1>${verifierName}</h1>
+      <p><strong>Profile:</strong> ${verifierProfile} | <strong>Submit route:</strong> ${activeSubmitRoute}</p>
+      <p>Login with WebID, upload a document, and verify.</p>
+      <p>Credential write to sovereign pod happens only with explicit permission.</p>
+      ${
+        verifierProfile === 'self_presence'
+          ? '<p><strong>Requirement:</strong> Drivers License VC or Passport VC must already exist in personal identity and record storage.</p>'
+          : ''
+      }
+    </section>
+
+    <section class="panel">
+      <h2>WebID Login</h2>
+      <label for="webId">WebID</label>
+      <input id="webId" value="${demoWebId}">
+      <button id="loginBtn">Login With WebID</button>
+      <p id="loginStatus">Not logged in.</p>
+    </section>
+
+    <section class="panel">
+      <h2>${verifierProfile === 'self_presence' ? 'Verify Presence' : 'Verify Document'}</h2>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:600;margin-top:8px;">
+        <input id="consentToStore" type="checkbox" style="width:auto;">
+        Allow verifier to add issued credential to sovereign pod
+      </label>
+
+      ${
+        verifierProfile === 'self_presence'
+          ? '<button id="mockCaptureBtn" type="button">Mock Capture Live Video</button>'
+          : '<label for="docFile">Document / Image</label><input id="docFile" type="file" accept="image/*,.pdf">'
+      }
+
+      <button id="submitBtn">Verify Submission</button>
+      <p id="status"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Response</h2>
+      <pre id="output">{}</pre>
+    </section>
+  </div>
+
+  <script>
+    const endpoint = '${activeSubmitRoute}';
+    const isSelfPresence = ${verifierProfile === 'self_presence' ? 'true' : 'false'};
+    let token = '';
+    let mockLiveVideoBase64 = '';
+
+    const toBase64 = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || '');
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const loginStatusEl = document.getElementById('loginStatus');
+    const statusEl = document.getElementById('status');
+    const outputEl = document.getElementById('output');
+    const mockCaptureBtn = document.getElementById('mockCaptureBtn');
+
+    if (isSelfPresence && mockCaptureBtn) {
+      mockCaptureBtn.addEventListener('click', () => {
+        mockLiveVideoBase64 = btoa('mock-live-video-capture-' + new Date().toISOString());
+        statusEl.textContent = 'Mock live video captured.';
+      });
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      loginStatusEl.textContent = 'Logging in...';
+      try {
+        const webId = document.getElementById('webId').value.trim();
+        const res = await fetch('/api/login-webid', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ webId })
+        });
+        const data = await res.json();
+        outputEl.textContent = JSON.stringify(data, null, 2);
+        if (!res.ok) {
+          loginStatusEl.textContent = 'Login failed.';
+          token = '';
+          return;
+        }
+        token = data.token;
+        loginStatusEl.textContent = 'Logged in as ' + data.webId;
+      } catch (err) {
+        loginStatusEl.textContent = 'Login error.';
+        outputEl.textContent = JSON.stringify({ ok: false, error: String(err && err.message ? err.message : err) }, null, 2);
+      }
+    });
+
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      if (!token) {
+        statusEl.textContent = 'Login with WebID first.';
+        return;
+      }
+
+      statusEl.textContent = 'Submitting...';
+      outputEl.textContent = '{}';
+
+      const consentToStore = document.getElementById('consentToStore').checked;
+      const fileInput = document.getElementById('docFile');
+      const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+
+      try {
+        let imageBase64 = null;
+        if (isSelfPresence && mockLiveVideoBase64) {
+          imageBase64 = mockLiveVideoBase64;
+        } else if (file) {
+          imageBase64 = await toBase64(file);
+        }
+
+        if (isSelfPresence && !imageBase64) {
+          statusEl.textContent = 'Click "Mock Capture Live Video" first.';
+          return;
+        }
+
+        const payload = {
+          consentToStore,
+          imageBase64,
+          captureMode: isSelfPresence && mockLiveVideoBase64 ? 'mock-live-video' : 'file-upload'
+        };
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + token
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        outputEl.textContent = JSON.stringify(data, null, 2);
+        if (!res.ok) {
+          statusEl.textContent = 'Submission failed.';
+        } else if (data.walletStore && data.walletStore.skipped) {
+          statusEl.textContent = 'Verified. VC issued without writing to sovereign pod.';
+        } else {
+          statusEl.textContent = 'Verified. VC issued and written to sovereign pod.';
+        }
+      } catch (err) {
+        outputEl.textContent = JSON.stringify({ ok: false, error: String(err && err.message ? err.message : err) }, null, 2);
+        statusEl.textContent = 'Request error.';
+      }
+    });
+  </script>
+</body>
+</html>`;
+
+const server = http.createServer(async (req, res) => {
+  const verifierSchemas = buildVerifierSchemas();
+  const verifierContexts = buildVerifierContexts();
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, baseHeaders);
+    res.end();
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(renderHomePage());
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/health') {
+    json(res, 200, { ok: true, verifierProfile, verifierName, verifierDid });
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/schema') {
+    json(res, 200, {
+      verifierProfile,
+      verifierName,
+      mockAlwaysAccept,
+      standards: activeSchema.standards,
+      credentialType: activeSchema.credentialType,
+      requiredClaims: activeSchema.requiredClaims,
+      context: `http://localhost:${port}${activeSchema.contextPath}`,
+      credentialSchema: {
+        id: `http://localhost:${port}${activeSchema.schemaPath}`,
+        type: 'JsonSchema'
+      },
+      submitRoute: activeSubmitRoute
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && verifierSchemas[req.url]) {
+    json(res, 200, verifierSchemas[req.url]);
+    return;
+  }
+
+  if (req.method === 'GET' && verifierContexts[req.url]) {
+    json(res, 200, verifierContexts[req.url]);
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/api/login-webid') {
+    try {
+      const raw = await readBody(req);
+      const body = raw ? JSON.parse(raw) : {};
+      const webId = String(body.webId || '').trim();
+      if (!webId) {
+        json(res, 400, { ok: false, error: 'webId is required' });
+        return;
+      }
+
+      const resolution = await resolveWalletFromWebId(webId);
+      if (!resolution.ok) {
+        json(res, 400, { ok: false, error: `invalid webid for login: ${resolution.reason}` });
+        return;
+      }
+
+      const subjectDid = deriveSubjectDidFromWebId(webId);
+      const token = crypto.randomUUID();
+      sessions.set(token, { webId, subjectDid, createdAt: new Date().toISOString() });
+
+      json(res, 200, {
+        ok: true,
+        token,
+        webId,
+        subjectDid,
+        walletResolution: { method: resolution.source, webIdDoc: resolution.webIdDoc }
+      });
+      return;
+    } catch (err) {
+      json(res, 400, { ok: false, error: 'invalid login payload', detail: err.message });
+      return;
+    }
+  }
+
+  if (req.method === 'GET' && req.url === '/api/session') {
+    const session = getSession(req);
+    if (!session) {
+      json(res, 401, { ok: false, error: 'unauthorized' });
+      return;
+    }
+
+    json(res, 200, { ok: true, session });
+    return;
+  }
+
+  if (req.method === 'POST' && (req.url === '/verify' || req.url === activeSubmitRoute)) {
+    const session = getSession(req);
+    if (!session) {
+      json(res, 401, { ok: false, error: 'webid login required before submission' });
+      return;
+    }
+
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const result = await issueCredentialFromBody(body, session);
+      json(res, result.status, result.payload);
+      return;
+    } catch (err) {
+      json(res, 400, {
+        ok: false,
+        error: 'Invalid JSON body or payload format',
+        detail: err.message
+      });
+      return;
+    }
+  }
+
+  json(res, 404, { ok: false, error: 'Not found' });
+});
+
+server.listen(port, () => {
+  console.log(`Verifier API '${verifierProfile}' listening on ${port}`);
+});

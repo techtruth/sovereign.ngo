@@ -1,0 +1,238 @@
+services:
+  holder_sovereign:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.identity-record-storage
+    image: sovereign-holder-sovereign:latest
+    container_name: sovereign-holder-sovereign
+    environment:
+      BUSINESS_NAME: sovereign
+      POD_NAME: holder-sovereign
+      PORT: 4000
+      SOVEREIGN_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOVEREIGN_WALLET_API: http://holder_sovereign:4000/wallet/credentials
+    ports:
+      - "8180:4000"
+
+  holder_doctors_office:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.identity-record-storage
+    image: sovereign-holder-doctors-office:latest
+    container_name: sovereign-holder-doctors-office
+    environment:
+      BUSINESS_NAME: doctors-office
+      POD_NAME: holder-doctors-office
+      PORT: 4000
+    networks:
+      - doctors_office_net
+
+  issuer_doctors_office:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.issuer-portal
+    image: sovereign-issuer-doctors-office:latest
+    container_name: sovereign-issuer-doctors-office
+    environment:
+      SITE_DIR: doctors-office
+      PORT: 3000
+      SOLID_POD_URL: http://holder_doctors_office:4000/profile
+      SOVEREIGN_POD_AUTH_URL: http://holder_sovereign:4000/auth/verify-webid
+      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+    ports:
+      - "8081:3000"
+    depends_on:
+      - holder_doctors_office
+    networks:
+      - doctors_office_net
+      - default
+
+  holder_car_repair_shop:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.identity-record-storage
+    image: sovereign-holder-car-repair-shop:latest
+    container_name: sovereign-holder-car-repair-shop
+    environment:
+      BUSINESS_NAME: car-repair-shop
+      POD_NAME: holder-car-repair-shop
+      PORT: 4000
+    networks:
+      - car_repair_shop_net
+
+  issuer_car_repair_shop:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.issuer-portal
+    image: sovereign-issuer-car-repair-shop:latest
+    container_name: sovereign-issuer-car-repair-shop
+    environment:
+      SITE_DIR: car-repair-shop
+      PORT: 3000
+      SOLID_POD_URL: http://holder_car_repair_shop:4000/profile
+      SOVEREIGN_POD_AUTH_URL: http://holder_sovereign:4000/auth/verify-webid
+      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+    ports:
+      - "8082:3000"
+    depends_on:
+      - holder_car_repair_shop
+    networks:
+      - car_repair_shop_net
+      - default
+
+  holder_sports_park:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.identity-record-storage
+    image: sovereign-holder-sports-park:latest
+    container_name: sovereign-holder-sports-park
+    environment:
+      BUSINESS_NAME: sports-park
+      POD_NAME: holder-sports-park
+      PORT: 4000
+    networks:
+      - sports_park_net
+
+  issuer_sports_park:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.issuer-portal
+    image: sovereign-issuer-sports-park:latest
+    container_name: sovereign-issuer-sports-park
+    environment:
+      SITE_DIR: sports-park
+      PORT: 3000
+      SOLID_POD_URL: http://holder_sports_park:4000/profile
+      SOVEREIGN_POD_AUTH_URL: http://holder_sovereign:4000/auth/verify-webid
+      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+    ports:
+      - "8083:3000"
+    depends_on:
+      - holder_sports_park
+    networks:
+      - sports_park_net
+      - default
+
+  holder_national_metal_works:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.identity-record-storage
+    image: sovereign-holder-national-metal-works:latest
+    container_name: sovereign-holder-national-metal-works
+    environment:
+      BUSINESS_NAME: national-metal-works
+      POD_NAME: holder-national-metal-works
+      PORT: 4000
+    networks:
+      - national_metal_works_net
+
+  issuer_national_metal_works:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.issuer-portal
+    image: sovereign-issuer-national-metal-works:latest
+    container_name: sovereign-issuer-national-metal-works
+    environment:
+      SITE_DIR: national-metal-works
+      PORT: 3000
+      SOLID_POD_URL: http://holder_national_metal_works:4000/profile
+      SOVEREIGN_POD_AUTH_URL: http://holder_sovereign:4000/auth/verify-webid
+      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+    ports:
+      - "8084:3000"
+    depends_on:
+      - holder_national_metal_works
+    networks:
+      - national_metal_works_net
+      - default
+
+  verifier_drivers_license:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.verifier-portal
+    image: sovereign-verifier-drivers-license:latest
+    container_name: sovereign-verifier-drivers-license
+    environment:
+      PORT: 5000
+      VERIFIER_PROFILE: drivers_license
+      VERIFIER_NAME: Drivers License Verifier
+      VERIFIER_DID: did:example:verifier:drivers-license
+      SIGNING_SECRET: drivers-license-secret
+      MOCK_ALWAYS_ACCEPT: "true"
+      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+    ports:
+      - "8091:5000"
+
+  verifier_utility_bill:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.verifier-portal
+    image: sovereign-verifier-utility-bill:latest
+    container_name: sovereign-verifier-utility-bill
+    environment:
+      PORT: 5000
+      VERIFIER_PROFILE: utility_bill
+      VERIFIER_NAME: Utility Bill Verifier
+      VERIFIER_DID: did:example:verifier:utility-bill
+      SIGNING_SECRET: utility-bill-secret
+      MOCK_ALWAYS_ACCEPT: "true"
+      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+    ports:
+      - "8092:5000"
+
+  verifier_itar:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.verifier-portal
+    image: sovereign-verifier-itar:latest
+    container_name: sovereign-verifier-itar
+    environment:
+      PORT: 5000
+      VERIFIER_PROFILE: itar
+      VERIFIER_NAME: ITAR Compliance Verifier
+      VERIFIER_DID: did:example:verifier:itar
+      SIGNING_SECRET: itar-secret
+      MOCK_ALWAYS_ACCEPT: "true"
+      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+    ports:
+      - "8093:5000"
+
+  verifier_passport:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.verifier-portal
+    image: sovereign-verifier-passport:latest
+    container_name: sovereign-verifier-passport
+    environment:
+      PORT: 5000
+      VERIFIER_PROFILE: passport
+      VERIFIER_NAME: Passport Verifier
+      VERIFIER_DID: did:example:verifier:passport
+      SIGNING_SECRET: passport-secret
+      MOCK_ALWAYS_ACCEPT: "true"
+      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+    ports:
+      - "8094:5000"
+
+  verifier_self_presence:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.verifier-portal
+    image: sovereign-verifier-self-presence:latest
+    container_name: sovereign-verifier-self-presence
+    environment:
+      PORT: 5000
+      VERIFIER_PROFILE: self_presence
+      VERIFIER_NAME: Self Presence Verifier
+      VERIFIER_DID: did:example:verifier:self-presence
+      SIGNING_SECRET: self-presence-secret
+      MOCK_ALWAYS_ACCEPT: "true"
+      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+    ports:
+      - "8095:5000"
+
+networks:
+  doctors_office_net:
+  car_repair_shop_net:
+  sports_park_net:
+  national_metal_works_net:
