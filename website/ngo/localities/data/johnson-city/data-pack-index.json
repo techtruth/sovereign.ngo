@@ -1,0 +1,60 @@
+{
+  "locality": "Johnson City",
+  "pack_id": "jc-locality-data-pack",
+  "version": "1.0.1",
+  "updated_at": "2026-03-27",
+  "artifacts": [
+    {
+      "path": "README.md",
+      "type": "documentation"
+    },
+    {
+      "path": "sources.json",
+      "type": "source_catalog"
+    },
+    {
+      "path": "metrics_snapshot_2026-03-27.json",
+      "type": "metrics_snapshot"
+    },
+    {
+      "path": "outreach_monthly_records_2024-01_to_2026-02.json",
+      "type": "time_series"
+    },
+    {
+      "path": "ce_rrh_bed_pressure_view.schema.json",
+      "type": "json_schema"
+    },
+    {
+      "path": "ce_rrh_bed_pressure_view.sample.json",
+      "type": "sample_payload"
+    },
+    {
+      "path": "portable_referral_packet.schema.json",
+      "type": "json_schema"
+    },
+    {
+      "path": "portable_referral_packet.sample.json",
+      "type": "sample_payload"
+    },
+    {
+      "path": "policy_export_spec.json",
+      "type": "export_spec"
+    },
+    {
+      "path": "insights_and_interventions.md",
+      "type": "intervention_backlog"
+    },
+    {
+      "path": "export-templates/pit_export_template.csv",
+      "type": "csv_template"
+    },
+    {
+      "path": "export-templates/hmis_export_template.csv",
+      "type": "csv_template"
+    },
+    {
+      "path": "export-templates/esg_participation_export_template.csv",
+      "type": "csv_template"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apple Seed Insurance</title>
+  <style>
+    :root { --bg:#fef9f2; --panel:#fff; --primary:#8a4b08; --accent:#fde68a; --text:#3a2308; --muted:#6b4e16; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Trebuchet MS","Segoe UI",sans-serif; background:linear-gradient(180deg,#fff7e6,var(--bg)); color:var(--text); }
+    .wrap { max-width:920px; margin:2rem auto; padding:0 1rem; }
+    .hero, .panel { background:var(--panel); border-radius:16px; padding:1.2rem; box-shadow:0 12px 28px rgba(138,75,8,.14); }
+    .hero { border-left:10px solid var(--primary); }
+    .tag { display:inline-block; background:var(--accent); color:var(--primary); padding:.25rem .7rem; border-radius:999px; font-weight:700; font-size:.9rem; }
+    h1 { margin:.6rem 0; color:var(--primary); }
+    p { color:var(--muted); margin:.4rem 0; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+    ul { margin:.5rem 0 0 1rem; line-height:1.6; }
+    .workflow { margin-top:12px; border:1px solid #fcd34d; background:#fffbeb; border-radius:12px; padding:.9rem; }
+    .workflow h3 { margin:.2rem 0 .4rem; color:#92400e; }
+    .chip { display:inline-block; margin-right:6px; margin-top:4px; padding:.2rem .55rem; border-radius:999px; font-size:.82rem; font-weight:700; background:#fef3c7; color:#78350f; border:1px solid #fcd34d; }
+    @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="tag">Issuer: Insurance</span>
+      <h1>Apple Seed Insurance</h1>
+      <p>Regional insurance issuer for policy verification, claims, and benefits credentials.</p>
+      <p><strong>Main purpose:</strong> Confirm active coverage and track claim intake decisions.</p>
+      <div class="workflow">
+        <h3>Identity and Record Flow</h3>
+        <p>1) Login with sovereign WebID in the issuer console</p>
+        <p>2) Subject DID is derived from that login session automatically</p>
+        <p>3) Run actions from the dropdown to issue signed insurance records</p>
+        <span class="chip">WebID Login</span>
+        <span class="chip">Policy Records</span>
+        <span class="chip">Claim Intake</span>
+      </div>
+    </section>
+    <section class="grid">
+      <article class="panel">
+        <h2>What We Issue</h2>
+        <ul>
+          <li>Policy verification credential</li>
+          <li>Claim intake receipt credential</li>
+          <li>Benefit eligibility credential</li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h2>Office Snapshot</h2>
+        <ul>
+          <li>Claims desk: Mon-Fri, 8:30 AM - 5:30 PM</li>
+          <li>Coverage support: regional coverage</li>
+          <li>Digital issuance and signed records</li>
+        </ul>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

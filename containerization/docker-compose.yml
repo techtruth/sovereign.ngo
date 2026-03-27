@@ -2,28 +2,49 @@ services:
   holder_sovereign:
     build:
       context: ..
-      dockerfile: containerization/Dockerfile.identity-record-storage
+      dockerfile: containerization/Dockerfile.solid-pod
     image: sovereign-holder-sovereign:latest
     container_name: sovereign-holder-sovereign
     environment:
-      BUSINESS_NAME: sovereign
-      POD_NAME: holder-sovereign
-      PORT: 4000
-      SOVEREIGN_WEBID: http://holder_sovereign:4000/profile/card#me
-      SOVEREIGN_WALLET_API: http://holder_sovereign:4000/wallet/credentials
+      CSS_BASE_URL: http://localhost:8180/
+    tmpfs:
+      - /data
+
+  sovereign_gateway:
+    image: nginx:alpine
+    container_name: sovereign-gateway
+    depends_on:
+      - holder_sovereign
+    volumes:
+      - ./sovereign-gateway.nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - "8180:4000"
+      - "8180:80"
+
+  credential_explorer:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.credential-explorer
+    image: sovereign-credential-explorer:latest
+    container_name: sovereign-credential-explorer
+    environment:
+      PORT: 3000
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
+    ports:
+      - "8070:3000"
+    depends_on:
+      - sovereign_gateway
 
   holder_doctors_office:
     build:
       context: ..
-      dockerfile: containerization/Dockerfile.identity-record-storage
+      dockerfile: containerization/Dockerfile.solid-pod
     image: sovereign-holder-doctors-office:latest
     container_name: sovereign-holder-doctors-office
     environment:
-      BUSINESS_NAME: doctors-office
-      POD_NAME: holder-doctors-office
-      PORT: 4000
+      CSS_BASE_URL: http://holder_doctors_office:3000/
+    tmpfs:
+      - /data
     networks:
       - doctors_office_net
 
@@ -36,9 +57,10 @@ services:
     environment:
       SITE_DIR: doctors-office
       PORT: 3000
-      SOLID_POD_URL: http://holder_doctors_office:4000/profile
-      SOVEREIGN_POD_AUTH_URL: http://holder_sovereign:4000/auth/verify-webid
-      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOLID_POD_URL: http://holder_doctors_office:3000/
+      SOVEREIGN_POD_URL: http://localhost:8180/
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
     ports:
       - "8081:3000"
     depends_on:
@@ -50,15 +72,16 @@ services:
   holder_car_repair_shop:
     build:
       context: ..
-      dockerfile: containerization/Dockerfile.identity-record-storage
+      dockerfile: containerization/Dockerfile.solid-pod
     image: sovereign-holder-car-repair-shop:latest
     container_name: sovereign-holder-car-repair-shop
     environment:
-      BUSINESS_NAME: car-repair-shop
-      POD_NAME: holder-car-repair-shop
-      PORT: 4000
+      CSS_BASE_URL: http://holder_car_repair_shop:3000/
+    tmpfs:
+      - /data
     networks:
       - car_repair_shop_net
+      - default
 
   issuer_car_repair_shop:
     build:
@@ -69,9 +92,10 @@ services:
     environment:
       SITE_DIR: car-repair-shop
       PORT: 3000
-      SOLID_POD_URL: http://holder_car_repair_shop:4000/profile
-      SOVEREIGN_POD_AUTH_URL: http://holder_sovereign:4000/auth/verify-webid
-      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOLID_POD_URL: http://holder_car_repair_shop:3000/
+      SOVEREIGN_POD_URL: http://localhost:8180/
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
     ports:
       - "8082:3000"
     depends_on:
@@ -83,13 +107,13 @@ services:
   holder_sports_park:
     build:
       context: ..
-      dockerfile: containerization/Dockerfile.identity-record-storage
+      dockerfile: containerization/Dockerfile.solid-pod
     image: sovereign-holder-sports-park:latest
     container_name: sovereign-holder-sports-park
     environment:
-      BUSINESS_NAME: sports-park
-      POD_NAME: holder-sports-park
-      PORT: 4000
+      CSS_BASE_URL: http://holder_sports_park:3000/
+    tmpfs:
+      - /data
     networks:
       - sports_park_net
 
@@ -102,9 +126,10 @@ services:
     environment:
       SITE_DIR: sports-park
       PORT: 3000
-      SOLID_POD_URL: http://holder_sports_park:4000/profile
-      SOVEREIGN_POD_AUTH_URL: http://holder_sovereign:4000/auth/verify-webid
-      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOLID_POD_URL: http://holder_sports_park:3000/
+      SOVEREIGN_POD_URL: http://localhost:8180/
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
     ports:
       - "8083:3000"
     depends_on:
@@ -116,13 +141,13 @@ services:
   holder_national_metal_works:
     build:
       context: ..
-      dockerfile: containerization/Dockerfile.identity-record-storage
+      dockerfile: containerization/Dockerfile.solid-pod
     image: sovereign-holder-national-metal-works:latest
     container_name: sovereign-holder-national-metal-works
     environment:
-      BUSINESS_NAME: national-metal-works
-      POD_NAME: holder-national-metal-works
-      PORT: 4000
+      CSS_BASE_URL: http://holder_national_metal_works:3000/
+    tmpfs:
+      - /data
     networks:
       - national_metal_works_net
 
@@ -135,15 +160,84 @@ services:
     environment:
       SITE_DIR: national-metal-works
       PORT: 3000
-      SOLID_POD_URL: http://holder_national_metal_works:4000/profile
-      SOVEREIGN_POD_AUTH_URL: http://holder_sovereign:4000/auth/verify-webid
-      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOLID_POD_URL: http://holder_national_metal_works:3000/
+      SOVEREIGN_POD_URL: http://localhost:8180/
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
     ports:
       - "8084:3000"
     depends_on:
       - holder_national_metal_works
     networks:
       - national_metal_works_net
+      - default
+
+  holder_apple_seed_insurance:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.solid-pod
+    image: sovereign-holder-apple-seed-insurance:latest
+    container_name: sovereign-holder-apple-seed-insurance
+    environment:
+      CSS_BASE_URL: http://holder_apple_seed_insurance:3000/
+    tmpfs:
+      - /data
+    networks:
+      - apple_seed_insurance_net
+
+  issuer_apple_seed_insurance:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.issuer-portal
+    image: sovereign-issuer-apple-seed-insurance:latest
+    container_name: sovereign-issuer-apple-seed-insurance
+    environment:
+      SITE_DIR: apple-seed-insurance
+      PORT: 3000
+      SOLID_POD_URL: http://holder_apple_seed_insurance:3000/
+      SOVEREIGN_POD_URL: http://localhost:8180/
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
+    ports:
+      - "8085:3000"
+    depends_on:
+      - holder_apple_seed_insurance
+    networks:
+      - apple_seed_insurance_net
+      - default
+
+  holder_assistance_charity:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.solid-pod
+    image: sovereign-holder-assistance-charity:latest
+    container_name: sovereign-holder-assistance-charity
+    environment:
+      CSS_BASE_URL: http://holder_assistance_charity:3000/
+    tmpfs:
+      - /data
+    networks:
+      - assistance_charity_net
+
+  issuer_assistance_charity:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.issuer-portal
+    image: sovereign-issuer-assistance-charity:latest
+    container_name: sovereign-issuer-assistance-charity
+    environment:
+      SITE_DIR: assistance-charity
+      PORT: 3000
+      SOLID_POD_URL: http://holder_assistance_charity:3000/
+      SOVEREIGN_POD_URL: http://localhost:8180/
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
+    ports:
+      - "8086:3000"
+    depends_on:
+      - holder_assistance_charity
+    networks:
+      - assistance_charity_net
       - default
 
   verifier_drivers_license:
@@ -159,9 +253,28 @@ services:
       VERIFIER_DID: did:example:verifier:drivers-license
       SIGNING_SECRET: drivers-license-secret
       MOCK_ALWAYS_ACCEPT: "true"
-      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
     ports:
       - "8091:5000"
+
+  verifier_bogus_id:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.verifier-portal
+    image: sovereign-verifier-bogus-id:latest
+    container_name: sovereign-verifier-bogus-id
+    environment:
+      PORT: 5000
+      VERIFIER_PROFILE: bogus_id
+      VERIFIER_NAME: Bogus ID Verifier (Untrusted)
+      VERIFIER_DID: did:example:verifier:bogus-id
+      SIGNING_SECRET: bogus-id-secret
+      MOCK_ALWAYS_ACCEPT: "true"
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
+    ports:
+      - "8096:5000"
 
   verifier_utility_bill:
     build:
@@ -176,7 +289,8 @@ services:
       VERIFIER_DID: did:example:verifier:utility-bill
       SIGNING_SECRET: utility-bill-secret
       MOCK_ALWAYS_ACCEPT: "true"
-      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
     ports:
       - "8092:5000"
 
@@ -193,7 +307,8 @@ services:
       VERIFIER_DID: did:example:verifier:itar
       SIGNING_SECRET: itar-secret
       MOCK_ALWAYS_ACCEPT: "true"
-      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
     ports:
       - "8093:5000"
 
@@ -210,7 +325,8 @@ services:
       VERIFIER_DID: did:example:verifier:passport
       SIGNING_SECRET: passport-secret
       MOCK_ALWAYS_ACCEPT: "true"
-      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
     ports:
       - "8094:5000"
 
@@ -227,12 +343,33 @@ services:
       VERIFIER_DID: did:example:verifier:self-presence
       SIGNING_SECRET: self-presence-secret
       MOCK_ALWAYS_ACCEPT: "true"
-      DEMO_WEBID: http://holder_sovereign:4000/profile/card#me
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
     ports:
       - "8095:5000"
+
+  verifier_business_registry:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.verifier-portal
+    image: sovereign-verifier-business-registry:latest
+    container_name: sovereign-verifier-business-registry
+    environment:
+      PORT: 5000
+      VERIFIER_PROFILE: business_registry
+      VERIFIER_NAME: Business Registry Verifier
+      VERIFIER_DID: did:example:verifier:business-registry
+      SIGNING_SECRET: business-registry-secret
+      MOCK_ALWAYS_ACCEPT: "true"
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://holder_car_repair_shop:3000/profile/card#me
+    ports:
+      - "8097:5000"
 
 networks:
   doctors_office_net:
   car_repair_shop_net:
   sports_park_net:
   national_metal_works_net:
+  apple_seed_insurance_net:
+  assistance_charity_net:

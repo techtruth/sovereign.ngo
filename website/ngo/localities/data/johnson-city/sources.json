@@ -1,0 +1,174 @@
+{
+  "locality": "Johnson City",
+  "updated_at": "2026-03-27",
+  "sources": [
+    {
+      "id": "S1",
+      "title": "Johnson City 2025-2027 Homelessness Strategy context",
+      "url": "https://johnsoncitytn.civicweb.net/document/324097/Ordinance%204920-25%20Second%20Reading%20Public%20Hearing.pdf?handle=82D7D8A17C054D9D803A44D2A8020A5B#page=46",
+      "type": "city_pdf"
+    },
+    {
+      "id": "S2",
+      "title": "Johnson City 2025-2029 Consolidated Plan / Annual Action Plan",
+      "url": "https://johnsoncitytn.civicweb.net/document/322611/Consider%20approval%20of%20the%20Department%20of%20Housing%20.pdf?handle=C4B605A5EEF4419FB31EE288FDDCA0A8#page=76",
+      "type": "city_pdf"
+    },
+    {
+      "id": "S3",
+      "title": "Johnson City HCDAB ESG packet",
+      "url": "https://johnsoncitytn.civicweb.net/document/316319/Housing%20and%20Community%20Development%20Advisory%20Boar.pdf?handle=23DC1B2ACDA74C8E9AC32BB5C24B9DC3#page=17",
+      "type": "city_pdf"
+    },
+    {
+      "id": "S4",
+      "title": "THDA ESG program description",
+      "url": "https://johnsoncitytn.civicweb.net/document/56853/2023%20ESG%20Program%20Description.pdf?handle=995C7DFF87AA46A9B6701C9AAE6A9487#page=19",
+      "type": "city_pdf"
+    },
+    {
+      "id": "S5",
+      "title": "ARCH HMIS information",
+      "url": "https://archcoc.org/hmis-information",
+      "type": "arch_page"
+    },
+    {
+      "id": "S6",
+      "title": "ARCH PIT counts",
+      "url": "https://archcoc.org/pit-counts",
+      "type": "arch_page"
+    },
+    {
+      "id": "S7",
+      "title": "Johnson City August 21, 2025 packet",
+      "url": "https://johnsoncitytn.civicweb.net/document/324695/City%20Commission%20-%20Aug%2021%202025.pdf?handle=1BBC171168BD4C25BC770F06FE1297F6#page=130",
+      "type": "city_pdf"
+    },
+    {
+      "id": "S8",
+      "title": "ARCH PIT Count Trends 2019-2025",
+      "url": "https://archcoc.org/s/PIT-Count-Trends-2019-through-2025.pdf#page=2",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S9",
+      "title": "ARCH CoC 2025 PIT Count (Johnson City), as of June 10, 2025",
+      "url": "https://archcoc.org/s/ARCH-CoC-2025-PIT-Count-Final-Johnson-City.pdf#page=1",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S10",
+      "title": "ARCH CoC HMIS Policies and Procedures",
+      "url": "https://archcoc.org/s/ARCH-CoC-HMIS-PP-Integrating-HMIS-Charter-Approved-20210318.pdf#page=21",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S11",
+      "title": "ARCH HMIS Written Instructions, as of May 28, 2025",
+      "url": "https://archcoc.org/s/HMIS-Written-Intstructions-as-of-250528.pdf#page=3",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S12",
+      "title": "Johnson City HCDAB packet (March 5, 2026), including CARE Resource Center and funding-transition materials",
+      "url": "https://johnsoncitytn.civicweb.net/document/331753#page=26",
+      "type": "city_document"
+    },
+    {
+      "id": "S13",
+      "title": "Johnson City ESG FY22-23 contracts and compliance terms",
+      "url": "https://johnsoncitytn.civicweb.net/document/47654#page=27",
+      "type": "city_document"
+    },
+    {
+      "id": "S14",
+      "title": "ARCH PIT Count Methodology and Plan (revised for 2026)",
+      "url": "https://archcoc.org/s/ARCH-PIT-Count-Methodology-and-Plan-Approved-revised-for-2026.pdf#page=1",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S15",
+      "title": "ARCH Coordinated Entry Referral in HMIS workflow guide",
+      "url": "https://archcoc.org/s/ARCH-CoC-Coordinated-Entry-Referral-in-HMIS-with-Images.pdf#page=1",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S16",
+      "title": "ARCH Group Functionality Resource Guide (March 2025)",
+      "url": "https://archcoc.org/s/Group-Functionality-Resource-Guide-March-2025.pdf#page=1",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S17",
+      "title": "ARCH CoC meeting documents archive",
+      "url": "https://archcoc.org/coc-meeting-documents",
+      "type": "arch_page"
+    },
+    {
+      "id": "S18",
+      "title": "ARCH FY24-25 Continuum of Care Gap Analysis",
+      "url": "https://archcoc.org/s/FY24-25-CoC-Gap-Analysis-Final-4lby.pdf#page=1",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S19",
+      "title": "ARCH ESG CoC Participation Rubric",
+      "url": "https://archcoc.org/s/ESG-CoC-Participation-Rubric.pdf#page=1",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S20",
+      "title": "ARCH CoC Meeting Agenda (February 10, 2026)",
+      "url": "https://archcoc.org/s/CoC-Meeting-Agenda-20260210.pdf#page=1",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S21",
+      "title": "ARCH CoC Meeting Minutes (December cycle file)",
+      "url": "https://archcoc.org/s/CoC-Meeting-Minutes-12092025-1.pdf#page=1",
+      "type": "arch_pdf"
+    },
+    {
+      "id": "S22",
+      "title": "ARCH CoC training attendance report (December 9, 2025)",
+      "url": "https://archcoc.org/s/December-CoC-Meeting-Human-Trafficking-Training-Attendance-report-12-09-25.csv",
+      "type": "arch_csv"
+    },
+    {
+      "id": "S23",
+      "title": "Johnson City ArcGIS Homeless Outreach dashboard item",
+      "url": "https://www.arcgis.com/home/item.html?id=fe216dbc18b440f7b7261746513496af",
+      "type": "arcgis_item"
+    },
+    {
+      "id": "S24",
+      "title": "Johnson City ArcGIS HomelessOutreachMonthlyReport public query (month, meetings, contacts)",
+      "url": "https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/HomelessOutreachMonthlyReport_public/FeatureServer/0/query?where=1%3D1&outFields=month,meetings,contacts&f=pjson",
+      "type": "arcgis_query"
+    },
+    {
+      "id": "S25",
+      "title": "Johnson City ArcGIS Homeless Outreach public query (record count)",
+      "url": "https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/Homeless_Outreach_public/FeatureServer/0/query?where=1%3D1&returnCountOnly=true&f=pjson",
+      "type": "arcgis_query"
+    },
+    {
+      "id": "S26",
+      "title": "Johnson City ArcGIS New Residential Development dashboard item",
+      "url": "https://www.arcgis.com/home/item.html?id=ab96295198ff409ab0acc5d968c95b5a",
+      "type": "arcgis_item"
+    },
+    {
+      "id": "S27",
+      "title": "Johnson City ArcGIS Homeless Outreach public layer metadata (field schema)",
+      "url": "https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/Homeless_Outreach_public/FeatureServer/0?f=pjson",
+      "type": "arcgis_metadata"
+    },
+    {
+      "id": "S28",
+      "title": "Johnson City ArcGIS HomelessOutreachMonthlyReport public layer metadata (field schema)",
+      "url": "https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/HomelessOutreachMonthlyReport_public/FeatureServer/0?f=pjson",
+      "type": "arcgis_metadata"
+    }
+  ]
+}

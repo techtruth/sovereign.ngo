@@ -1,0 +1,38 @@
+{
+  "locality": "Johnson City",
+  "dataset": "HomelessOutreachMonthlyReport_public",
+  "source_id": "S24",
+  "normalized_on": "2026-03-27",
+  "notes": [
+    "Duplicate month rows in raw results were de-duplicated by keeping the higher meetings+contacts total for the month.",
+    "All records are de-identified aggregate counts."
+  ],
+  "records": [
+    { "month": "2024-01", "month_epoch_ms": 1704128400000, "meetings": 25, "contacts": 129 },
+    { "month": "2024-02", "month_epoch_ms": 1706806800000, "meetings": 24, "contacts": 134 },
+    { "month": "2024-03", "month_epoch_ms": 1709312400000, "meetings": 31, "contacts": 157 },
+    { "month": "2024-04", "month_epoch_ms": 1711987200000, "meetings": 35, "contacts": 230 },
+    { "month": "2024-05", "month_epoch_ms": 1714579200000, "meetings": 33, "contacts": 283 },
+    { "month": "2024-06", "month_epoch_ms": 1717257600000, "meetings": 52, "contacts": 351 },
+    { "month": "2024-07", "month_epoch_ms": 1719849600000, "meetings": 22, "contacts": 198 },
+    { "month": "2024-08", "month_epoch_ms": 1722528000000, "meetings": 42, "contacts": 292 },
+    { "month": "2024-09", "month_epoch_ms": 1725206400000, "meetings": 33, "contacts": 266 },
+    { "month": "2024-10", "month_epoch_ms": 1727798400000, "meetings": 30, "contacts": 230 },
+    { "month": "2024-11", "month_epoch_ms": 1730476800000, "meetings": 29, "contacts": 277 },
+    { "month": "2024-12", "month_epoch_ms": 1733072400000, "meetings": 25, "contacts": 215 },
+    { "month": "2025-01", "month_epoch_ms": 1735750800000, "meetings": 26, "contacts": 234 },
+    { "month": "2025-02", "month_epoch_ms": 1738429200000, "meetings": 30, "contacts": 212 },
+    { "month": "2025-03", "month_epoch_ms": 1740848400000, "meetings": 22, "contacts": 268 },
+    { "month": "2025-04", "month_epoch_ms": 1743523200000, "meetings": 30, "contacts": 236 },
+    { "month": "2025-05", "month_epoch_ms": 1746115200000, "meetings": 30, "contacts": 238 },
+    { "month": "2025-06", "month_epoch_ms": 1748793600000, "meetings": 23, "contacts": 213 },
+    { "month": "2025-07", "month_epoch_ms": 1751385600000, "meetings": 14, "contacts": 159 },
+    { "month": "2025-08", "month_epoch_ms": 1754064000000, "meetings": 26, "contacts": 263 },
+    { "month": "2025-09", "month_epoch_ms": 1756742400000, "meetings": 29, "contacts": 253 },
+    { "month": "2025-10", "month_epoch_ms": 1759334400000, "meetings": 34, "contacts": 187 },
+    { "month": "2025-11", "month_epoch_ms": 1762012800000, "meetings": 18, "contacts": 203 },
+    { "month": "2025-12", "month_epoch_ms": 1764608400000, "meetings": 6, "contacts": 212 },
+    { "month": "2026-01", "month_epoch_ms": 1767286800000, "meetings": 24, "contacts": 298 },
+    { "month": "2026-02", "month_epoch_ms": 1769965200000, "meetings": 8, "contacts": 199 }
+  ]
+}

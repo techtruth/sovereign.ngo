@@ -1,0 +1,51 @@
+{
+  "snapshot_id": "jc-2026-03",
+  "locality": "Johnson City",
+  "period": {
+    "from": "2026-01",
+    "to": "2026-02"
+  },
+  "bed_capacity": {
+    "es_th_beds_available": 407,
+    "unsheltered_people": 538,
+    "estimated_shortfall": 131
+  },
+  "queue_counts": {
+    "coordinated_entry_active": 1737,
+    "pending_referral": 420,
+    "referral_sent": 286,
+    "referral_accepted": 142,
+    "rrh_enrollment_pending": 73,
+    "rrh_housed": 55
+  },
+  "transitions": [
+    {
+      "from_stage": "coordinated_entry_active",
+      "to_stage": "referral_sent",
+      "count": 286,
+      "median_days": 9.5
+    },
+    {
+      "from_stage": "referral_sent",
+      "to_stage": "referral_accepted",
+      "count": 142,
+      "median_days": 7.0
+    },
+    {
+      "from_stage": "referral_accepted",
+      "to_stage": "rrh_housed",
+      "count": 55,
+      "median_days": 21.0
+    }
+  ],
+  "outcomes": {
+    "rrh_placements": 55,
+    "returns_to_homelessness_12m": 0
+  },
+  "data_quality": {
+    "source_ids": ["S18", "S24", "S25"],
+    "last_refresh_utc": "2026-03-27T04:30:00Z",
+    "deidentified": true,
+    "notes": "Queue-stage counts are sample modeling fields; bed and CE/RRH baseline values are source-backed."
+  }
+}

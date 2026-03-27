@@ -1,0 +1,62 @@
+{
+  "locality": "Johnson City",
+  "version": "1.0.0",
+  "updated_at": "2026-03-27",
+  "purpose": "Policy-ready exports for PIT, HMIS, and ESG evidence with de-identified operational reporting.",
+  "exports": [
+    {
+      "export_id": "pit_monthly_summary",
+      "format": "csv",
+      "template": "export-templates/pit_export_template.csv",
+      "required_fields": [
+        "report_period",
+        "locality_code",
+        "total_sheltered",
+        "total_unsheltered",
+        "households_total",
+        "children_in_shelter",
+        "children_unsheltered",
+        "veterans_total",
+        "data_quality_notes",
+        "source_reference"
+      ],
+      "source_ids": ["S8", "S9", "S14", "S18"]
+    },
+    {
+      "export_id": "hmis_queue_and_handoff",
+      "format": "csv",
+      "template": "export-templates/hmis_export_template.csv",
+      "required_fields": [
+        "report_period",
+        "deidentified_client_key",
+        "ce_status",
+        "referral_status",
+        "referral_target_type",
+        "consent_share_status",
+        "identity_doc_status",
+        "days_from_ce_to_referral",
+        "days_from_referral_to_service_decision",
+        "outcome_status",
+        "source_reference"
+      ],
+      "source_ids": ["S10", "S11", "S15", "S24", "S25"]
+    },
+    {
+      "export_id": "esg_participation_evidence",
+      "format": "csv",
+      "template": "export-templates/esg_participation_export_template.csv",
+      "required_fields": [
+        "report_period",
+        "provider_org",
+        "coc_meeting_attendance_count",
+        "pit_participation_level",
+        "coordinated_entry_alignment",
+        "hmis_performance_band",
+        "governance_participation_notes",
+        "evidence_link",
+        "scoring_comment"
+      ],
+      "source_ids": ["S19", "S20", "S21", "S22"]
+    }
+  ]
+}

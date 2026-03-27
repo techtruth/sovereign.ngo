@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Johnson City Briefing | Sovereign NGO</title>
+  <meta name="description" content="Presentation briefing on Johnson City public-record context and service-system design opportunities.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <style>
+    :root {
+      --paper: #f5f0e8;
+      --sheet: #fffdf9;
+      --ink: #25211d;
+      --ink-soft: #4e463d;
+      --rule: #d0c2af;
+      --accent: #74402d;
+      --accent-soft: #f0e5d8;
+      --link: #184e73;
+      --focus: #0b63a5;
+      --radius: 10px;
+      --shadow: 0 14px 34px rgba(56, 43, 28, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Baskerville", "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.55;
+      background:
+        radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.64), transparent 46%),
+        radial-gradient(circle at 84% 24%, rgba(255, 255, 255, 0.42), transparent 42%),
+        var(--paper);
+    }
+
+    .container {
+      width: min(1040px, 94vw);
+      margin: 0 auto;
+      padding: 18px 0 36px;
+    }
+
+    .mast {
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 9px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px 14px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink-soft);
+      font-size: 0.88rem;
+      letter-spacing: 0.01em;
+    }
+
+    .mast a {
+      color: var(--link);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .sheet {
+      background: var(--sheet);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.78rem, 3.4vw, 2.56rem);
+      line-height: 1.12;
+      color: #2b1f1a;
+      max-width: none;
+    }
+
+    .title-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .title-copy {
+      min-width: 0;
+      max-width: none;
+    }
+
+    .subtitle {
+      margin: 7px 0 0;
+      color: var(--ink-soft);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .cesium-window {
+      border: 1px solid #bba78f;
+      border-radius: 10px;
+      background: #f6f0e6;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+      overflow: hidden;
+      min-height: 168px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cesium-window-bar {
+      padding: 7px 10px;
+      border-bottom: 1px solid #cfbda7;
+      background: linear-gradient(180deg, #efe3d3 0%, #e5d4c0 100%);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #4b3e31;
+      letter-spacing: 0.02em;
+      text-align: center;
+    }
+
+    .cesium-window-body {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+      background:
+        radial-gradient(circle at 24% 26%, rgba(255, 255, 255, 0.52), transparent 44%),
+        linear-gradient(145deg, #f8f3eb 0%, #ece0d0 100%);
+      color: #5a4c3e;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .rule {
+      margin: 14px 0 12px;
+      border: 0;
+      border-top: 1px solid var(--rule);
+    }
+
+    .kicker {
+      margin: 0;
+      color: var(--accent);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .lead {
+      margin: 7px 0 0;
+      font-size: 1.05rem;
+      max-width: none;
+    }
+
+    .grid {
+      margin-top: 15px;
+      display: grid;
+      grid-template-columns: 1.06fr 1fr;
+      gap: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: #fffefb;
+      padding: 13px;
+    }
+
+    .panel h2 {
+      margin: 0 0 9px;
+      font-size: 1.12rem;
+      line-height: 1.2;
+      color: #3a2d26;
+    }
+
+    .panel ul {
+      margin: 0;
+      padding-left: 18px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #514940;
+      display: grid;
+      gap: 6px;
+      font-size: 0.94rem;
+    }
+
+    .state {
+      margin-top: 15px;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: #fdf9f3;
+      padding: 13px;
+    }
+
+    .state h2 {
+      margin: 0 0 9px;
+      color: #3a2d26;
+      font-size: 1.12rem;
+    }
+
+    .state h3 {
+      margin: 12px 0 8px;
+      color: #493b31;
+      font-size: 0.98rem;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .state h3:first-of-type {
+      margin-top: 0;
+    }
+
+    .state ul {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 7px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #514940;
+      font-size: 0.94rem;
+    }
+
+    .problem-grid {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .problem {
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: #fffefb;
+      padding: 12px;
+    }
+
+    .problem-summary {
+      margin-top: 10px;
+    }
+
+    .problem h3 {
+      margin: 0 0 7px;
+      font-size: 1rem;
+      color: #3a2d26;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .problem ul {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 6px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #514940;
+      font-size: 0.93rem;
+    }
+
+    .cite {
+      white-space: nowrap;
+      font-size: 0.78rem;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      margin-left: 3px;
+    }
+
+    .cite a {
+      color: #275a7d;
+      text-decoration: none;
+      border: 1px solid #c1d2e0;
+      border-radius: 999px;
+      padding: 1px 6px;
+      background: #f3f8fc;
+    }
+
+    .cite a:hover {
+      background: #e9f2fa;
+    }
+
+    .priorities {
+      margin-top: 15px;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: #fffefb;
+      padding: 13px;
+    }
+
+    .priorities h2 {
+      margin: 0 0 9px;
+      color: #3a2d26;
+      font-size: 1.12rem;
+    }
+
+    .priority-list {
+      margin: 0;
+      padding-left: 22px;
+      display: grid;
+      gap: 8px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #514940;
+      font-size: 0.94rem;
+    }
+
+    .priority-list strong {
+      color: #352920;
+    }
+
+    .priority-list p {
+      margin: 4px 0 6px;
+      color: #5a5046;
+    }
+
+    .priority-actions {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 4px;
+      font-size: 0.92rem;
+      color: #4c443a;
+    }
+
+    .thesis {
+      margin-top: 15px;
+      padding: 12px;
+      background: #edf3f8;
+      border: 1px solid #c4d4e2;
+      border-radius: 8px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #355266;
+      font-size: 0.95rem;
+    }
+
+    .sources {
+      margin-top: 15px;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: #fffefb;
+      padding: 13px;
+    }
+
+    .sources h2 {
+      margin: 0 0 7px;
+      color: #3a2d26;
+      font-size: 1.08rem;
+    }
+
+    .sources p {
+      margin: 0 0 8px;
+      color: var(--ink-soft);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.9rem;
+    }
+
+    .source-note {
+      margin: 0 0 8px;
+      padding: 8px 10px;
+      background: #f6f2eb;
+      border-left: 3px solid #b99f7f;
+      border-radius: 5px;
+      color: #554b40;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.88rem;
+    }
+
+    .sources ol {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.93rem;
+      color: #514940;
+    }
+
+    .source-id {
+      display: inline-block;
+      min-width: 32px;
+      padding: 1px 7px;
+      margin-right: 6px;
+      border: 1px solid #c1d2e0;
+      border-radius: 999px;
+      background: #f3f8fc;
+      color: #214f70;
+      font-size: 0.79rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    a {
+      color: var(--link);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+
+    a:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 950px) {
+      .title-row {
+        grid-template-columns: 1fr;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .problem-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <div class="mast">
+      <div>Sovereign NGO Localities Briefing</div>
+      <a href="../index.html">Back to Nonprofit Website</a>
+    </div>
+
+    <section class="sheet">
+      <div class="title-row">
+        <div class="title-copy">
+          <h1>Johnson City: What the Public Record Shows and What Still Needs Design Work</h1>
+          <p class="subtitle">Prepared for use in community, partner, and civic planning conversations.</p>
+        </div>
+        <aside class="cesium-window" aria-label="CesiumJS placeholder window">
+          <div class="cesium-window-bar">Shared 3D Interactive Map</div>
+          <div class="cesium-window-body">Loading...</div>
+        </aside>
+      </div>
+
+      <hr class="rule">
+
+      <p class="kicker">Core Takeaway</p>
+      <p class="lead">Johnson City already has key homelessness-response infrastructure in place. The strongest opportunity now is last-mile service design: fewer document failures, cleaner consent handoffs, and clearer outcome visibility for the people and teams trying to move services forward. This is not a build-from-zero problem; it is a last-mile coordination and usability problem.</p>
+
+      <section class="state">
+        <h2>Integrated Locality Report</h2>
+        <div class="problem-grid">
+          <article class="problem">
+            <h3>Evidence Base</h3>
+            <ul>
+              <li>Coordination maturity remains a core issue: city strategy materials, Emergency Solutions Grant planning packets, Homeless Management Information System information pages, and Continuum of Care governance records show active transition work, recurring steering decisions, and ongoing alignment needs across providers.<span class="cite"><a href="#s1">[S1]</a></span><span class="cite"><a href="#s3">[S3]</a></span><span class="cite"><a href="#s5">[S5]</a></span><span class="cite"><a href="#s12">[S12]</a></span><span class="cite"><a href="#s17">[S17]</a></span><span class="cite"><a href="#s20">[S20]</a></span></li>
+              <li>Capacity and throughput pressure are systemic, not isolated: gap analysis and Point-in-Time count records point to sustained unsheltered demand and constrained movement through housing pathways.<span class="cite"><a href="#s8">[S8]</a></span><span class="cite"><a href="#s9">[S9]</a></span><span class="cite"><a href="#s18">[S18]</a></span></li>
+              <li>Consent and document workflows are a practical bottleneck: Homeless Management Information System policy and referral workflow requirements depend on release status, identity checks, and repeated inter-organization handoffs.<span class="cite"><a href="#s10">[S10]</a></span><span class="cite"><a href="#s11">[S11]</a></span><span class="cite"><a href="#s15">[S15]</a></span><span class="cite"><a href="#s16">[S16]</a></span></li>
+              <li>Accountability data exists but is distributed across systems: city dashboards, ArcGIS services, Continuum of Care packets, and attendance records are public, but not yet unified into one routine operating picture.<span class="cite"><a href="#s17">[S17]</a></span><span class="cite"><a href="#s22">[S22]</a></span><span class="cite"><a href="#s23">[S23]</a></span><span class="cite"><a href="#s24">[S24]</a></span><span class="cite"><a href="#s25">[S25]</a></span><span class="cite"><a href="#s26">[S26]</a></span></li>
+              <li>Compliance incentives are strong and ongoing: Emergency Solutions Grant participation scoring, contract terms, and Point-in-Time count methodology requirements tie day-to-day operations to auditable reporting quality.<span class="cite"><a href="#s13">[S13]</a></span><span class="cite"><a href="#s14">[S14]</a></span><span class="cite"><a href="#s19">[S19]</a></span></li>
+              <li>Data granularity is sufficient to act now: published layer metadata shows fields that can support de-identified queue, handoff, and outcome monitoring without exposing personal identities.<span class="cite"><a href="#s27">[S27]</a></span><span class="cite"><a href="#s28">[S28]</a></span></li>
+            </ul>
+          </article>
+
+          <article class="problem">
+            <h3>Baseline Conditions</h3>
+            <ul>
+              <li id="stmt-housing-gap">Housing pressure remains high: city records show the housing gap rising from 4,859 units (2022) to 5,557 units (2025), with severe renter cost burden at 22.3% in 2025.<span class="cite"><a href="#s1">[S1]</a></span><span class="cite"><a href="#s7">[S7]</a></span></li>
+              <li id="stmt-pit-counts">Johnson City's 2025 Point-in-Time count reported 243 people (149 sheltered, 94 unsheltered), while ARCH trend totals rose from 405 in 2019 to 943 in 2025.<span class="cite"><a href="#s8">[S8]</a></span><span class="cite"><a href="#s9">[S9]</a></span><span class="cite"><a href="#s6">[S6]</a></span></li>
+              <li id="stmt-bed-shortfall">ARCH gap analysis reports 538 unsheltered people versus 407 emergency shelter and transitional housing beds, a shortfall of 131 beds (about 32.2% unsheltered pressure above bed count in that snapshot).<span class="cite"><a href="#s18">[S18]</a></span></li>
+              <li id="stmt-ce-vs-rrh">ARCH gap analysis reports 1,737 people enrolled in Coordinated Entry and 55 literally homeless clients rapidly rehoused in the same reporting frame.<span class="cite"><a href="#s18">[S18]</a></span></li>
+              <li id="stmt-outreach-range">Outreach monthly records from January 2024 to February 2026 show contacts ranging from 129 to 351 and meetings from 6 to 52 per month.<span class="cite"><a href="#s24">[S24]</a></span></li>
+              <li id="stmt-outreach-yearly">Year totals remained high: 2,762 contacts / 381 meetings in 2024 and 2,678 contacts / 288 meetings in 2025; January-February 2026 already shows 497 contacts / 32 meetings.<span class="cite"><a href="#s24">[S24]</a></span></li>
+              <li id="stmt-layer-count">The public outreach feature layer currently returns 232 records, and ArcGIS field schemas include month/contacts/meetings plus placement and barrier fields for repeatable monitoring baselines.<span class="cite"><a href="#s25">[S25]</a></span><span class="cite"><a href="#s27">[S27]</a></span><span class="cite"><a href="#s28">[S28]</a></span></li>
+              <li id="stmt-training-attendance">Partner activation is measurable: one published Continuum of Care training report logs 59 attendees with 1 hour 27 minutes average attendance.<span class="cite"><a href="#s22">[S22]</a></span></li>
+            </ul>
+          </article>
+
+          <article class="problem">
+            <h3>Current Trends and Operating Signals</h3>
+            <ul>
+              <li><strong>Regional homelessness pressure has intensified over time:</strong> ARCH trend totals increased from 405 in 2019 to 943 in 2025 (about +133%), indicating sustained system strain rather than a short-term spike.<span class="cite"><a href="#s8">[S8]</a></span></li>
+              <li><strong>Queue pressure is likely accumulating in housing pathways:</strong> Coordinated Entry enrollment is large relative to rapid rehousing exits in the same reporting frame (about 3.2% by simple ratio), signaling potential bottlenecks between assessment and placement stages.<span class="cite"><a href="#s18">[S18]</a></span></li>
+              <li><strong>Outreach burden stayed high even as meeting count dropped:</strong> contacts declined by about 3% from 2024 to 2025 while meetings declined by about 24%, implying heavier load per meeting and less slack in frontline operations.<span class="cite"><a href="#s24">[S24]</a></span></li>
+              <li><strong>Early 2026 activity indicates continued high demand:</strong> 497 contacts in the first two months (about 249 per month) is consistent with persistent outreach pressure.<span class="cite"><a href="#s24">[S24]</a></span></li>
+              <li><strong>Monthly accountability loops are operationally feasible now:</strong> live public service records plus standing governance and training channels support recurring scorecards and corrective action cycles without waiting for new data infrastructure.<span class="cite"><a href="#s17">[S17]</a></span><span class="cite"><a href="#s20">[S20]</a></span><span class="cite"><a href="#s21">[S21]</a></span><span class="cite"><a href="#s22">[S22]</a></span><span class="cite"><a href="#s25">[S25]</a></span></li>
+            </ul>
+          </article>
+
+          <article class="problem">
+            <h3>Service Flow Failure Points</h3>
+            <ul>
+              <li id="stmt-release-controls">Data sharing requires signed releases, can be revoked, and defaults to restricted sharing states when release conditions are not met.<span class="cite"><a href="#s10">[S10]</a></span><span class="cite"><a href="#s11">[S11]</a></span></li>
+              <li>Refusal to share does not block services, but visibility and coordination pathways are constrained by sharing status.<span class="cite"><a href="#s10">[S10]</a></span></li>
+              <li id="stmt-confidentiality">Confidentiality controls, including domestic-violence protection expectations, are explicit in the system materials.<span class="cite"><a href="#s2">[S2]</a></span><span class="cite"><a href="#s4">[S4]</a></span><span class="cite"><a href="#s10">[S10]</a></span></li>
+              <li>Identity checks and referral loops are documented in practice, including accepted/rejected/outstanding status handling and repeated follow-up operations.<span class="cite"><a href="#s11">[S11]</a></span><span class="cite"><a href="#s15">[S15]</a></span><span class="cite"><a href="#s16">[S16]</a></span></li>
+              <li>Capacity shortfall is a direct flow blocker: documented unsheltered need exceeds available emergency shelter and transitional housing bed capacity in the same reporting frame, creating unavoidable waiting pressure.<span class="cite"><a href="#s18">[S18]</a></span></li>
+              <li>Referral funnel compression is visible at system level: Coordinated Entry enrollment volume is large relative to rapid rehousing exits, signaling stage-to-stage attrition risk before placement completion.<span class="cite"><a href="#s18">[S18]</a></span></li>
+              <li>Outreach coordination cadence is uneven: monthly meeting counts vary sharply while contact demand remains high, increasing risk of delayed follow-up and inconsistent handoff timing.<span class="cite"><a href="#s24">[S24]</a></span></li>
+            </ul>
+          </article>
+
+          <article class="problem">
+            <h3>Community-Led Solutions In Progress</h3>
+            <ul>
+              <li>Coordinated Entry and Homeless Management Information System participation are already operating across partner providers, with confidentiality and release controls built into normal workflows.<span class="cite"><a href="#s2">[S2]</a></span><span class="cite"><a href="#s3">[S3]</a></span><span class="cite"><a href="#s5">[S5]</a></span><span class="cite"><a href="#s10">[S10]</a></span><span class="cite"><a href="#s11">[S11]</a></span></li>
+              <li>City and partner planning cycles are active, including homelessness strategy implementation, Emergency Solutions Grant-linked planning, and the CARE transition period.<span class="cite"><a href="#s1">[S1]</a></span><span class="cite"><a href="#s2">[S2]</a></span><span class="cite"><a href="#s3">[S3]</a></span><span class="cite"><a href="#s12">[S12]</a></span></li>
+              <li>Continuum of Care governance is continuously working core system issues such as renewal funding, Homeless Management Information System participation fees, Emergency Solutions Grant allocation adjustments, and Point-in-Time count after-action review.<span class="cite"><a href="#s17">[S17]</a></span><span class="cite"><a href="#s20">[S20]</a></span><span class="cite"><a href="#s21">[S21]</a></span></li>
+              <li>Point-in-Time count operations continue as an ongoing system function, with updated methodology published for the 2026 cycle.<span class="cite"><a href="#s6">[S6]</a></span><span class="cite"><a href="#s14">[S14]</a></span></li>
+              <li>Partner capacity-building is active through recurring training and attendance-tracked sessions across the Continuum of Care network.<span class="cite"><a href="#s22">[S22]</a></span></li>
+              <li>Public reporting infrastructure is already live, including outreach dashboards, public feature services, and housing-development context dashboards.<span class="cite"><a href="#s23">[S23]</a></span><span class="cite"><a href="#s24">[S24]</a></span><span class="cite"><a href="#s25">[S25]</a></span><span class="cite"><a href="#s26">[S26]</a></span></li>
+            </ul>
+          </article>
+
+          <article class="problem">
+            <h3>Applying Our Mission to Local Needs</h3>
+            <ul>
+              <li><strong>Service-pathway bottlenecks and decision delay points:</strong> focus on where people stall between first contact, referral movement, and placement-related decisions.<span class="cite"><a href="#s18">[S18]</a></span><span class="cite"><a href="#s15">[S15]</a></span><span class="cite"><a href="#s24">[S24]</a></span></li>
+              <li><strong>Consent continuity and permission clarity across organizations:</strong> focus on keeping sharing status understandable and consistent as people move between providers.<span class="cite"><a href="#s10">[S10]</a></span><span class="cite"><a href="#s11">[S11]</a></span><span class="cite"><a href="#s15">[S15]</a></span></li>
+              <li><strong>Identity and document continuity during handoffs:</strong> focus on reducing repeat proof collection and loss of context when referrals move across organizations.<span class="cite"><a href="#s11">[S11]</a></span><span class="cite"><a href="#s15">[S15]</a></span><span class="cite"><a href="#s16">[S16]</a></span></li>
+              <li><strong>Privacy-safe accountability and reporting readiness:</strong> focus on de-identified operational evidence that supports monthly review, compliance, and public trust.<span class="cite"><a href="#s14">[S14]</a></span><span class="cite"><a href="#s19">[S19]</a></span><span class="cite"><a href="#s20">[S20]</a></span><span class="cite"><a href="#s21">[S21]</a></span></li>
+              <li><strong>Adoption risk and implementation fit:</strong> focus on rollout approaches that providers can absorb without disrupting frontline service delivery.<span class="cite"><a href="#s22">[S22]</a></span><span class="cite"><a href="#s17">[S17]</a></span></li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="priorities">
+        <h2>Proposed Priorities for the Sovereign Technology Initiative</h2>
+        <ol class="priority-list">
+          <li>
+            <strong>Referral Throughput and Faster Service Decisions</strong>
+            <p>Goal: reduce stalls between coordinated entry, referral movement, and housing-related decisions so people move through services faster.<span class="cite"><a href="#s18">[S18]</a></span><span class="cite"><a href="#s24">[S24]</a></span></p>
+            <ul class="priority-actions">
+              <li>Use the service workflows and signed digital receipts in the Sovereign platform to carry intake and decision context across organizations.</li>
+              <li>Add time-stamped milestones at each handoff so teams can measure how long people wait between first contact, referral, and decision.</li>
+              <li>Provide a privacy-safe queue view that highlights stalled cases for regular cross-provider review and faster action.</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Resident-Controlled Consent Continuity</strong>
+            <p>Goal: make sharing permissions clear, revocable, and consistent across organizations so referral flow does not break on consent confusion.<span class="cite"><a href="#s10">[S10]</a></span><span class="cite"><a href="#s11">[S11]</a></span><span class="cite"><a href="#s15">[S15]</a></span></p>
+            <ul class="priority-actions">
+              <li>Use Sovereign platform consent management controls so sharing permissions are clear, revocable, and consistent across partner organizations.</li>
+              <li>Show current permission status at each handoff so staff request only what a resident has actually approved.</li>
+              <li>Provide plain-language consent screens that let residents grant, update, or revoke access quickly and confidently.</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Identity and Document Continuity Across Handoffs</strong>
+            <p>Goal: reduce repeated proof collection and document loss so people do not restart intake each time they move between providers.<span class="cite"><a href="#s11">[S11]</a></span><span class="cite"><a href="#s15">[S15]</a></span><span class="cite"><a href="#s16">[S16]</a></span></p>
+            <ul class="priority-actions">
+              <li>Use existing verification flows for state-issued identity and related records with resident-controlled storage and sharing.</li>
+              <li>Use portable proof-sharing so origin organizations keep full records while partner teams receive only what is needed for service decisions.</li>
+              <li>Add a simple document-status handoff packet and online portal (available, pending, missing) so people are not asked for the same documents repeatedly.</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Privacy-Safe Accountability and Trust</strong>
+            <p>Goal: publish routine, de-identified operating metrics that support governance review and community confidence without exposing personal data.<span class="cite"><a href="#s14">[S14]</a></span><span class="cite"><a href="#s19">[S19]</a></span><span class="cite"><a href="#s20">[S20]</a></span><span class="cite"><a href="#s21">[S21]</a></span><span class="cite"><a href="#s24">[S24]</a></span><span class="cite"><a href="#s25">[S25]</a></span></p>
+            <ul class="priority-actions">
+              <li>Use Sovereign platform logs and export capabilities to generate recurring de-identified operating summaries.</li>
+              <li>Publish monthly metric snapshots with direct source links for each key measure so council and partners can review outcomes quickly.</li>
+              <li>Run a standard quality-check process before each release to confirm completeness, source coverage, and data freshness.</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Provider Onboarding Without Service Disruption</strong>
+            <p>Goal: phase adoption in ways providers can absorb while keeping frontline operations stable.<span class="cite"><a href="#s22">[S22]</a></span><span class="cite"><a href="#s17">[S17]</a></span><span class="cite"><a href="#s20">[S20]</a></span><span class="cite"><a href="#s21">[S21]</a></span></p>
+            <ul class="priority-actions">
+              <li>Onboard providers in small cohorts using realistic service scenarios and hands-on training.</li>
+              <li>Start in parallel with current workflows, then expand only after parity and reliability checkpoints are met.</li>
+              <li>Phase in two-way system integration so providers can adopt without disrupting daily operations or replacing existing systems on day one.</li>
+            </ul>
+          </li>
+        </ol>
+      </section>
+
+      <div class="thesis"><strong>Strategic Case for Action:</strong> build client-controlled identity and consent infrastructure on top of the system Johnson City already has, then pair it with aggregate reporting so the community can evaluate whether support pathways are getting faster and more reliable.</div>
+
+      <section class="state">
+        <h2>Operational Benefit Framed for Civic Leadership</h2>
+        <ul>
+          <li><strong>Cross-department operating picture (Housing and Community Development, Continuum of Care, Homeless Management Information System, and outreach):</strong> align Coordinated Entry (CE) inflow, Rapid Re-Housing (RRH) outflow, Emergency Shelter and Transitional Housing (ES/TH) utilization, unsheltered pressure, and outreach cadence into one management view that supports Housing and Community Development Advisory Board review rhythm and Continuum of Care committee action cycles.</li>
+          <li><strong>Program-administration handshake (Tennessee Housing Development Agency Emergency Solutions Grant and Continuum of Care standards):</strong> map intake, Release of Information (ROI) execution, consent revocation, referral accept/decline, and case disposition to the evidence chain needed for Emergency Solutions Grant subrecipient monitoring, Homeless Management Information System participation expectations, and Continuum of Care rubric performance.</li>
+          <li><strong>Planning-to-operations coupling (Affordable Housing Tax Credit and Low-Income Housing Tax Credit pipelines plus service load):</strong> connect housing-pipeline assumptions, siting timelines, and program-mix decisions to live Coordinated Entry queue pressure and Rapid Re-Housing conversion signals so policy and operations stay synchronized.</li>
+          <li><strong>Governance-grade accountability outputs:</strong> produce de-identified monthly deltas suitable for Commission agenda backup, Housing and Community Development Advisory Board packet review, Continuum of Care after-action follow-through, and recurring corrective-action tracking without exposing protected client data.</li>
+          <li><strong>Implementation controls functional owners expect:</strong> run mirror-period parity, Standard Operating Procedure (SOP) alignment, User Acceptance Testing (UAT) signoff by responsible units, and go/no-go gates tied to Key Performance Indicator (KPI) thresholds before widening deployment.<span class="cite"><a href="#s17">[S17]</a></span><span class="cite"><a href="#s20">[S20]</a></span><span class="cite"><a href="#s21">[S21]</a></span><span class="cite"><a href="#s23">[S23]</a></span><span class="cite"><a href="#s24">[S24]</a></span><span class="cite"><a href="#s25">[S25]</a></span></li>
+        </ul>
+      </section>
+
+      <section class="state">
+        <h2>Integrated Data Pack</h2>
+        <h3>Direct Evidence Links</h3>
+        <ul>
+          <li><strong>Housing gap and renter burden:</strong> <a href="#stmt-housing-gap">statement</a>; <a href="https://johnsoncitytn.civicweb.net/document/324097/Ordinance%204920-25%20Second%20Reading%20Public%20Hearing.pdf?handle=82D7D8A17C054D9D803A44D2A8020A5B#page=46" target="_blank" rel="noopener noreferrer">S1 p.46</a>, <a href="https://johnsoncitytn.civicweb.net/document/324695/City%20Commission%20-%20Aug%2021%202025.pdf?handle=1BBC171168BD4C25BC770F06FE1297F6#page=130" target="_blank" rel="noopener noreferrer">S7 p.130</a>.</li>
+          <li><strong>Point-in-Time totals and trend growth:</strong> <a href="#stmt-pit-counts">statement</a>; <a href="https://archcoc.org/s/PIT-Count-Trends-2019-through-2025.pdf#page=2" target="_blank" rel="noopener noreferrer">S8 p.2</a>, <a href="https://archcoc.org/s/ARCH-CoC-2025-PIT-Count-Final-Johnson-City.pdf#page=1" target="_blank" rel="noopener noreferrer">S9 p.1</a>.</li>
+          <li><strong>Bed-capacity mismatch:</strong> <a href="#stmt-bed-shortfall">statement</a>; <a href="https://archcoc.org/s/FY24-25-CoC-Gap-Analysis-Final-4lby.pdf#page=1" target="_blank" rel="noopener noreferrer">S18 p.1</a>.</li>
+          <li><strong>Coordinated Entry vs rapid rehousing throughput:</strong> <a href="#stmt-ce-vs-rrh">statement</a>; <a href="https://archcoc.org/s/FY24-25-CoC-Gap-Analysis-Final-4lby.pdf#page=1" target="_blank" rel="noopener noreferrer">S18 p.1</a>.</li>
+          <li><strong>Outreach volume baseline and yearly totals:</strong> <a href="#stmt-outreach-range">range statement</a>, <a href="#stmt-outreach-yearly">yearly statement</a>; <a href="https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/HomelessOutreachMonthlyReport_public/FeatureServer/0/query?where=1%3D1&outFields=month,meetings,contacts&f=pjson" target="_blank" rel="noopener noreferrer">S24 query endpoint</a>.</li>
+          <li><strong>Public layer count and field-level monitoring schema:</strong> <a href="#stmt-layer-count">statement</a>; <a href="https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/Homeless_Outreach_public/FeatureServer/0/query?where=1%3D1&returnCountOnly=true&f=pjson" target="_blank" rel="noopener noreferrer">S25 count query</a>, <a href="https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/Homeless_Outreach_public/FeatureServer/0?f=pjson" target="_blank" rel="noopener noreferrer">S27 schema</a>, <a href="https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/HomelessOutreachMonthlyReport_public/FeatureServer/0?f=pjson" target="_blank" rel="noopener noreferrer">S28 schema</a>.</li>
+          <li><strong>Release and revocation controls:</strong> <a href="#stmt-release-controls">statement</a>; <a href="https://archcoc.org/s/ARCH-CoC-HMIS-PP-Integrating-HMIS-Charter-Approved-20210318.pdf#page=21" target="_blank" rel="noopener noreferrer">S10 p.21</a>, <a href="https://archcoc.org/s/HMIS-Written-Intstructions-as-of-250528.pdf#page=3" target="_blank" rel="noopener noreferrer">S11 p.3</a>.</li>
+          <li><strong>Confidentiality and protection constraints:</strong> <a href="#stmt-confidentiality">statement</a>; <a href="https://johnsoncitytn.civicweb.net/document/322611/Consider%20approval%20of%20the%20Department%20of%20Housing%20.pdf?handle=C4B605A5EEF4419FB31EE288FDDCA0A8#page=90" target="_blank" rel="noopener noreferrer">S2 p.90</a>, <a href="https://johnsoncitytn.civicweb.net/document/56853/2023%20ESG%20Program%20Description.pdf?handle=995C7DFF87AA46A9B6701C9AAE6A9487#page=19" target="_blank" rel="noopener noreferrer">S4 p.19</a>, <a href="https://archcoc.org/s/ARCH-CoC-HMIS-PP-Integrating-HMIS-Charter-Approved-20210318.pdf#page=44" target="_blank" rel="noopener noreferrer">S10 p.44</a>.</li>
+          <li><strong>Partner training engagement baseline:</strong> <a href="#stmt-training-attendance">statement</a>; <a href="https://archcoc.org/s/December-CoC-Meeting-Human-Trafficking-Training-Attendance-report-12-09-25.csv" target="_blank" rel="noopener noreferrer">S22 CSV record</a>.</li>
+        </ul>
+        <h3>Data Assets</h3>
+        <ul>
+          <li><strong>Snapshot and coverage:</strong> refreshed <time datetime="2026-03-27">March 27, 2026</time>; monthly outreach coverage spans 2024-01 through 2026-02.</li>
+          <li><strong>Source catalog (S1-S28):</strong> <a href="data/johnson-city/sources.json" target="_blank" rel="noopener noreferrer">sources.json</a></li>
+          <li><strong>Metrics snapshot:</strong> <a href="data/johnson-city/metrics_snapshot_2026-03-27.json" target="_blank" rel="noopener noreferrer">metrics_snapshot_2026-03-27.json</a></li>
+          <li><strong>Monthly outreach records:</strong> <a href="data/johnson-city/outreach_monthly_records_2024-01_to_2026-02.json" target="_blank" rel="noopener noreferrer">outreach_monthly_records_2024-01_to_2026-02.json</a></li>
+        </ul>
+      </section>
+
+      <section class="sources">
+        <h2>Source Record</h2>
+        <p>Primary public records used for this locality context:</p>
+        <ol>
+          <li id="s1"><span class="source-id">S1</span><a href="https://johnsoncitytn.civicweb.net/document/324097/Ordinance%204920-25%20Second%20Reading%20Public%20Hearing.pdf?handle=82D7D8A17C054D9D803A44D2A8020A5B#page=46" target="_blank" rel="noopener noreferrer">Johnson City 2025-2027 Homelessness Strategy context</a> (key pages: <a href="https://johnsoncitytn.civicweb.net/document/324097/Ordinance%204920-25%20Second%20Reading%20Public%20Hearing.pdf?handle=82D7D8A17C054D9D803A44D2A8020A5B#page=46" target="_blank" rel="noopener noreferrer">p.46</a>, <a href="https://johnsoncitytn.civicweb.net/document/324097/Ordinance%204920-25%20Second%20Reading%20Public%20Hearing.pdf?handle=82D7D8A17C054D9D803A44D2A8020A5B#page=48" target="_blank" rel="noopener noreferrer">p.48</a>)</li>
+          <li id="s2"><span class="source-id">S2</span><a href="https://johnsoncitytn.civicweb.net/document/322611/Consider%20approval%20of%20the%20Department%20of%20Housing%20.pdf?handle=C4B605A5EEF4419FB31EE288FDDCA0A8#page=76" target="_blank" rel="noopener noreferrer">Johnson City 2025-2029 Consolidated Plan / Annual Action Plan</a> (key pages: <a href="https://johnsoncitytn.civicweb.net/document/322611/Consider%20approval%20of%20the%20Department%20of%20Housing%20.pdf?handle=C4B605A5EEF4419FB31EE288FDDCA0A8#page=76" target="_blank" rel="noopener noreferrer">p.76</a>, <a href="https://johnsoncitytn.civicweb.net/document/322611/Consider%20approval%20of%20the%20Department%20of%20Housing%20.pdf?handle=C4B605A5EEF4419FB31EE288FDDCA0A8#page=90" target="_blank" rel="noopener noreferrer">p.90</a>)</li>
+          <li id="s3"><span class="source-id">S3</span><a href="https://johnsoncitytn.civicweb.net/document/316319/Housing%20and%20Community%20Development%20Advisory%20Boar.pdf?handle=23DC1B2ACDA74C8E9AC32BB5C24B9DC3#page=17" target="_blank" rel="noopener noreferrer">Johnson City HCDAB ESG packet</a> (key pages: <a href="https://johnsoncitytn.civicweb.net/document/316319/Housing%20and%20Community%20Development%20Advisory%20Boar.pdf?handle=23DC1B2ACDA74C8E9AC32BB5C24B9DC3#page=17" target="_blank" rel="noopener noreferrer">p.17</a>, <a href="https://johnsoncitytn.civicweb.net/document/316319/Housing%20and%20Community%20Development%20Advisory%20Boar.pdf?handle=23DC1B2ACDA74C8E9AC32BB5C24B9DC3#page=40" target="_blank" rel="noopener noreferrer">p.40</a>)</li>
+          <li id="s4"><span class="source-id">S4</span><a href="https://johnsoncitytn.civicweb.net/document/56853/2023%20ESG%20Program%20Description.pdf?handle=995C7DFF87AA46A9B6701C9AAE6A9487#page=19" target="_blank" rel="noopener noreferrer">THDA ESG program description</a> (key pages: <a href="https://johnsoncitytn.civicweb.net/document/56853/2023%20ESG%20Program%20Description.pdf?handle=995C7DFF87AA46A9B6701C9AAE6A9487#page=19" target="_blank" rel="noopener noreferrer">p.19</a>, <a href="https://johnsoncitytn.civicweb.net/document/56853/2023%20ESG%20Program%20Description.pdf?handle=995C7DFF87AA46A9B6701C9AAE6A9487#page=20" target="_blank" rel="noopener noreferrer">p.20</a>)</li>
+          <li id="s5"><span class="source-id">S5</span><a href="https://archcoc.org/hmis-information" target="_blank" rel="noopener noreferrer">ARCH HMIS information</a></li>
+          <li id="s6"><span class="source-id">S6</span><a href="https://archcoc.org/pit-counts" target="_blank" rel="noopener noreferrer">ARCH PIT counts</a></li>
+          <li id="s7"><span class="source-id">S7</span><a href="https://johnsoncitytn.civicweb.net/document/324695/City%20Commission%20-%20Aug%2021%202025.pdf?handle=1BBC171168BD4C25BC770F06FE1297F6#page=130" target="_blank" rel="noopener noreferrer">Johnson City August 21, 2025 packet</a> (key pages: <a href="https://johnsoncitytn.civicweb.net/document/324695/City%20Commission%20-%20Aug%2021%202025.pdf?handle=1BBC171168BD4C25BC770F06FE1297F6#page=130" target="_blank" rel="noopener noreferrer">p.130</a>, <a href="https://johnsoncitytn.civicweb.net/document/324695/City%20Commission%20-%20Aug%2021%202025.pdf?handle=1BBC171168BD4C25BC770F06FE1297F6#page=132" target="_blank" rel="noopener noreferrer">p.132</a>)</li>
+          <li id="s8"><span class="source-id">S8</span><a href="https://archcoc.org/s/PIT-Count-Trends-2019-through-2025.pdf#page=2" target="_blank" rel="noopener noreferrer">ARCH PIT Count Trends 2019-2025</a> (key page: <a href="https://archcoc.org/s/PIT-Count-Trends-2019-through-2025.pdf#page=2" target="_blank" rel="noopener noreferrer">p.2</a>)</li>
+          <li id="s9"><span class="source-id">S9</span><a href="https://archcoc.org/s/ARCH-CoC-2025-PIT-Count-Final-Johnson-City.pdf#page=1" target="_blank" rel="noopener noreferrer">ARCH CoC 2025 PIT Count (Johnson City), as of June 10, 2025</a> (key page: <a href="https://archcoc.org/s/ARCH-CoC-2025-PIT-Count-Final-Johnson-City.pdf#page=1" target="_blank" rel="noopener noreferrer">p.1</a>)</li>
+          <li id="s10"><span class="source-id">S10</span><a href="https://archcoc.org/s/ARCH-CoC-HMIS-PP-Integrating-HMIS-Charter-Approved-20210318.pdf#page=21" target="_blank" rel="noopener noreferrer">ARCH CoC HMIS Policies and Procedures</a> (key pages: <a href="https://archcoc.org/s/ARCH-CoC-HMIS-PP-Integrating-HMIS-Charter-Approved-20210318.pdf#page=21" target="_blank" rel="noopener noreferrer">p.21</a>, <a href="https://archcoc.org/s/ARCH-CoC-HMIS-PP-Integrating-HMIS-Charter-Approved-20210318.pdf#page=44" target="_blank" rel="noopener noreferrer">p.44</a>)</li>
+          <li id="s11"><span class="source-id">S11</span><a href="https://archcoc.org/s/HMIS-Written-Intstructions-as-of-250528.pdf#page=3" target="_blank" rel="noopener noreferrer">ARCH HMIS Written Instructions, as of May 28, 2025</a> (key pages: <a href="https://archcoc.org/s/HMIS-Written-Intstructions-as-of-250528.pdf#page=1" target="_blank" rel="noopener noreferrer">p.1</a>, <a href="https://archcoc.org/s/HMIS-Written-Intstructions-as-of-250528.pdf#page=3" target="_blank" rel="noopener noreferrer">p.3</a>)</li>
+          <li id="s12"><span class="source-id">S12</span><a href="https://johnsoncitytn.civicweb.net/document/331753#page=26" target="_blank" rel="noopener noreferrer">Johnson City HCDAB packet (March 5, 2026), including CARE Resource Center and funding-transition materials</a> (key pages: <a href="https://johnsoncitytn.civicweb.net/document/331753#page=26" target="_blank" rel="noopener noreferrer">p.26</a>, <a href="https://johnsoncitytn.civicweb.net/document/331753#page=27" target="_blank" rel="noopener noreferrer">p.27</a>, <a href="https://johnsoncitytn.civicweb.net/document/331753#page=28" target="_blank" rel="noopener noreferrer">p.28</a>)</li>
+          <li id="s13"><span class="source-id">S13</span><a href="https://johnsoncitytn.civicweb.net/document/47654#page=27" target="_blank" rel="noopener noreferrer">Johnson City ESG FY22-23 contracts and compliance terms</a> (key page: <a href="https://johnsoncitytn.civicweb.net/document/47654#page=27" target="_blank" rel="noopener noreferrer">p.27</a>)</li>
+          <li id="s14"><span class="source-id">S14</span><a href="https://archcoc.org/s/ARCH-PIT-Count-Methodology-and-Plan-Approved-revised-for-2026.pdf#page=1" target="_blank" rel="noopener noreferrer">ARCH PIT Count Methodology and Plan (revised for 2026)</a> (key pages: <a href="https://archcoc.org/s/ARCH-PIT-Count-Methodology-and-Plan-Approved-revised-for-2026.pdf#page=1" target="_blank" rel="noopener noreferrer">p.1</a>, <a href="https://archcoc.org/s/ARCH-PIT-Count-Methodology-and-Plan-Approved-revised-for-2026.pdf#page=11" target="_blank" rel="noopener noreferrer">p.11</a>)</li>
+          <li id="s15"><span class="source-id">S15</span><a href="https://archcoc.org/s/ARCH-CoC-Coordinated-Entry-Referral-in-HMIS-with-Images.pdf#page=1" target="_blank" rel="noopener noreferrer">ARCH Coordinated Entry Referral in HMIS workflow guide</a> (key pages: <a href="https://archcoc.org/s/ARCH-CoC-Coordinated-Entry-Referral-in-HMIS-with-Images.pdf#page=1" target="_blank" rel="noopener noreferrer">p.1</a>, <a href="https://archcoc.org/s/ARCH-CoC-Coordinated-Entry-Referral-in-HMIS-with-Images.pdf#page=5" target="_blank" rel="noopener noreferrer">p.5</a>)</li>
+          <li id="s16"><span class="source-id">S16</span><a href="https://archcoc.org/s/Group-Functionality-Resource-Guide-March-2025.pdf#page=1" target="_blank" rel="noopener noreferrer">ARCH Group Functionality Resource Guide (March 2025)</a> (key page: <a href="https://archcoc.org/s/Group-Functionality-Resource-Guide-March-2025.pdf#page=1" target="_blank" rel="noopener noreferrer">p.1</a>)</li>
+          <li id="s17"><span class="source-id">S17</span><a href="https://archcoc.org/coc-meeting-documents" target="_blank" rel="noopener noreferrer">ARCH CoC meeting documents archive</a></li>
+          <li id="s18"><span class="source-id">S18</span><a href="https://archcoc.org/s/FY24-25-CoC-Gap-Analysis-Final-4lby.pdf#page=1" target="_blank" rel="noopener noreferrer">ARCH FY24-25 Continuum of Care Gap Analysis</a> (key page: <a href="https://archcoc.org/s/FY24-25-CoC-Gap-Analysis-Final-4lby.pdf#page=1" target="_blank" rel="noopener noreferrer">p.1</a>)</li>
+          <li id="s19"><span class="source-id">S19</span><a href="https://archcoc.org/s/ESG-CoC-Participation-Rubric.pdf#page=1" target="_blank" rel="noopener noreferrer">ARCH ESG CoC Participation Rubric</a> (key pages: <a href="https://archcoc.org/s/ESG-CoC-Participation-Rubric.pdf#page=1" target="_blank" rel="noopener noreferrer">p.1</a>, <a href="https://archcoc.org/s/ESG-CoC-Participation-Rubric.pdf#page=2" target="_blank" rel="noopener noreferrer">p.2</a>)</li>
+          <li id="s20"><span class="source-id">S20</span><a href="https://archcoc.org/s/CoC-Meeting-Agenda-20260210.pdf#page=1" target="_blank" rel="noopener noreferrer">ARCH CoC Meeting Agenda (February 10, 2026)</a> (key page: <a href="https://archcoc.org/s/CoC-Meeting-Agenda-20260210.pdf#page=1" target="_blank" rel="noopener noreferrer">p.1</a>)</li>
+          <li id="s21"><span class="source-id">S21</span><a href="https://archcoc.org/s/CoC-Meeting-Minutes-12092025-1.pdf#page=1" target="_blank" rel="noopener noreferrer">ARCH CoC Meeting Minutes (December cycle file)</a> (key pages: <a href="https://archcoc.org/s/CoC-Meeting-Minutes-12092025-1.pdf#page=1" target="_blank" rel="noopener noreferrer">p.1</a>, <a href="https://archcoc.org/s/CoC-Meeting-Minutes-12092025-1.pdf#page=4" target="_blank" rel="noopener noreferrer">p.4</a>)</li>
+          <li id="s22"><span class="source-id">S22</span><a href="https://archcoc.org/s/December-CoC-Meeting-Human-Trafficking-Training-Attendance-report-12-09-25.csv" target="_blank" rel="noopener noreferrer">ARCH CoC training attendance report (December 9, 2025)</a></li>
+          <li id="s23"><span class="source-id">S23</span><a href="https://www.arcgis.com/home/item.html?id=fe216dbc18b440f7b7261746513496af" target="_blank" rel="noopener noreferrer">Johnson City ArcGIS Homeless Outreach dashboard item</a></li>
+          <li id="s24"><span class="source-id">S24</span><a href="https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/HomelessOutreachMonthlyReport_public/FeatureServer/0/query?where=1%3D1&outFields=month,meetings,contacts&f=pjson" target="_blank" rel="noopener noreferrer">Johnson City ArcGIS HomelessOutreachMonthlyReport public query (month, meetings, contacts)</a></li>
+          <li id="s25"><span class="source-id">S25</span><a href="https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/Homeless_Outreach_public/FeatureServer/0/query?where=1%3D1&returnCountOnly=true&f=pjson" target="_blank" rel="noopener noreferrer">Johnson City ArcGIS Homeless Outreach public query (record count)</a></li>
+          <li id="s26"><span class="source-id">S26</span><a href="https://www.arcgis.com/home/item.html?id=ab96295198ff409ab0acc5d968c95b5a" target="_blank" rel="noopener noreferrer">Johnson City ArcGIS New Residential Development dashboard item</a></li>
+          <li id="s27"><span class="source-id">S27</span><a href="https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/Homeless_Outreach_public/FeatureServer/0?f=pjson" target="_blank" rel="noopener noreferrer">Johnson City ArcGIS Homeless Outreach public layer metadata (field schema)</a></li>
+          <li id="s28"><span class="source-id">S28</span><a href="https://services2.arcgis.com/sFeLdas1ukfB6i8T/arcgis/rest/services/HomelessOutreachMonthlyReport_public/FeatureServer/0?f=pjson" target="_blank" rel="noopener noreferrer">Johnson City ArcGIS HomelessOutreachMonthlyReport public layer metadata (field schema)</a></li>
+        </ol>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

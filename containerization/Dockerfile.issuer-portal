@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY issuer-portal-api-server.js ./issuer-portal-api-server.js
 COPY issuer-sites ./issuer-sites
+COPY issuer-policies ./issuer-policies
 
 ENV PORT=3000
 ENV SITE_DIR=doctors-office

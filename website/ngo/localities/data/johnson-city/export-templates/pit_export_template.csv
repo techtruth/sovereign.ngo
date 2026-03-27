@@ -1,0 +1,2 @@
+report_period,locality_code,total_sheltered,total_unsheltered,households_total,children_in_shelter,children_unsheltered,veterans_total,data_quality_notes,source_reference
+2026-02,JC,149,94,214,0,0,0,"Example row; replace with period values and QA notes","S9"

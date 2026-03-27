@@ -7,7 +7,8 @@ const verifierName = process.env.VERIFIER_NAME || 'Generic Verifier';
 const verifierDid = process.env.VERIFIER_DID || 'did:example:verifier:generic';
 const signingSecret = process.env.SIGNING_SECRET || 'local-dev-secret';
 const mockAlwaysAccept = (process.env.MOCK_ALWAYS_ACCEPT || 'true').toLowerCase() === 'true';
-const demoWebId = process.env.DEMO_WEBID || 'http://holder_sovereign:4000/profile/card#me';
+const sovereignInternalOrigin = process.env.SOVEREIGN_INTERNAL_ORIGIN || 'http://sovereign_gateway';
+const demoWebId = process.env.DEMO_WEBID || 'http://holder_sovereign:3000/profile/card#me';
 
 const sessions = new Map();
 
@@ -22,6 +23,17 @@ const schemas = {
       { name: 'W3C Verifiable Credentials Data Model v2.0', url: 'https://www.w3.org/TR/vc-data-model-2.0/' },
       { name: 'W3C vCard RDF Vocabulary', url: 'https://www.w3.org/TR/vcard-rdf/' },
       { name: 'JSON Schema Draft 2020-12', url: 'https://json-schema.org/draft/2020-12' }
+    ]
+  },
+  bogus_id: {
+    credentialType: 'DriversLicenseCredential',
+    requiredClaims: ['name', 'dob', 'address', 'eyes', 'hairColor', 'height', 'weight'],
+    schemaPath: '/schemas/bogus-id.json',
+    schemaName: 'Bogus ID Evidence Schema (Untrusted Demo)',
+    contextPath: '/contexts/bogus-id.jsonld',
+    standards: [
+      { name: 'Demo Untrusted Verifier', url: 'https://example.invalid/untrusted' },
+      { name: 'W3C Verifiable Credentials Data Model v2.0', url: 'https://www.w3.org/TR/vc-data-model-2.0/' }
     ]
   },
   utility_bill: {
@@ -71,6 +83,17 @@ const schemas = {
       { name: 'W3C vCard RDF Vocabulary', url: 'https://www.w3.org/TR/vcard-rdf/' },
       { name: 'JSON Schema Draft 2020-12', url: 'https://json-schema.org/draft/2020-12' }
     ]
+  },
+  business_registry: {
+    credentialType: 'BusinessRegistrationCredential',
+    requiredClaims: ['businessName', 'registrationNumber', 'jurisdiction', 'registrationStatus', 'issuedDate', 'expiryDate'],
+    schemaPath: '/schemas/business-registration.json',
+    schemaName: 'Business Registration Evidence Schema',
+    contextPath: '/contexts/business-registration.jsonld',
+    standards: [
+      { name: 'W3C Verifiable Credentials Data Model v2.0', url: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+      { name: 'JSON Schema Draft 2020-12', url: 'https://json-schema.org/draft/2020-12' }
+    ]
   }
 };
 
@@ -108,6 +131,25 @@ const buildVerifierSchemas = () => ({
       accountNumber: { type: 'string' }
     },
     required: schemas.utility_bill.requiredClaims
+  },
+  '/schemas/bogus-id.json': {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: `https://verifier.local${schemas.bogus_id.schemaPath}`,
+    title: schemas.bogus_id.schemaName,
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      name: { type: 'string' },
+      dob: { type: 'string', format: 'date' },
+      address: { type: 'string' },
+      eyes: { type: 'string' },
+      hairColor: { type: 'string' },
+      height: { type: 'string' },
+      weight: { type: 'string' },
+      licenseNumber: { type: 'string' },
+      state: { type: 'string' }
+    },
+    required: schemas.bogus_id.requiredClaims
   },
   '/schemas/passport.json': {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -155,6 +197,23 @@ const buildVerifierSchemas = () => ({
       identityBasisCredentialType: { type: 'string' }
     },
     required: schemas.self_presence.requiredClaims
+  },
+  '/schemas/business-registration.json': {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: `https://verifier.local${schemas.business_registry.schemaPath}`,
+    title: schemas.business_registry.schemaName,
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      businessName: { type: 'string' },
+      registrationNumber: { type: 'string' },
+      jurisdiction: { type: 'string' },
+      registrationStatus: { type: 'string' },
+      issuedDate: { type: 'string', format: 'date' },
+      expiryDate: { type: 'string', format: 'date' },
+      businessType: { type: 'string' }
+    },
+    required: schemas.business_registry.requiredClaims
   }
 });
 
@@ -199,6 +258,31 @@ const buildVerifierContexts = () => ({
       billingPeriod: 'schema:billingPeriod',
       provider: 'schema:provider',
       accountNumber: 'schema:accountId'
+    }
+  },
+  '/contexts/bogus-id.jsonld': {
+    '@context': {
+      '@version': 1.1,
+      id: '@id',
+      type: '@type',
+      vcard: 'http://www.w3.org/2006/vcard/ns#',
+      schema: 'https://schema.org/',
+      identity: 'https://sovereign.ngo/ns/identity#',
+      xsd: 'http://www.w3.org/2001/XMLSchema#',
+      name: 'vcard:fn',
+      birthDate: { '@id': 'vcard:bday', '@type': 'xsd:date' },
+      address: 'vcard:hasAddress',
+      eyes: 'schema:eyeColor',
+      hairColor: 'schema:hairColor',
+      height: 'schema:height',
+      weight: 'schema:weight',
+      licenseNumber: 'schema:identifier',
+      state: 'schema:addressRegion',
+      stateIdType: 'identity:stateIdType',
+      stateIdFlags: 'identity:stateIdFlags',
+      isOver18: 'identity:isOver18',
+      isOver21: 'identity:isOver21',
+      organDonor: 'identity:organDonor'
     }
   },
   '/contexts/passport.jsonld': {
@@ -249,6 +333,23 @@ const buildVerifierContexts = () => ({
       verificationMethod: 'identity:verificationMethod',
       identityBasisCredentialType: 'identity:identityBasisCredentialType'
     }
+  },
+  '/contexts/business-registration.jsonld': {
+    '@context': {
+      '@version': 1.1,
+      id: '@id',
+      type: '@type',
+      schema: 'https://schema.org/',
+      identity: 'https://sovereign.ngo/ns/identity#',
+      xsd: 'http://www.w3.org/2001/XMLSchema#',
+      businessName: 'schema:legalName',
+      registrationNumber: 'schema:identifier',
+      jurisdiction: 'identity:jurisdiction',
+      registrationStatus: 'identity:registrationStatus',
+      issuedDate: { '@id': 'identity:issuedDate', '@type': 'xsd:date' },
+      expiryDate: { '@id': 'identity:expiryDate', '@type': 'xsd:date' },
+      businessType: 'schema:additionalType'
+    }
   }
 });
 
@@ -256,19 +357,32 @@ const mockClaimsByProfile = {
   drivers_license: {
     name: 'Alex Sovereign',
     dob: '1990-01-15',
-    address: '742 Evergreen Terrace, Springfield, USA',
+    address: '100 Buffalo St, Northeast Tennessee 37604, USA',
     eyes: 'Brown',
     hairColor: 'Black',
     height: '5ft 11in',
     weight: '180 lb',
     licenseNumber: 'DL-000-123-456',
     stateIdType: 'drivers_license',
-    state: 'NC',
+    state: 'TN',
     organDonor: true
+  },
+  bogus_id: {
+    name: 'Pat Fakeperson',
+    dob: '1990-01-15',
+    address: '999 Fake Street, Faketown, USA',
+    eyes: 'Green',
+    hairColor: 'Purple',
+    height: '6ft 0in',
+    weight: '170 lb',
+    licenseNumber: 'FAKE-000-000',
+    stateIdType: 'drivers_license',
+    state: 'ZZ',
+    organDonor: false
   },
   utility_bill: {
     name: 'Alex Sovereign',
-    address: '742 Evergreen Terrace, Springfield, USA',
+    address: '100 Buffalo St, Northeast Tennessee 37604, USA',
     lastPaidDate: '2026-02-28',
     billingPeriod: '2026-02',
     provider: 'Mock Utility Electric Co.',
@@ -295,19 +409,120 @@ const mockClaimsByProfile = {
     presenceStatus: 'present',
     verifiedAt: new Date().toISOString(),
     verificationMethod: 'live-selfie-upload'
+  },
+  business_registry: {
+    businessName: 'State of Franklin Auto Repair',
+    registrationNumber: 'JC-BIZ-AR-2026-0012',
+    jurisdiction: 'Northeast Tennessee',
+    registrationStatus: 'active',
+    issuedDate: '2026-01-01',
+    expiryDate: '2027-01-01',
+    businessType: 'Automotive Repair'
   }
 };
 
 const submitRouteByProfile = {
   drivers_license: '/submit/drivers-license',
+  bogus_id: '/submit/bogus-id',
   utility_bill: '/submit/utility-bill',
   passport: '/submit/passport',
   self_presence: '/submit/self-presence',
-  itar: '/submit/itar'
+  itar: '/submit/itar',
+  business_registry: '/submit/business-registration'
+};
+
+const documentStandardsByProfile = {
+  drivers_license: {
+    authority: 'AAMVA',
+    regulationId: 'AAMVA-DLID-Card-Design-Standard',
+    version: '2020',
+    uri: 'https://www.aamva.org/',
+    subjectType: 'drivers_license'
+  },
+  bogus_id: {
+    authority: 'UNTRUSTED-DEMO',
+    regulationId: 'NONE-UNTRUSTED',
+    version: '0',
+    uri: 'https://example.invalid/untrusted',
+    subjectType: 'drivers_license'
+  },
+  passport: {
+    authority: 'ICAO',
+    regulationId: 'ICAO-Doc-9303',
+    version: '8',
+    uri: 'https://www.icao.int/publications/doc-series/pages/doc-9303.aspx',
+    subjectType: 'passport'
+  },
+  utility_bill: {
+    authority: 'CIQ-Address',
+    regulationId: 'OASIS-xAL',
+    version: '3.0',
+    uri: 'https://www.oasis-open.org/committees/ciq/',
+    subjectType: 'utility_bill'
+  },
+  itar: {
+    authority: 'US-DDTC',
+    regulationId: '22-CFR-120-130',
+    version: 'current',
+    uri: 'https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M',
+    subjectType: 'itar_compliance'
+  },
+  self_presence: {
+    authority: 'NIST',
+    regulationId: 'SP-800-63A',
+    version: '3',
+    uri: 'https://pages.nist.gov/800-63-3/sp800-63a.html',
+    subjectType: 'self_presence'
+  },
+  business_registry: {
+    authority: 'TENNESSEE-SOS',
+    regulationId: 'TN-Business-Registry',
+    version: 'current',
+    uri: 'https://tnbear.tn.gov/',
+    subjectType: 'business_registration'
+  }
 };
 
 const activeSchema = schemas[verifierProfile] || schemas.drivers_license;
 const activeSubmitRoute = submitRouteByProfile[verifierProfile] || '/verify';
+const activeDocumentStandard = documentStandardsByProfile[verifierProfile] || documentStandardsByProfile.drivers_license;
+
+const standardsProfileByVerifier = {
+  drivers_license: [
+    { standard: 'W3C VC Data Model v2.0', uri: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+    { standard: 'AAMVA DL/ID Card Design Standard', uri: 'https://www.aamva.org/' },
+    { standard: 'JSON Schema Draft 2020-12', uri: 'https://json-schema.org/draft/2020-12' }
+  ],
+  bogus_id: [
+    { standard: 'W3C VC Data Model v2.0', uri: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+    { standard: 'UNTRUSTED-DEMO', uri: 'https://example.invalid/untrusted' }
+  ],
+  utility_bill: [
+    { standard: 'W3C VC Data Model v2.0', uri: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+    { standard: 'OASIS CIQ xAL', uri: 'https://www.oasis-open.org/committees/ciq/' },
+    { standard: 'JSON Schema Draft 2020-12', uri: 'https://json-schema.org/draft/2020-12' }
+  ],
+  passport: [
+    { standard: 'W3C VC Data Model v2.0', uri: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+    { standard: 'ICAO Doc 9303', uri: 'https://www.icao.int/publications/doc-series/pages/doc-9303.aspx' },
+    { standard: 'JSON Schema Draft 2020-12', uri: 'https://json-schema.org/draft/2020-12' }
+  ],
+  itar: [
+    { standard: 'W3C VC Data Model v2.0', uri: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+    { standard: '22 CFR 120-130', uri: 'https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M' },
+    { standard: 'JSON Schema Draft 2020-12', uri: 'https://json-schema.org/draft/2020-12' }
+  ],
+  self_presence: [
+    { standard: 'W3C VC Data Model v2.0', uri: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+    { standard: 'NIST SP 800-63A', uri: 'https://pages.nist.gov/800-63-3/sp800-63a.html' },
+    { standard: 'JSON Schema Draft 2020-12', uri: 'https://json-schema.org/draft/2020-12' }
+  ],
+  business_registry: [
+    { standard: 'W3C VC Data Model v2.0', uri: 'https://www.w3.org/TR/vc-data-model-2.0/' },
+    { standard: 'Tennessee Business Registry', uri: 'https://tnbear.tn.gov/' },
+    { standard: 'JSON Schema Draft 2020-12', uri: 'https://json-schema.org/draft/2020-12' }
+  ]
+};
 
 const baseHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -392,10 +607,39 @@ const deriveSubjectDidFromWebId = (webId) => {
   }
 };
 
+const sanitizeIdPart = (value) => String(value || '').trim().replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toUpperCase();
+
+const buildStandardDocumentId = (profile, claims, issuanceDate) => {
+  if (profile === 'drivers_license') {
+    return `urn:aamva:dlid:${sanitizeIdPart(claims.state || 'na')}:${sanitizeIdPart(claims.licenseNumber || crypto.randomUUID())}`;
+  }
+  if (profile === 'bogus_id') {
+    return `urn:bogus:id:${sanitizeIdPart(claims.state || 'zz')}:${sanitizeIdPart(claims.licenseNumber || crypto.randomUUID())}`;
+  }
+  if (profile === 'passport') {
+    return `urn:icao:doc9303:passport:${sanitizeIdPart(claims.issuingCountry || 'na')}:${sanitizeIdPart(claims.passportNumber || crypto.randomUUID())}`;
+  }
+  if (profile === 'utility_bill') {
+    return `urn:oasis:xal:utility:${sanitizeIdPart(claims.provider || 'provider')}:${sanitizeIdPart(claims.accountNumber || crypto.randomUUID())}:${sanitizeIdPart(claims.billingPeriod || issuanceDate.slice(0, 10))}`;
+  }
+  if (profile === 'itar') {
+    return `urn:us:itar:22cfr120-130:${sanitizeIdPart(claims.company || 'company')}:${sanitizeIdPart(claims.screeningDate || issuanceDate.slice(0, 10))}`;
+  }
+  if (profile === 'self_presence') {
+    return `urn:nist:sp800-63a:self-presence:${sanitizeIdPart(issuanceDate.slice(0, 10))}:${sanitizeIdPart(crypto.randomUUID())}`;
+  }
+  if (profile === 'business_registry') {
+    return `urn:tn:bizreg:${sanitizeIdPart(claims.jurisdiction || 'tn')}:${sanitizeIdPart(claims.registrationNumber || crypto.randomUUID())}`;
+  }
+  return `urn:doc:${sanitizeIdPart(crypto.randomUUID())}`;
+};
+
 const buildCredential = ({ subjectDid, claims, evidenceSummary }) => {
   const issuanceDate = new Date().toISOString();
   const schemaUrl = `http://localhost:${port}${activeSchema.schemaPath}`;
   const contextUrl = `http://localhost:${port}${activeSchema.contextPath}`;
+  const documentId = buildStandardDocumentId(verifierProfile, claims, issuanceDate);
+  const standardsProfile = standardsProfileByVerifier[verifierProfile] || standardsProfileByVerifier.drivers_license;
 
   const vc = {
     '@context': ['https://www.w3.org/ns/credentials/v2', contextUrl],
@@ -406,17 +650,39 @@ const buildCredential = ({ subjectDid, claims, evidenceSummary }) => {
     validFrom: issuanceDate,
     credentialSchema: {
       id: schemaUrl,
-      type: 'JsonSchema'
+      type: 'JsonSchema',
+      standardReference: {
+        authority: activeDocumentStandard.authority,
+        regulationId: activeDocumentStandard.regulationId,
+        version: activeDocumentStandard.version,
+        uri: activeDocumentStandard.uri
+      }
     },
     credentialSubject: {
       id: subjectDid || 'did:example:subject:unknown',
+      documentId,
+      documentType: activeDocumentStandard.subjectType,
+      documentStandard: {
+        authority: activeDocumentStandard.authority,
+        regulationId: activeDocumentStandard.regulationId,
+        version: activeDocumentStandard.version
+      },
+      standardsProfile,
       ...claims
     },
     evidence: {
       type: 'DocumentSubmission',
       verifierProfile,
+      documentId,
+      standard: {
+        authority: activeDocumentStandard.authority,
+        regulationId: activeDocumentStandard.regulationId,
+        version: activeDocumentStandard.version,
+        uri: activeDocumentStandard.uri
+      },
       receivedAt: issuanceDate,
-      summary: evidenceSummary
+      summary: evidenceSummary,
+      standardsProfile
     }
   };
 
@@ -431,19 +697,46 @@ const buildCredential = ({ subjectDid, claims, evidenceSummary }) => {
   return vc;
 };
 
+const mapToInternalSovereignOrigin = (url) => {
+  const source = new URL(url);
+  if (source.hostname === 'localhost' || source.hostname === '127.0.0.1') {
+    const mapped = new URL(sovereignInternalOrigin);
+    return `${mapped.origin}${source.pathname}${source.search}${source.hash}`;
+  }
+  return source.toString();
+};
+
+const sanitizeFilePart = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+const listCredentialResourceUrls = async (containerUrl) => {
+  const response = await fetch(containerUrl, { headers: { Accept: 'text/turtle' } });
+  if (response.status === 404) return { ok: true, resources: [] };
+  const text = await response.text();
+  if (!response.ok) {
+    return { ok: false, reason: `credentials container read failed (${response.status})`, detail: text.slice(0, 400) };
+  }
+
+  const resources = [];
+  const containsRegex = /<([^>]+\.json)>/g;
+  let match;
+  while ((match = containsRegex.exec(text))) {
+    const resourceUrl = match[1];
+    const normalized = resourceUrl.startsWith('http://') || resourceUrl.startsWith('https://')
+      ? resourceUrl
+      : new URL(resourceUrl, containerUrl).toString();
+    if (!resources.includes(normalized)) resources.push(normalized);
+  }
+  return { ok: true, resources };
+};
+
 const resolveWalletFromWebId = async (webId) => {
   if (!webId) return { ok: false, reason: 'webId not provided' };
 
-  const docUrl = webId.split('#')[0];
   try {
-    const response = await fetch(docUrl);
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) return { ok: false, reason: `webid document request failed (${response.status})` };
-
-    const walletApi = payload.walletApi || payload?.service?.walletApi || payload?.profile?.walletApi;
-    if (!walletApi) return { ok: false, reason: 'walletApi not present in webid document' };
-
-    return { ok: true, walletApi, source: 'webid-document', webIdDoc: docUrl, profile: payload };
+    const webIdUrl = new URL(mapToInternalSovereignOrigin(webId));
+    const docUrl = webId.split('#')[0];
+    const credentialsContainer = `${webIdUrl.origin}/credentials/`;
+    return { ok: true, credentialsContainer, source: 'derived-from-webid', webIdDoc: docUrl };
   } catch (err) {
     return { ok: false, reason: err.message };
   }
@@ -457,31 +750,34 @@ const storeCredentialToSovereignWallet = async (webId, credential) => {
     return { ok: false, skipped: true, reason: `wallet discovery failed: ${resolution.reason}` };
   }
 
-  const walletUrl = resolution.walletApi;
+  const containerUrl = resolution.credentialsContainer;
+  const types = credentialTypes(credential).filter((t) => t !== 'VerifiableCredential');
+  const typePart = sanitizeFilePart(types[0] || verifierProfile || 'credential');
+  const resourceUrl = `${containerUrl}vc-${typePart}-${crypto.randomUUID()}.json`;
   const resolutionMeta = { method: resolution.source, webIdDoc: resolution.webIdDoc };
 
   try {
-    const response = await fetch(walletUrl, {
-      method: 'POST',
+    const writeResponse = await fetch(resourceUrl, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ webId, credential })
+      body: JSON.stringify(credential, null, 2)
     });
-    const payload = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
+    if (!writeResponse.ok) {
+      const payload = await writeResponse.text().catch(() => '');
       return {
         ok: false,
         skipped: false,
-        reason: payload.error || 'wallet storage failed',
-        walletUrl,
+        reason: `credential write failed (${writeResponse.status})`,
+        walletUrl: resourceUrl,
         resolution: resolutionMeta,
         detail: payload
       };
     }
 
-    return { ok: true, skipped: false, walletUrl, resolution: resolutionMeta, detail: payload };
+    return { ok: true, skipped: false, walletUrl: resourceUrl, resolution: resolutionMeta, detail: { count: 1 } };
   } catch (err) {
-    return { ok: false, skipped: false, reason: err.message, walletUrl, resolution: resolutionMeta };
+    return { ok: false, skipped: false, reason: err.message, walletUrl: resourceUrl, resolution: resolutionMeta };
   }
 };
 
@@ -492,16 +788,21 @@ const fetchSovereignCredentials = async (webId) => {
   }
 
   try {
-    const walletUrl = new URL(resolution.walletApi);
-    walletUrl.searchParams.set('webId', webId);
-
-    const response = await fetch(walletUrl.toString());
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      return { ok: false, reason: payload.error || `wallet read failed (${response.status})` };
+    const listed = await listCredentialResourceUrls(resolution.credentialsContainer);
+    if (!listed.ok) {
+      return { ok: false, reason: listed.reason, detail: listed.detail };
     }
 
-    const credentials = Array.isArray(payload.credentials) ? payload.credentials : [];
+    const credentials = [];
+    for (const resourceUrl of listed.resources) {
+      const response = await fetch(resourceUrl, { headers: { Accept: 'application/json' } });
+      if (!response.ok) continue;
+      const payload = await response.json().catch(() => null);
+      if (!payload || typeof payload !== 'object') continue;
+      const types = credentialTypes(payload);
+      if (types.length === 0) continue;
+      credentials.push(payload);
+    }
     return { ok: true, credentials };
   } catch (err) {
     return { ok: false, reason: err.message };
@@ -597,7 +898,7 @@ const issueCredentialFromBody = async (body, session) => {
     evidenceSummary
   });
 
-  const stateIdFlags = verifierProfile === 'drivers_license' ? buildStateIdFlags(claims) : undefined;
+  const stateIdFlags = verifierProfile === 'drivers_license' || verifierProfile === 'bogus_id' ? buildStateIdFlags(claims) : undefined;
   if (stateIdFlags) credential.credentialSubject.stateIdFlags = stateIdFlags;
 
   const consentToStore = body.consentToStore === true;
@@ -827,6 +1128,7 @@ const server = http.createServer(async (req, res) => {
       verifierProfile,
       verifierName,
       mockAlwaysAccept,
+      documentStandard: activeDocumentStandard,
       standards: activeSchema.standards,
       credentialType: activeSchema.credentialType,
       requiredClaims: activeSchema.requiredClaims,

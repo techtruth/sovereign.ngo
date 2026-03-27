@@ -1,18 +1,18 @@
-# Run Flow: Employee Season Ticket (National Metal Works -> Riverbend Sports Park)
+# Run Flow: Employee Season Ticket (National Metal Works -> Appalachian Sports Park)
 
 ## Scenario
 National Metal Works wants to provide a baseball season-ticket benefit to employees.
-Mr. Whang is an employee and wants to use that benefit at Riverbend Sports Park.
+Mr. Whang is an employee and wants to use that benefit at Appalachian Sports Park.
 
 ## Goal
 1. National Metal Works issues employee and benefit credentials.
 2. Mr. Whang stores them in Personal Identity and Record Storage.
-3. Riverbend verifies entitlement and issues gate-ready access proof.
+3. Appalachian verifies entitlement and issues gate-ready access proof.
 
 ## Actors
 1. Employee (Mr. Whang)
 2. National Metal Works (benefit issuer)
-3. Riverbend Sports Park (benefit redeemer / access issuer)
+3. Appalachian Sports Park (benefit redeemer / access issuer)
 4. Gate verifier (event entry check)
 
 ## Proposed credentials
@@ -21,11 +21,11 @@ Mr. Whang is an employee and wants to use that benefit at Riverbend Sports Park.
    2. `employeeId`: internal ID
    3. `department`: optional
 2. `SeasonTicketEntitlementCredential` (issuer: National Metal Works)
-   1. `benefitType`: riverbend-baseball-season
+   1. `benefitType`: tricities-baseball-season
    2. `seasonYear`: 2026
    3. `validFrom` / `validUntil`
    4. `ticketClass`: example `general` or `premium`
-3. `GameEntryCredential` (issuer: Riverbend Sports Park)
+3. `GameEntryCredential` (issuer: Appalachian Sports Park)
    1. `eventId`
    2. `entryWindow`
    3. `holderDid`
@@ -52,7 +52,7 @@ Mr. Whang is an employee and wants to use that benefit at Riverbend Sports Park.
 ### 3. National Metal Works issues season-ticket entitlement
 1. Still on National Metal Works page, select season-ticket entitlement action (new action to add).
 2. Include payload fields if needed:
-   1. `benefitType`: `riverbend-baseball-season`
+   1. `benefitType`: `tricities-baseball-season`
    2. `seasonYear`: `2026`
    3. `ticketClass`: `general`
 3. Run action.
@@ -62,27 +62,27 @@ Mr. Whang is an employee and wants to use that benefit at Riverbend Sports Park.
 1. Save both credentials to sovereign storage using the existing wallet write flow.
 2. Confirm credentials are visible in Personal Identity and Record Storage (`http://localhost:8180`).
 
-### 5. Redeem at Riverbend Sports Park
+### 5. Redeem at Appalachian Sports Park
 1. Open `http://localhost:8083`.
 2. Login with same WebID.
 3. Select action `Redeem Employee Season Ticket` (new action to add).
-4. Riverbend verifies:
+4. Appalachian verifies:
    1. issuer is National Metal Works
    2. entitlement is active and in valid date range
    3. ticket class and season values are acceptable
-5. If valid, Riverbend issues signed `GameEntryCredential`.
+5. If valid, Appalachian issues signed `GameEntryCredential`.
 
 ### 6. Gate check
-1. Present Riverbend-issued `GameEntryCredential`.
+1. Present Appalachian-issued `GameEntryCredential`.
 2. Gate verifier validates:
-   1. Riverbend signature/proof
+   1. Appalachian signature/proof
    2. entry window and event ID
    3. optional anti-replay check
 3. Entry granted.
 
 ## Trust model
 1. National Metal Works is source of employee-benefit eligibility.
-2. Riverbend is source of event-entry authority.
+2. Appalachian is source of event-entry authority.
 3. Sovereign storage is user-controlled sharing and consent layer.
 
 ## Suggested ability updates
@@ -94,9 +94,9 @@ Add:
 3. Optional revocation list endpoint for inactive employees.
 
 Remove / restrict:
-1. Issuing venue entry credentials directly (that should belong to Riverbend).
+1. Issuing venue entry credentials directly (that should belong to Appalachian).
 
-### Riverbend Sports Park
+### Appalachian Sports Park
 Add:
 1. `Redeem Employee Season Ticket` action.
 2. Verification logic for National Metal Works credentials.
@@ -122,6 +122,6 @@ Remove / restrict:
 1. Any access decision based only on unsigned payload data.
 
 ## Optional implementation ideas
-1. Add a dedicated Riverbend endpoint: `POST /api/redeem-season-ticket`.
+1. Add a dedicated Appalachian endpoint: `POST /api/redeem-season-ticket`.
 2. Add National Metal Works endpoint: `GET /api/benefits/revocations`.
 3. Add a QR payload format for gate scanning that references `GameEntryCredential`.

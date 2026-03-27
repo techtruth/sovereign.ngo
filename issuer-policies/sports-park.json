@@ -1,0 +1,43 @@
+{
+  "actionTemplates": {
+    "issue_membership_pass": {
+      "context": ["https://www.w3.org/ns/credentials/v2"],
+      "types": ["VerifiableCredential", "SportsMembershipPassCredential"],
+      "storage": "sovereign_with_log",
+      "subjectDefaults": {
+        "venue": "Boone Lake Sports Park"
+      },
+      "subjectFromPayload": {
+        "membershipTier": "membershipTier",
+        "seasonYear": "seasonYear"
+      },
+      "includePayload": true
+    },
+    "register_tournament_entry": {
+      "context": ["https://www.w3.org/ns/credentials/v2"],
+      "types": ["VerifiableCredential", "TournamentEntryCredential"],
+      "storage": "sovereign_with_log",
+      "subjectDefaults": {
+        "venue": "Boone Lake Sports Park"
+      },
+      "subjectFromPayload": {
+        "tournamentId": "tournamentId",
+        "division": "division"
+      },
+      "includePayload": true
+    },
+    "validate_coach_access": {
+      "context": ["https://www.w3.org/ns/credentials/v2"],
+      "types": ["VerifiableCredential", "CoachAccessCredential"],
+      "storage": "sovereign_with_log",
+      "subjectDefaults": {
+        "venue": "Boone Lake Sports Park"
+      },
+      "subjectFromPayload": {
+        "coachLevel": "coachLevel",
+        "accessZone": "accessZone"
+      },
+      "includePayload": true
+    }
+  }
+}

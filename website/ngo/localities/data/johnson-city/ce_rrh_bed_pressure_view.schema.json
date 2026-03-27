@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sovereign.ngo/schemas/ce-rrh-bed-pressure-view.schema.json",
+  "title": "De-identified CE to RRH Bed-Pressure View",
+  "type": "object",
+  "required": [
+    "snapshot_id",
+    "locality",
+    "period",
+    "bed_capacity",
+    "queue_counts",
+    "transitions",
+    "outcomes",
+    "data_quality"
+  ],
+  "properties": {
+    "snapshot_id": { "type": "string" },
+    "locality": { "type": "string" },
+    "period": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$" },
+        "to": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$" }
+      }
+    },
+    "bed_capacity": {
+      "type": "object",
+      "required": ["es_th_beds_available", "unsheltered_people", "estimated_shortfall"],
+      "properties": {
+        "es_th_beds_available": { "type": "integer", "minimum": 0 },
+        "unsheltered_people": { "type": "integer", "minimum": 0 },
+        "estimated_shortfall": { "type": "integer" }
+      }
+    },
+    "queue_counts": {
+      "type": "object",
+      "required": [
+        "coordinated_entry_active",
+        "pending_referral",
+        "referral_sent",
+        "referral_accepted",
+        "rrh_enrollment_pending",
+        "rrh_housed"
+      ],
+      "properties": {
+        "coordinated_entry_active": { "type": "integer", "minimum": 0 },
+        "pending_referral": { "type": "integer", "minimum": 0 },
+        "referral_sent": { "type": "integer", "minimum": 0 },
+        "referral_accepted": { "type": "integer", "minimum": 0 },
+        "rrh_enrollment_pending": { "type": "integer", "minimum": 0 },
+        "rrh_housed": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "transitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from_stage", "to_stage", "count"],
+        "properties": {
+          "from_stage": { "type": "string" },
+          "to_stage": { "type": "string" },
+          "count": { "type": "integer", "minimum": 0 },
+          "median_days": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "outcomes": {
+      "type": "object",
+      "required": ["rrh_placements", "returns_to_homelessness_12m"],
+      "properties": {
+        "rrh_placements": { "type": "integer", "minimum": 0 },
+        "returns_to_homelessness_12m": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "data_quality": {
+      "type": "object",
+      "required": ["source_ids", "last_refresh_utc", "deidentified"],
+      "properties": {
+        "source_ids": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^S[0-9]+$" }
+        },
+        "last_refresh_utc": { "type": "string", "format": "date-time" },
+        "deidentified": { "type": "boolean", "const": true },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

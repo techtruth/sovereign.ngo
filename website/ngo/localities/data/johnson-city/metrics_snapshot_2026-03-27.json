@@ -1,0 +1,98 @@
+{
+  "locality": "Johnson City",
+  "snapshot_date": "2026-03-27",
+  "metrics": {
+    "housing_pressure": {
+      "housing_gap_units": {
+        "2022": 4859,
+        "2025": 5557,
+        "source_ids": ["S1", "S7"]
+      },
+      "severe_renter_cost_burden_percent_2025": {
+        "value": 22.3,
+        "source_ids": ["S7"]
+      }
+    },
+    "pit_and_system_counts": {
+      "johnson_city_pit_2025": {
+        "total_people": 243,
+        "sheltered_people": 149,
+        "unsheltered_people": 94,
+        "households": 214,
+        "source_ids": ["S9"]
+      },
+      "coc_pit_trend_2019_to_2025": {
+        "total_people_2019": 405,
+        "total_people_2025": 943,
+        "unsheltered_2019": 149,
+        "unsheltered_2025": 538,
+        "source_ids": ["S8"]
+      }
+    },
+    "bed_pressure_and_referral_throughput": {
+      "unsheltered_people": {
+        "value": 538,
+        "source_ids": ["S18"]
+      },
+      "es_th_beds_available": {
+        "value": 407,
+        "source_ids": ["S18"]
+      },
+      "estimated_bed_shortfall": {
+        "value": 131,
+        "source_ids": ["S18"]
+      },
+      "coordinated_entry_enrolled": {
+        "value": 1737,
+        "source_ids": ["S18"]
+      },
+      "literally_homeless_clients_rapidly_rehoused": {
+        "value": 55,
+        "source_ids": ["S18"]
+      }
+    },
+    "outreach_aggregate_metrics": {
+      "monthly_coverage": {
+        "from": "2024-01",
+        "to": "2026-02",
+        "source_ids": ["S24"]
+      },
+      "monthly_contacts_range": {
+        "min": 129,
+        "max": 351,
+        "source_ids": ["S24"]
+      },
+      "monthly_meetings_range": {
+        "min": 6,
+        "max": 52,
+        "source_ids": ["S24"]
+      },
+      "year_totals": {
+        "2024": { "months": 12, "meetings": 381, "contacts": 2762 },
+        "2025": { "months": 12, "meetings": 288, "contacts": 2678 },
+        "2026": { "months": 2, "meetings": 32, "contacts": 497 }
+      },
+      "public_outreach_layer_record_count": {
+        "value": 232,
+        "source_ids": ["S25"]
+      }
+    },
+    "governance_and_operational_signals": {
+      "agenda_focus_topics_2026_02_10": {
+        "topics": [
+          "CoC renewal funding",
+          "HMIS participation fees",
+          "ESG allocation change",
+          "2026 PIT after-action discussion"
+        ],
+        "source_ids": ["S20"]
+      },
+      "training_participation_snapshot": {
+        "attended_participants": 59,
+        "meeting_duration": "2h 49m 38s",
+        "average_attendance_time": "1h 27m 13s",
+        "source_ids": ["S22"]
+      }
+    }
+  }
+}

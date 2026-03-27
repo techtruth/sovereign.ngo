@@ -2,7 +2,7 @@
 
 ## Scenario
 Mr. Whang works at Iron Mile Auto Repair and is injured on the job (possible broken hand).
-He visits Harbor Family Clinic, gets an X-ray, and then shares verifiable proof with his employer for insurance submission.
+He visits Nolichucky Family Clinic, gets an X-ray, and then shares verifiable proof with his employer for insurance submission.
 
 ## Goal
 Use the current stack so that:
@@ -12,7 +12,7 @@ Use the current stack so that:
 
 ## Actors
 1. Sovereign user (Mr. Whang)
-2. Harbor Family Clinic (doctor issuer)
+2. Nolichucky Family Clinic (doctor issuer)
 3. Iron Mile Auto Repair (employer issuer)
 4. Insurance reviewer (external verifier role)
 
@@ -26,7 +26,7 @@ Use the current stack so that:
 
 ## Runbook
 
-### 1. Login at Harbor Family Clinic
+### 1. Login at Nolichucky Family Clinic
 1. Open `http://localhost:8081`.
 2. In Issuer Console API, login with WebID.
 3. Confirm session DID appears as "Subject DID (from login)".
@@ -83,13 +83,13 @@ Use the current stack so that:
 3. Insurer correlates both for claim decision.
 
 ### Scenario C: Sports injury with shared care
-1. Riverbend issues incident participation record.
+1. Appalachian issues incident participation record.
 2. Harbor issues medical imaging link.
 3. Parent/guardian grants selective sharing to coach and insurer.
 
 ## Potential ability updates by entity
 
-### Harbor Family Clinic
+### Nolichucky Family Clinic
 Add:
 1. "Doctor Note" action that issues a signed doctor-note record link (doctor-owned).
 2. Record lifecycle states (`prelim`, `final`, `amended`).

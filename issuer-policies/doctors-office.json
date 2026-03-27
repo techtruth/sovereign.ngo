@@ -1,0 +1,32 @@
+{
+  "actionTemplates": {
+    "issue_visit_credential": {
+      "context": ["https://www.w3.org/ns/credentials/v2"],
+      "types": ["VerifiableCredential", "ClinicalVisitCredential"],
+      "storage": "sovereign",
+      "subjectDefaults": {
+        "recordClass": "clinical_visit",
+        "issuerDepartment": "front-desk"
+      },
+      "subjectFromPayload": {
+        "visitReason": "visitReason",
+        "appointmentRef": "appointmentRef"
+      },
+      "includePayload": true
+    },
+    "schedule_follow_up": {
+      "context": ["https://www.w3.org/ns/credentials/v2"],
+      "types": ["VerifiableCredential", "FollowUpScheduleCredential"],
+      "storage": "sovereign",
+      "subjectDefaults": {
+        "recordClass": "follow_up",
+        "issuerDepartment": "care-coordination"
+      },
+      "subjectFromPayload": {
+        "scheduledFor": "scheduledFor",
+        "location": "location"
+      },
+      "includePayload": true
+    }
+  }
+}

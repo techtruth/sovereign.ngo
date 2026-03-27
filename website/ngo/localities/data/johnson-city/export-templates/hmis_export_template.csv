@@ -1,0 +1,2 @@
+report_period,deidentified_client_key,ce_status,referral_status,referral_target_type,consent_share_status,identity_doc_status,days_from_ce_to_referral,days_from_referral_to_service_decision,outcome_status,source_reference
+2026-02,sha256:example001,active,accepted,rapid_rehousing,limited,pending,9,21,housed,"S10|S11|S15"

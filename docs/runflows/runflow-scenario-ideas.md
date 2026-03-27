@@ -3,11 +3,11 @@
 ## 1) Employee Season Ticket Redemption (Implemented)
 Summary:
 1. National Metal Works issues employee + season-ticket entitlement credentials.
-2. Riverbend redeems and issues game entry credential.
+2. Appalachian redeems and issues game entry credential.
 
 Entity ability updates:
 1. National Metal Works: `issue_employee_status`, `issue_season_ticket_entitlement`.
-2. Riverbend: `redeem_employee_season_ticket` with sovereign-wallet verification.
+2. Appalachian: `redeem_employee_season_ticket` with sovereign-wallet verification.
 
 ## 2) Work Injury Claim Package (Implemented core)
 Summary:
@@ -44,11 +44,11 @@ Remove/restrict:
 
 ## 5) Coach/Volunteer Child-Safety Gate
 Summary:
-1. Riverbend verifies identity + required safety credential.
-2. Riverbend issues coach sideline credential with schedule scope.
+1. Appalachian verifies identity + required safety credential.
+2. Appalachian issues coach sideline credential with schedule scope.
 
 Add:
-1. Riverbend action: `issue_coach_sideline_access`.
+1. Appalachian action: `issue_coach_sideline_access`.
 2. Verifier check: role + event schedule + expiry.
 
 Remove/restrict:

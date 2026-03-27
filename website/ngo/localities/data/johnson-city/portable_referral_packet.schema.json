@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sovereign.ngo/schemas/portable-referral-packet.schema.json",
+  "title": "Portable Referral Packet (De-identified)",
+  "type": "object",
+  "required": [
+    "packet_id",
+    "created_at",
+    "client_reference",
+    "identity_status",
+    "consent_status",
+    "verification_status",
+    "service_context",
+    "handoff",
+    "audit"
+  ],
+  "properties": {
+    "packet_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "client_reference": {
+      "type": "object",
+      "required": ["deidentified_key", "key_version"],
+      "properties": {
+        "deidentified_key": { "type": "string" },
+        "key_version": { "type": "string" },
+        "household_group_key": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "identity_status": {
+      "type": "object",
+      "required": ["state_id", "ssn_card", "birth_certificate"],
+      "properties": {
+        "state_id": { "type": "string", "enum": ["available", "pending", "missing", "not_applicable"] },
+        "ssn_card": { "type": "string", "enum": ["available", "pending", "missing", "not_applicable"] },
+        "birth_certificate": { "type": "string", "enum": ["available", "pending", "missing", "not_applicable"] },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "consent_status": {
+      "type": "object",
+      "required": ["share_status", "last_confirmed_at"],
+      "properties": {
+        "share_status": { "type": "string", "enum": ["sharing", "not_sharing", "revoked", "limited"] },
+        "consent_scope": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "last_confirmed_at": { "type": "string", "format": "date-time" },
+        "revocation_channel": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "verification_status": {
+      "type": "object",
+      "required": ["identity_verified", "provider_verified"],
+      "properties": {
+        "identity_verified": { "type": "boolean" },
+        "provider_verified": { "type": "boolean" },
+        "verification_method": { "type": "string" },
+        "verified_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "service_context": {
+      "type": "object",
+      "required": ["entry_channel", "priority_level"],
+      "properties": {
+        "entry_channel": { "type": "string" },
+        "priority_level": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "coordinated_entry_status": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "handoff": {
+      "type": "object",
+      "required": ["from_org", "to_org", "handoff_reason"],
+      "properties": {
+        "from_org": { "type": "string" },
+        "to_org": { "type": "string" },
+        "handoff_reason": { "type": "string" },
+        "requested_services": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "audit": {
+      "type": "object",
+      "required": ["source_system", "source_record_id", "exported_at", "deidentified"],
+      "properties": {
+        "source_system": { "type": "string" },
+        "source_record_id": { "type": "string" },
+        "exported_at": { "type": "string", "format": "date-time" },
+        "deidentified": { "type": "boolean", "const": true }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

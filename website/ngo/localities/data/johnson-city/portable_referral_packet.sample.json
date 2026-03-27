@@ -1,0 +1,51 @@
+{
+  "packet_id": "ref-jc-2026-03-0001",
+  "created_at": "2026-03-27T04:45:00Z",
+  "client_reference": {
+    "deidentified_key": "sha256:9d4f8c13f311f9fdb0f91131f7f7fb8e2b88f11fdc17b0aaf04b62dfe56f6b40",
+    "key_version": "v1",
+    "household_group_key": "hh-5f3c09"
+  },
+  "identity_status": {
+    "state_id": "pending",
+    "ssn_card": "missing",
+    "birth_certificate": "available",
+    "notes": "Document recovery requested; no clear copy attached to packet."
+  },
+  "consent_status": {
+    "share_status": "limited",
+    "consent_scope": [
+      "housing_navigation",
+      "benefits_screening",
+      "document_recovery"
+    ],
+    "last_confirmed_at": "2026-03-27T04:44:11Z",
+    "revocation_channel": "written_request"
+  },
+  "verification_status": {
+    "identity_verified": false,
+    "provider_verified": true,
+    "verification_method": "provider_attestation_plus_registry_check",
+    "verified_at": "2026-03-27T04:44:35Z"
+  },
+  "service_context": {
+    "entry_channel": "coordinated_entry",
+    "priority_level": "high",
+    "coordinated_entry_status": "active"
+  },
+  "handoff": {
+    "from_org": "provider_a",
+    "to_org": "provider_b",
+    "handoff_reason": "rapid_rehousing_assessment",
+    "requested_services": [
+      "housing_navigation",
+      "identity_recovery"
+    ]
+  },
+  "audit": {
+    "source_system": "hmis",
+    "source_record_id": "deid-001-a9",
+    "exported_at": "2026-03-27T04:45:00Z",
+    "deidentified": true
+  }
+}
