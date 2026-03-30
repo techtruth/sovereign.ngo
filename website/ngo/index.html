@@ -1618,6 +1618,7 @@
       const host = (window.location.hostname || "").toLowerCase();
       const orgSuffix = host.endsWith(".ong") ? "ONG" : "NGO";
       const orgDisplayName = "Sovereign " + orgSuffix;
+      const orgDomain = "sovereign." + orgSuffix.toLowerCase();
 
       function replaceOrgBrand(value) {
         return value.replaceAll("Sovereign ONG", orgDisplayName).replaceAll("Sovereign NGO", orgDisplayName);
@@ -1639,6 +1640,29 @@
       }
 
       applyDomainBranding(translations);
+
+      function applyDomainEmailBranding() {
+        document.querySelectorAll('a[href^="mailto:"]').forEach(function (link) {
+          const href = link.getAttribute("href") || "";
+          const match = href.match(/^mailto:([^?]+)/i);
+          if (!match) {
+            return;
+          }
+          const originalAddress = decodeURIComponent(match[1]);
+          const updatedAddress = originalAddress.replace(/@sovereign\.(ngo|ong)\b/i, "@" + orgDomain);
+          if (updatedAddress === originalAddress) {
+            return;
+          }
+
+          const queryIndex = href.indexOf("?");
+          const query = queryIndex >= 0 ? href.slice(queryIndex) : "";
+          link.setAttribute("href", "mailto:" + updatedAddress + query);
+
+          if (/@sovereign\.(ngo|ong)\b/i.test(link.textContent || "")) {
+            link.textContent = (link.textContent || "").replace(/@sovereign\.(ngo|ong)\b/gi, "@" + orgDomain);
+          }
+        });
+      }
 
       function readPath(obj, path) {
         return path.split(".").reduce((acc, segment) => (acc && acc[segment] !== undefined ? acc[segment] : undefined), obj);
@@ -1677,6 +1701,7 @@
         if (navSelect && navSelect.options.length > 0) {
           navSelect.options[0].textContent = orgDisplayName;
         }
+        applyDomainEmailBranding();
 
         languageSelect.value = locale;
         try {
