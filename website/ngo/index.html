@@ -1606,6 +1606,7 @@
       const metaDescription = document.querySelector('meta[name="description"]');
       const languageSelect = document.getElementById("language-select");
       const navSelect = document.getElementById("nav-select");
+      const brandLogo = document.querySelector(".brand-logo");
       const languageOptionLabels = {
         en: "English",
         es: "Español",
@@ -1614,6 +1615,30 @@
         pt: "Português",
         ro: "Română"
       };
+      const host = (window.location.hostname || "").toLowerCase();
+      const orgSuffix = host.endsWith(".ong") ? "ONG" : "NGO";
+      const orgDisplayName = "Sovereign " + orgSuffix;
+
+      function replaceOrgBrand(value) {
+        return value.replaceAll("Sovereign ONG", orgDisplayName).replaceAll("Sovereign NGO", orgDisplayName);
+      }
+
+      function applyDomainBranding(node) {
+        if (typeof node === "string") {
+          return replaceOrgBrand(node);
+        }
+        if (Array.isArray(node)) {
+          return node.map(applyDomainBranding);
+        }
+        if (node && typeof node === "object") {
+          Object.keys(node).forEach(function (key) {
+            node[key] = applyDomainBranding(node[key]);
+          });
+        }
+        return node;
+      }
+
+      applyDomainBranding(translations);
 
       function readPath(obj, path) {
         return path.split(".").reduce((acc, segment) => (acc && acc[segment] !== undefined ? acc[segment] : undefined), obj);
@@ -1645,6 +1670,13 @@
           const key = node.getAttribute("data-i18n-html");
           node.innerHTML = getString(locale, key);
         });
+
+        if (brandLogo) {
+          brandLogo.alt = orgDisplayName + " logo";
+        }
+        if (navSelect && navSelect.options.length > 0) {
+          navSelect.options[0].textContent = orgDisplayName;
+        }
 
         languageSelect.value = locale;
         try {
