@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign NGO | Provider Demo</title>
+  <meta name="description" content="Provider-facing demo for issuer and verifier flows.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="/demo.css">
+</head>
+<body>
+  <main class="container">
+    <div class="topbar">
+      <div>
+        <h1>Provider Demo View</h1>
+        <nav class="mode-nav" aria-label="Demo modes">
+          <a href="/individual/">Individual</a>
+          <a class="active" href="/provider/">Provider</a>
+          <a href="/combined/">Combined</a>
+        </nav>
+      </div>
+      <div>
+        <a href="https://sovereign.ngo/">Nonprofit Website</a>
+      </div>
+    </div>
+
+    <p class="note">Set provider-facing frame URLs, then refresh both frames.</p>
+    <p class="note">This front end can vary independently while still using the same API core. Provider-owned systems stay intact; Sovereign adds encrypted files for cross-sharing only.</p>
+
+    <section class="controls two-up" aria-label="Provider frame controls">
+      <label>
+        Issuer Portal
+        <input id="url1" value="http://localhost:8081/">
+      </label>
+      <label>
+        Verifier Portal
+        <input id="url2" value="http://localhost:8091/">
+      </label>
+      <button id="applyBtn" type="button">Refresh Frames</button>
+    </section>
+
+    <section class="grid two-up" aria-label="Embedded provider demos">
+      <article class="panel">
+        <h2>Issuer Portal</h2>
+        <iframe id="frame1" title="Issuer Portal Demo" src="http://localhost:8081/"></iframe>
+      </article>
+      <article class="panel">
+        <h2>Verifier Portal</h2>
+        <iframe id="frame2" title="Verifier Portal Demo" src="http://localhost:8091/"></iframe>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const apply = () => {
+      const pairs = [
+        ["url1", "frame1"],
+        ["url2", "frame2"]
+      ];
+      for (const [inputId, frameId] of pairs) {
+        const value = document.getElementById(inputId).value.trim();
+        document.getElementById(frameId).src = value || "about:blank";
+      }
+    };
+    document.getElementById("applyBtn").addEventListener("click", apply);
+  </script>
+</body>
+</html>

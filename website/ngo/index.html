@@ -13,7 +13,7 @@
       --surface-soft: #e7eff6;
       --ink: #1a2733;
       --ink-soft: #3a4b5b;
-      --brand: #0f5d8f;
+      --brand: #005EB8;
       --brand-soft: #d8e8f4;
       --line: #c7d5e2;
       --focus: #0b63a5;
@@ -71,13 +71,17 @@
     }
 
     .topbar {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 10px 16px;
       align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--line);
       padding-bottom: 0;
+    }
+
+    .topbar-nav {
+      grid-column: 1 / -1;
+      padding-bottom: 2px;
+      border-bottom: 1px solid var(--line);
     }
 
     .identity {
@@ -127,6 +131,63 @@
     nav a:hover {
       background: #eef5fb;
       border-color: var(--line);
+    }
+
+    .nav-compact-wrap {
+      display: none;
+    }
+
+    .nav-compact-card {
+      width: fit-content;
+      min-width: 0;
+      padding: 6px 8px;
+      background: linear-gradient(180deg, #f7fbff 0%, #edf4fb 100%);
+      border: 1px solid #bed0e2;
+      box-shadow: 0 8px 22px rgba(24, 61, 96, 0.12);
+      border-radius: 12px;
+    }
+
+    .nav-compact-wrap select {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: #1f4f6f;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.9rem;
+      padding: 6px 16px;
+    }
+
+    .language-cut-card {
+      position: static;
+      width: fit-content;
+      min-width: 0;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      background: linear-gradient(180deg, #f7fbff 0%, #edf4fb 100%);
+      border: 1px solid #bed0e2;
+      box-shadow: 0 8px 22px rgba(24, 61, 96, 0.12);
+      border-radius: 12px;
+      justify-self: end;
+    }
+
+    .language-switcher {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.9rem;
+      color: #33536a;
+    }
+
+    .language-switcher select {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: #1f4f6f;
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 5px 9px;
     }
 
     .hero {
@@ -283,6 +344,16 @@
       font-size: 0.9rem;
     }
 
+    footer a {
+      color: inherit;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer-compact-contact {
+      display: none;
+    }
+
     @media (max-width: 980px) {
       .hero,
       .dense-grid,
@@ -290,56 +361,242 @@
         grid-template-columns: 1fr;
       }
 
+      .topbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .language-cut-card {
+        position: static;
+        margin: 0 0 4px;
+        border-radius: 12px;
+        min-width: 0;
+        justify-self: end;
+      }
+
+      .topbar-nav {
+        grid-column: 1 / -1;
+      }
+
       .meta-list li {
         grid-template-columns: 1fr;
       }
     }
+
+    @media (max-width: 700px) {
+      .topbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+      }
+
+      .identity {
+        grid-column: 1 / -1;
+        grid-row: 1;
+      }
+
+      .language-cut-card {
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: end;
+        padding: 4px 6px;
+        margin-bottom: 0;
+        transform: translateY(-4px);
+      }
+
+      .topbar-nav {
+        grid-column: 1;
+        grid-row: 2;
+        justify-self: stretch;
+        width: 100%;
+        padding-bottom: 0;
+      }
+
+      .topbar-nav nav {
+        width: 100%;
+      }
+
+      .topbar-nav nav ul {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .hero {
+        margin-top: 0;
+      }
+
+      .org-snapshot {
+        display: none;
+      }
+
+      .topbar {
+        row-gap: 0;
+      }
+
+      .identity strong {
+        display: none;
+      }
+
+      .topbar-nav nav ul {
+        display: none;
+      }
+
+      .topbar-nav {
+        border-bottom: none;
+      }
+
+      .nav-compact-wrap {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .nav-compact-wrap select {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding-left: 8px;
+        padding-right: 14px;
+        text-align: left;
+        text-align-last: left;
+      }
+
+      .nav-compact-card {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: min(100%, 340px);
+        max-width: 100%;
+        transform: translateY(-4px);
+        padding-top: 4px;
+        padding-bottom: 4px;
+        padding-left: 4px;
+        padding-right: 4px;
+      }
+
+      .language-cut-card {
+        display: flex;
+        align-items: center;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        margin-top: 0;
+      }
+
+      body.tagline-wrapped .identity span {
+        display: none;
+      }
+
+      body.tagline-wrapped .topbar {
+        grid-template-columns: 94px minmax(0, 1fr) 72px;
+      }
+
+      body.tagline-wrapped .identity {
+        grid-column: 1;
+        grid-row: 2;
+        justify-self: center;
+        transform: none;
+        line-height: 0;
+        width: 100%;
+      }
+
+      body.tagline-wrapped .identity .brand-logo {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+      }
+
+      body.tagline-wrapped .topbar-nav {
+        grid-column: 2;
+        grid-row: 2;
+        min-width: 0;
+      }
+
+      body.tagline-wrapped .language-cut-card {
+        grid-column: 3;
+        grid-row: 2;
+        justify-self: end;
+        padding-left: 4px;
+        padding-right: 4px;
+      }
+
+      .footer-compact-contact {
+        display: inline;
+      }
+
+    }
   </style>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to main content</a>
+  <a class="skip-link" href="#main" data-i18n="ui.skip">Skip to main content</a>
   <header class="container">
     <div class="topbar">
       <div class="identity">
         <img class="brand-logo" src="logo.svg" alt="Sovereign NGO logo">
-        <strong>Sovereign NGO</strong>
-        <span>Privacy-compliant digital public infrastructure</span>
+        <strong data-i18n="brand.name">Sovereign NGO</strong>
+        <span data-i18n="brand.tagline">Privacy-compliant digital public infrastructure</span>
       </div>
-      <nav aria-label="Primary">
-        <ul>
-          <li><a href="#mission">Mission</a></li>
-          <li><a href="#impact">Impact</a></li>
-          <li><a href="#programs">Programs</a></li>
-          <li><a href="#involved">Get Involved</a></li>
-          <li><a href="#trust">Trust</a></li>
-        </ul>
-      </nav>
+      <div class="language-cut-card">
+        <div class="language-switcher">
+          <select id="language-select" aria-label="Language selector">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="it">Italiano</option>
+            <option value="pt">Português</option>
+            <option value="ro">Română</option>
+          </select>
+        </div>
+      </div>
+      <div class="topbar-nav">
+        <nav aria-label="Primary">
+          <ul>
+            <li><a href="#mission" data-i18n="nav.mission">Mission</a></li>
+            <li><a href="#impact" data-i18n="nav.impact">Impact</a></li>
+            <li><a href="#programs" data-i18n="nav.programs">Programs</a></li>
+            <li><a href="#involved" data-i18n="nav.involved">Get Involved</a></li>
+            <li><a href="#trust" data-i18n="nav.trust">Trust</a></li>
+          </ul>
+          <div class="nav-compact-wrap">
+            <div class="nav-compact-card">
+              <select id="nav-select" aria-label="Section navigation">
+                <option value="">Sovereign NGO</option>
+                <option value="#mission" data-i18n="nav.mission">Mission</option>
+                <option value="#impact" data-i18n="nav.impact">Impact</option>
+                <option value="#programs" data-i18n="nav.programs">Programs</option>
+                <option value="#involved" data-i18n="nav.involved">Get Involved</option>
+                <option value="#trust" data-i18n="nav.trust">Trust</option>
+              </select>
+            </div>
+          </div>
+        </nav>
+      </div>
     </div>
     <div class="hero" id="mission">
       <article class="panel">
-        <h1>Digital dignity for people navigating essential services</h1>
-        <p>Sovereign NGO builds privacy-compliant identity and record tools so people can move freely through assistance programs, healthcare, and local services with fewer data barriers and greater personal confidence.</p>
-        <p>Our work responds to real service-system challenges across communities: repeated intake, lost documents, inconsistent handoffs, and strict confidentiality obligations that can slow support when systems are fragmented.</p>
-        <p>We partner with community providers, public-interest teams, and local service networks to make access pathways clearer, safer, and more accountable while protecting personal data and human dignity.</p>
+        <h1 data-i18n="hero.title">Digital dignity for people navigating essential services</h1>
+        <p data-i18n="hero.p1">Sovereign NGO builds privacy-compliant identity and record tools so people can move freely through assistance programs, healthcare, and local services with fewer data barriers and greater personal confidence.</p>
+        <p data-i18n="hero.p2">Our work responds to real service-system challenges across communities: repeated intake, lost documents, inconsistent handoffs, and strict confidentiality obligations that can slow support when systems are fragmented.</p>
+        <p data-i18n="hero.p3">We partner with community providers, public-interest teams, and local service networks to make access pathways clearer, safer, and more accountable while protecting personal data and human dignity.</p>
         <div class="actions">
-          <a href="../demo/index.html">Explore the Demo</a>
-          <a class="secondary" href="#involved">Support the Work</a>
-          <a class="secondary" href="policies.html">Read Our Policies</a>
+          <a href="https://demo.sovereign.ngo/combined/" data-i18n="hero.ctaDemo">Explore the Demo</a>
+          <a class="secondary" href="#involved" data-i18n="hero.ctaSupport">Support the Work</a>
+          <a class="secondary" href="policies.html" data-i18n="hero.ctaPolicies">Read Our Policies</a>
         </div>
       </article>
-      <aside class="panel" aria-label="Organization details">
-        <h2>Organization Snapshot</h2>
+      <aside class="panel org-snapshot" aria-label="Organization details">
+        <h2 data-i18n="snapshot.title">Organization Snapshot</h2>
         <ul class="meta-list">
-          <li><strong>Legal Name</strong><span>Sovereign Technology Initiative</span></li>
-          <li><strong>Operating Name</strong><span>Sovereign NGO</span></li>
-          <li><strong>Focus Area</strong><span>Identity and service access infrastructure</span></li>
-          <li><strong>Model</strong><span>Mission-first nonprofit; revenue is reinvested in programs</span></li>
-          <li><strong>Organization Type</strong><span>Nonprofit public-benefit corporation</span></li>
+          <li><strong data-i18n="snapshot.legalNameLabel">Legal Name</strong><span data-i18n="snapshot.legalNameValue">Sovereign Technology Initiative</span></li>
+          <li><strong data-i18n="snapshot.operatingNameLabel">Operating Name</strong><span data-i18n="snapshot.operatingNameValue">Sovereign NGO</span></li>
+          <li><strong data-i18n="snapshot.focusLabel">Focus Area</strong><span data-i18n="snapshot.focusValue">Identity and service access infrastructure</span></li>
+          <li><strong data-i18n="snapshot.modelLabel">Model</strong><span data-i18n="snapshot.modelValue">Mission-first nonprofit; revenue is reinvested in programs</span></li>
+          <li><strong data-i18n="snapshot.typeLabel">Organization Type</strong><span data-i18n="snapshot.typeValue">Nonprofit public-benefit corporation</span></li>
         </ul>
         <div class="quick-contacts" aria-label="Primary contacts">
-          <p><strong>General Contact:</strong> <a href="mailto:hello@sovereign.ngo">hello@sovereign.ngo</a></p>
-          <p><strong>Partner Contact:</strong> <a href="mailto:partner@sovereign.ngo">partner@sovereign.ngo</a></p>
-          <p><strong>Security Contact:</strong> <a href="mailto:security@sovereign.ngo">security@sovereign.ngo</a></p>
+          <p><strong data-i18n="snapshot.generalContactLabel">General Contact:</strong> <a href="mailto:hello@sovereign.ngo">hello@sovereign.ngo</a></p>
+          <p><strong data-i18n="snapshot.partnerContactLabel">Partner Contact:</strong> <a href="mailto:partner@sovereign.ngo">partner@sovereign.ngo</a></p>
+          <p><strong data-i18n="snapshot.securityContactLabel">Security Contact:</strong> <a href="mailto:security@sovereign.ngo">security@sovereign.ngo</a></p>
         </div>
       </aside>
     </div>
@@ -347,128 +604,1139 @@
 
   <main id="main" class="container" tabindex="-1">
     <section id="impact">
-      <h2>Community Impact</h2>
+      <h2 data-i18n="impact.title">Community Impact</h2>
       <div class="dense-grid">
         <article class="card">
-          <h3>Faster Service Decisions</h3>
-          <p>We reduce delays from first contact to service approval by eliminating repeat intakes, missing document issues, and other document-based delays.</p>
+          <h3 data-i18n="impact.card1.title">Faster Service Decisions</h3>
+          <p data-i18n="impact.card1.body">We reduce delays from first contact to service approval by eliminating repeat intakes, missing document issues, and other document-based delays.</p>
         </article>
         <article class="card">
-          <h3>Privacy-Compliant Coordination</h3>
-          <p>Consent-based, revocable sharing keeps each person in control of what data is shared and with which entities, while helping providers coordinate support without exposing more personal data than necessary.</p>
+          <h3 data-i18n="impact.card2.title">Privacy-Compliant Coordination</h3>
+          <p data-i18n="impact.card2.body">Consent-based, revocable sharing keeps each person in control of what data is shared and with which entities, while helping providers coordinate support without exposing more personal data than necessary.</p>
         </article>
         <article class="card">
-          <h3>Transparent Service Accountability</h3>
-          <p>We publish de-identified outcome metrics to keep programs accountable without exposing sensitive personal data.</p>
+          <h3 data-i18n="impact.card3.title">Transparent Service Accountability</h3>
+          <p data-i18n="impact.card3.body">We publish de-identified outcome metrics to keep programs accountable without exposing sensitive personal data.</p>
         </article>
       </div>
     </section>
 
     <section id="programs">
-      <h2>Programs and Coordination</h2>
+      <h2 data-i18n="programs.title">Programs and Coordination</h2>
       <div class="dense-grid">
         <article class="card">
-          <h3>Consent and Service Coordination</h3>
+          <h3 data-i18n="programs.card1.title">Consent and Service Coordination</h3>
           <ul>
-            <li>Help people understand what information is being requested, why it is needed, and who can see it.</li>
-            <li>Give people simple self-service controls to approve, update, or revoke sharing decisions.</li>
-            <li>Support informed participation through our public demo hub at <a href="../demo/index.html">website demo</a>.</li>
-            <li>Improve communication between service organizations so people do not have to repeat their story at every step, and can move through services with more confidence and less stress.</li>
+            <li data-i18n="programs.card1.item1">Help people understand what information is being requested, why it is needed, and who can see it.</li>
+            <li data-i18n="programs.card1.item2">Give people simple self-service controls to approve, update, or revoke sharing decisions.</li>
+            <li data-i18n-html="programs.card1.item3">Support informed participation through our public demo hub at <a href="https://demo.sovereign.ngo/combined/">website demo</a>.</li>
+            <li data-i18n="programs.card1.item4">Improve communication between service organizations so people do not have to repeat their story at every step, and can move through services with more confidence and less stress.</li>
           </ul>
         </article>
         <article class="card">
-          <h3>Community Provider Onboarding</h3>
+          <h3 data-i18n="programs.card2.title">Community Provider Onboarding</h3>
           <ul>
-            <li>Community outreach with providers to map current workflows and implementation needs.</li>
-            <li>Implementation that keeps existing operational data untouched, using bidirectional read and write connections with current systems.</li>
-            <li>Hands-on onboarding to get provider systems online without disrupting daily operations.</li>
-            <li>We mirror existing transactions first, validate results, and then gradually shift execution to the new system as success is proven.</li>
+            <li data-i18n="programs.card2.item1">Community outreach with providers to map current workflows and implementation needs.</li>
+            <li data-i18n="programs.card2.item2">Implementation that keeps existing operational data untouched, using bidirectional read and write connections with current systems.</li>
+            <li data-i18n="programs.card2.item3">Hands-on onboarding to get provider systems online without disrupting daily operations.</li>
+            <li data-i18n="programs.card2.item4">We mirror existing transactions first, validate results, and then gradually shift execution to the new system as success is proven.</li>
           </ul>
         </article>
         <article class="card">
-          <h3>Document and Entity Verification</h3>
+          <h3 data-i18n="programs.card3.title">Document and Entity Verification</h3>
           <ul>
-            <li>Set up verification for government-issued identity documents and business-registration records.</li>
-            <li>Configure checks against trusted authorities and registries, including business-entity matching.</li>
-            <li>Support workflows where a partner may issue records, verify records, or do both.</li>
-            <li>Establish shared verification standards so outcomes remain consistent, auditable, and trusted across organizations.</li>
+            <li data-i18n="programs.card3.item1">Set up verification for government-issued identity documents and business-registration records.</li>
+            <li data-i18n="programs.card3.item2">Configure checks against trusted authorities and registries, including business-entity matching.</li>
+            <li data-i18n="programs.card3.item3">Support workflows where a partner may issue records, verify records, or do both.</li>
+            <li data-i18n="programs.card3.item4">Establish shared verification standards so outcomes remain consistent, auditable, and trusted across organizations.</li>
           </ul>
         </article>
       </div>
     </section>
 
     <section id="involved">
-      <h2>Get Involved</h2>
+      <h2 data-i18n="involved.title">Get Involved</h2>
       <div class="twocol">
         <article class="card">
-          <h3>For Community Partners</h3>
+          <h3 data-i18n="involved.card1.title">For Community Partners</h3>
           <ul>
-            <li>Host a local pilot with your clinic or assistance network.</li>
-            <li>Co-design workflows for your real service environment.</li>
-            <li>Request technical onboarding and staff training.</li>
+            <li data-i18n="involved.card1.item1">Host a local pilot with your clinic or assistance network.</li>
+            <li data-i18n="involved.card1.item2">Co-design workflows for your real service environment.</li>
+            <li data-i18n="involved.card1.item3">Request technical onboarding and staff training.</li>
           </ul>
         </article>
         <article class="card">
-          <h3>For Supporters</h3>
+          <h3 data-i18n="involved.card2.title">For Supporters</h3>
           <ul>
-            <li>Support operations and implementation through donations.</li>
-            <li>Connect us with local organizations that need better tools.</li>
-            <li>Contribute open-source code to strengthen community-facing tools.</li>
+            <li data-i18n="involved.card2.item1">Support operations and implementation through donations.</li>
+            <li data-i18n="involved.card2.item2">Connect us with local organizations that need better tools.</li>
+            <li data-i18n="involved.card2.item3">Contribute open-source code to strengthen community-facing tools.</li>
           </ul>
         </article>
       </div>
     </section>
 
     <section id="trust">
-      <h2>Governance and Public Accountability</h2>
+      <h2 data-i18n="trust.title">Governance and Public Accountability</h2>
       <div class="twocol">
         <article class="card">
-          <h3>Data Stewardship</h3>
+          <h3 data-i18n="trust.card1.title">Data Stewardship</h3>
           <ul>
-            <li>We design programs around minimum necessary data collection.</li>
-            <li>We provide clear, plain-language explanations of how information is used and shared.</li>
-            <li>We do not sell personal information.</li>
-            <li>We provide channels for access, correction, and deletion requests.</li>
+            <li data-i18n="trust.card1.item1">We design programs around minimum necessary data collection.</li>
+            <li data-i18n="trust.card1.item2">We provide clear, plain-language explanations of how information is used and shared.</li>
+            <li data-i18n="trust.card1.item3">We do not sell personal information.</li>
+            <li data-i18n="trust.card1.item4">We provide channels for access, correction, and deletion requests.</li>
           </ul>
         </article>
         <article class="card">
-          <h3>Operational Integrity</h3>
+          <h3 data-i18n="trust.card2.title">Operational Integrity</h3>
           <ul>
-            <li>We maintain internal controls to protect sensitive information and mission operations.</li>
-            <li>We train staff and partners on privacy, safeguarding, and responsible data handling.</li>
-            <li>We maintain incident response and remediation procedures.</li>
-            <li>We review and strengthen our practices through ongoing governance oversight.</li>
+            <li data-i18n="trust.card2.item1">We maintain internal controls to protect sensitive information and mission operations.</li>
+            <li data-i18n="trust.card2.item2">We train staff and partners on privacy, safeguarding, and responsible data handling.</li>
+            <li data-i18n="trust.card2.item3">We maintain incident response and remediation procedures.</li>
+            <li data-i18n="trust.card2.item4">We review and strengthen our practices through ongoing governance oversight.</li>
           </ul>
         </article>
         <article class="card">
-          <h3>Safeguarding and Accountability</h3>
+          <h3 data-i18n="trust.card3.title">Safeguarding and Accountability</h3>
           <ul>
-            <li>Non-discrimination and anti-retaliation commitments are considered at every level of our operations.</li>
-            <li>Our governance and decision-making remain independent of direct government and political-party control.</li>
-            <li>Participation in our initiatives and collaborations is voluntary.</li>
-            <li>We operate lawfully and with integrity in the communities we serve.</li>
-            <li>We maintain channels for harmful-use and abuse reporting.</li>
-            <li>High-impact policy changes are escalated through as-needed governance review and documented processes.</li>
+            <li data-i18n="trust.card3.item1">Non-discrimination and anti-retaliation commitments are considered at every level of our operations.</li>
+            <li data-i18n="trust.card3.item2">Our governance and decision-making remain independent of direct government and political-party control.</li>
+            <li data-i18n="trust.card3.item3">Participation in our initiatives and collaborations is voluntary.</li>
+            <li data-i18n="trust.card3.item4">We operate lawfully and with integrity in the communities we serve.</li>
+            <li data-i18n="trust.card3.item5">We maintain channels for harmful-use and abuse reporting.</li>
+            <li data-i18n="trust.card3.item6">High-impact policy changes are escalated through as-needed governance review and documented processes.</li>
           </ul>
         </article>
         <article class="card">
-          <h3>Public Documentation</h3>
+          <h3 data-i18n="trust.card4.title">Public Documentation</h3>
           <ul>
-            <li><a href="governance.html">Governance Statement</a></li>
-            <li><a href="conflict-of-interest-policy.html">Conflict of Interest Policy</a></li>
-            <li><a href="charitable-solicitations-compliance.html">Charitable Solicitations Compliance</a></li>
-            <li><a href="privacy-notice.html">Privacy Notice</a></li>
-            <li><a href="safeguarding-standard.html">Safeguarding Standard</a></li>
-            <li><a href="transparency-reports.html">Transparency Reports</a></li>
-            <li><a href="ngo-eligibility.html">NGO Eligibility Statement (.NGO/.ONG)</a></li>
+            <li><a href="governance.html" data-i18n="trust.card4.link1">Governance Statement</a></li>
+            <li><a href="conflict-of-interest-policy.html" data-i18n="trust.card4.link2">Conflict of Interest Policy</a></li>
+            <li><a href="charitable-solicitations-compliance.html" data-i18n="trust.card4.link3">Charitable Solicitations Compliance</a></li>
+            <li><a href="privacy-notice.html" data-i18n="trust.card4.link4">Privacy Notice</a></li>
+            <li><a href="safeguarding-standard.html" data-i18n="trust.card4.link5">Safeguarding Standard</a></li>
+            <li><a href="transparency-reports.html" data-i18n="trust.card4.link6">Transparency Reports</a></li>
+            <li><a href="ngo-eligibility.html" data-i18n="trust.card4.link7">NGO Eligibility Statement (.NGO/.ONG)</a></li>
           </ul>
         </article>
       </div>
     </section>
 
     <footer>
-      <p><strong>Sovereign NGO</strong> | Built for dignity, access, and verifiable trust. | Last updated: March 26, 2026</p>
+      <p><strong data-i18n="footer.name">Sovereign NGO</strong> <span data-i18n="footer.copy">| Built for dignity, access, and verifiable trust. | Last updated: March 26, 2026</span><span class="footer-compact-contact"> | <a href="mailto:hello@soverign.ngo">hello@soverign.ngo</a></span></p>
     </footer>
   </main>
+  <script>
+    (function () {
+      const translations = {
+        en: {
+          meta: {
+            title: "Sovereign NGO | Privacy-Compliant Public Infrastructure",
+            description: "Sovereign NGO builds privacy-compliant digital public infrastructure for identity, records, and community service access."
+          },
+          ui: {
+            skip: "Skip to main content",
+            languageLabel: "Language",
+            navPlaceholder: "Jump to section"
+          },
+          brand: {
+            name: "Sovereign NGO",
+            tagline: "Privacy-compliant digital public infrastructure"
+          },
+          nav: {
+            mission: "Mission",
+            impact: "Impact",
+            programs: "Programs",
+            involved: "Get Involved",
+            trust: "Trust"
+          },
+          hero: {
+            title: "Digital dignity for people navigating essential services",
+            p1: "Sovereign NGO builds privacy-compliant identity and record tools so people can move freely through assistance programs, healthcare, and local services with fewer data barriers and greater personal confidence.",
+            p2: "Our work responds to real service-system challenges across communities: repeated intake, lost documents, inconsistent handoffs, and strict confidentiality obligations that can slow support when systems are fragmented.",
+            p3: "We partner with community providers, public-interest teams, and local service networks to make access pathways clearer, safer, and more accountable while protecting personal data and human dignity.",
+            ctaDemo: "Explore the Demo",
+            ctaSupport: "Support the Work",
+            ctaPolicies: "Read Our Policies"
+          },
+          snapshot: {
+            title: "Organization Snapshot",
+            legalNameLabel: "Legal Name",
+            legalNameValue: "Sovereign Technology Initiative",
+            operatingNameLabel: "Operating Name",
+            operatingNameValue: "Sovereign NGO",
+            focusLabel: "Focus Area",
+            focusValue: "Identity and service access infrastructure",
+            modelLabel: "Model",
+            modelValue: "Mission-first nonprofit; revenue is reinvested in programs",
+            typeLabel: "Organization Type",
+            typeValue: "Nonprofit public-benefit corporation",
+            generalContactLabel: "General Contact:",
+            partnerContactLabel: "Partner Contact:",
+            securityContactLabel: "Security Contact:"
+          },
+          impact: {
+            title: "Community Impact",
+            card1: {
+              title: "Faster Service Decisions",
+              body: "We reduce delays from first contact to service approval by eliminating repeat intakes, missing document issues, and other document-based delays."
+            },
+            card2: {
+              title: "Privacy-Compliant Coordination",
+              body: "Consent-based, revocable sharing keeps each person in control of what data is shared and with which entities, while helping providers coordinate support without exposing more personal data than necessary."
+            },
+            card3: {
+              title: "Transparent Service Accountability",
+              body: "We publish de-identified outcome metrics to keep programs accountable without exposing sensitive personal data."
+            }
+          },
+          programs: {
+            title: "Programs and Coordination",
+            card1: {
+              title: "Consent and Service Coordination",
+              item1: "Help people understand what information is being requested, why it is needed, and who can see it.",
+              item2: "Give people simple self-service controls to approve, update, or revoke sharing decisions.",
+              item3: "Support informed participation through our public demo hub at <a href=\"https://demo.sovereign.ngo/combined/\">website demo</a>.",
+              item4: "Improve communication between service organizations so people do not have to repeat their story at every step, and can move through services with more confidence and less stress."
+            },
+            card2: {
+              title: "Community Provider Onboarding",
+              item1: "Community outreach with providers to map current workflows and implementation needs.",
+              item2: "Implementation that keeps existing operational data untouched, using bidirectional read and write connections with current systems.",
+              item3: "Hands-on onboarding to get provider systems online without disrupting daily operations.",
+              item4: "We mirror existing transactions first, validate results, and then gradually shift execution to the new system as success is proven."
+            },
+            card3: {
+              title: "Document and Entity Verification",
+              item1: "Set up verification for government-issued identity documents and business-registration records.",
+              item2: "Configure checks against trusted authorities and registries, including business-entity matching.",
+              item3: "Support workflows where a partner may issue records, verify records, or do both.",
+              item4: "Establish shared verification standards so outcomes remain consistent, auditable, and trusted across organizations."
+            }
+          },
+          involved: {
+            title: "Get Involved",
+            card1: {
+              title: "For Community Partners",
+              item1: "Host a local pilot with your clinic or assistance network.",
+              item2: "Co-design workflows for your real service environment.",
+              item3: "Request technical onboarding and staff training."
+            },
+            card2: {
+              title: "For Supporters",
+              item1: "Support operations and implementation through donations.",
+              item2: "Connect us with local organizations that need better tools.",
+              item3: "Contribute open-source code to strengthen community-facing tools."
+            }
+          },
+          trust: {
+            title: "Governance and Public Accountability",
+            card1: {
+              title: "Data Stewardship",
+              item1: "We design programs around minimum necessary data collection.",
+              item2: "We provide clear, plain-language explanations of how information is used and shared.",
+              item3: "We do not sell personal information.",
+              item4: "We provide channels for access, correction, and deletion requests."
+            },
+            card2: {
+              title: "Operational Integrity",
+              item1: "We maintain internal controls to protect sensitive information and mission operations.",
+              item2: "We train staff and partners on privacy, safeguarding, and responsible data handling.",
+              item3: "We maintain incident response and remediation procedures.",
+              item4: "We review and strengthen our practices through ongoing governance oversight."
+            },
+            card3: {
+              title: "Safeguarding and Accountability",
+              item1: "Non-discrimination and anti-retaliation commitments are considered at every level of our operations.",
+              item2: "Our governance and decision-making remain independent of direct government and political-party control.",
+              item3: "Participation in our initiatives and collaborations is voluntary.",
+              item4: "We operate lawfully and with integrity in the communities we serve.",
+              item5: "We maintain channels for harmful-use and abuse reporting.",
+              item6: "High-impact policy changes are escalated through as-needed governance review and documented processes."
+            },
+            card4: {
+              title: "Public Documentation",
+              link1: "Governance Statement",
+              link2: "Conflict of Interest Policy",
+              link3: "Charitable Solicitations Compliance",
+              link4: "Privacy Notice",
+              link5: "Safeguarding Standard",
+              link6: "Transparency Reports",
+              link7: "NGO Eligibility Statement (.NGO/.ONG)"
+            }
+          },
+          footer: {
+            name: "Sovereign NGO",
+            copy: "| Built for dignity, access, and verifiable trust. | Last updated: March 26, 2026"
+          }
+        },
+        es: {
+          meta: {
+            title: "Sovereign ONG | Infraestructura publica compatible con la privacidad",
+            description: "Sovereign ONG crea infraestructura publica digital compatible con la privacidad para identidad, registros y acceso a servicios comunitarios."
+          },
+          ui: {
+            skip: "Saltar al contenido principal",
+            languageLabel: "Idioma",
+            navPlaceholder: "Ir a seccion"
+          },
+          brand: {
+            name: "Sovereign ONG",
+            tagline: "Infraestructura publica digital compatible con la privacidad"
+          },
+          nav: {
+            mission: "Mision",
+            impact: "Impacto",
+            programs: "Programas",
+            involved: "Participa",
+            trust: "Confianza"
+          },
+          hero: {
+            title: "Dignidad digital para personas que navegan servicios esenciales",
+            p1: "Sovereign ONG desarrolla herramientas de identidad y registros compatibles con la privacidad para que las personas avancen por programas de apoyo, salud y servicios locales con menos barreras de datos y mayor confianza personal.",
+            p2: "Nuestro trabajo responde a desafios reales de los sistemas de servicios: admisiones repetidas, documentos perdidos, derivaciones inconsistentes y obligaciones estrictas de confidencialidad que pueden retrasar la ayuda cuando los sistemas estan fragmentados.",
+            p3: "Trabajamos con proveedores comunitarios, equipos de interes publico y redes locales de servicios para que el acceso sea mas claro, mas seguro y mas responsable, protegiendo los datos personales y la dignidad humana.",
+            ctaDemo: "Explorar la Demo",
+            ctaSupport: "Apoyar el Trabajo",
+            ctaPolicies: "Leer Nuestras Politicas"
+          },
+          snapshot: {
+            title: "Resumen de la Organizacion",
+            legalNameLabel: "Nombre Legal",
+            legalNameValue: "Sovereign Technology Initiative",
+            operatingNameLabel: "Nombre Operativo",
+            operatingNameValue: "Sovereign ONG",
+            focusLabel: "Area de Enfoque",
+            focusValue: "Infraestructura de identidad y acceso a servicios",
+            modelLabel: "Modelo",
+            modelValue: "Organizacion sin fines de lucro orientada a la mision; los ingresos se reinvierten en programas",
+            typeLabel: "Tipo de Organizacion",
+            typeValue: "Corporacion sin fines de lucro de beneficio publico",
+            generalContactLabel: "Contacto General:",
+            partnerContactLabel: "Contacto para Alianzas:",
+            securityContactLabel: "Contacto de Seguridad:"
+          },
+          impact: {
+            title: "Impacto Comunitario",
+            card1: {
+              title: "Decisiones de Servicio Mas Rapidas",
+              body: "Reducimos demoras desde el primer contacto hasta la aprobacion del servicio al eliminar admisiones repetidas, problemas con documentos faltantes y otros retrasos basados en documentos."
+            },
+            card2: {
+              title: "Coordinacion Compatible con la Privacidad",
+              body: "El intercambio revocable basado en consentimiento mantiene a cada persona en control de los datos que comparte y con que entidades, mientras ayuda a los proveedores a coordinar apoyo sin exponer mas datos personales de los necesarios."
+            },
+            card3: {
+              title: "Rendicion de Cuentas Transparente",
+              body: "Publicamos metricas de resultados sin identificadores personales para mantener la rendicion de cuentas de los programas sin exponer datos sensibles."
+            }
+          },
+          programs: {
+            title: "Programas y Coordinacion",
+            card1: {
+              title: "Consentimiento y Coordinacion de Servicios",
+              item1: "Ayudamos a las personas a entender que informacion se solicita, por que se necesita y quien puede verla.",
+              item2: "Ofrecemos controles de autoservicio simples para aprobar, actualizar o revocar decisiones de intercambio.",
+              item3: "Promovemos la participacion informada mediante nuestro centro publico de demostracion en <a href=\"https://demo.sovereign.ngo/combined/\">demo del sitio</a>.",
+              item4: "Mejoramos la comunicacion entre organizaciones de servicio para que las personas no tengan que repetir su historia en cada paso y puedan avanzar con mas confianza y menos estres."
+            },
+            card2: {
+              title: "Incorporacion de Proveedores Comunitarios",
+              item1: "Realizamos trabajo comunitario con proveedores para mapear flujos actuales y necesidades de implementacion.",
+              item2: "Implementamos sin tocar los datos operativos existentes, con conexiones bidireccionales de lectura y escritura con sistemas actuales.",
+              item3: "Acompanamos la puesta en marcha para conectar sistemas de proveedores sin interrumpir operaciones diarias.",
+              item4: "Primero reflejamos transacciones existentes, validamos resultados y luego trasladamos gradualmente la ejecucion al nuevo sistema cuando se demuestra exito."
+            },
+            card3: {
+              title: "Verificacion de Documentos y Entidades",
+              item1: "Configuramos verificacion para documentos de identidad emitidos por gobierno y registros de empresas.",
+              item2: "Configuramos controles contra autoridades y registros confiables, incluyendo coincidencia de entidad comercial.",
+              item3: "Apoyamos flujos donde una entidad asociada puede emitir registros, verificarlos o hacer ambas cosas.",
+              item4: "Establecemos estandares de verificacion compartidos para mantener resultados consistentes, auditables y confiables entre organizaciones."
+            }
+          },
+          involved: {
+            title: "Participa",
+            card1: {
+              title: "Para Socios Comunitarios",
+              item1: "Lanza un piloto local con tu clinica o red de apoyo.",
+              item2: "Codisena flujos para tu entorno real de servicios.",
+              item3: "Solicita incorporacion tecnica y capacitacion de personal."
+            },
+            card2: {
+              title: "Para Patrocinadores",
+              item1: "Apoya operaciones e implementacion mediante donaciones.",
+              item2: "Conectanos con organizaciones locales que necesitan mejores herramientas.",
+              item3: "Contribuye codigo abierto para fortalecer herramientas comunitarias."
+            }
+          },
+          trust: {
+            title: "Gobernanza y Rendicion de Cuentas Publica",
+            card1: {
+              title: "Custodia de Datos",
+              item1: "Disenamos programas alrededor de la recoleccion minima necesaria de datos.",
+              item2: "Ofrecemos explicaciones claras y sencillas sobre como se usa y comparte la informacion.",
+              item3: "No vendemos informacion personal.",
+              item4: "Mantenemos canales para solicitudes de acceso, correccion y eliminacion."
+            },
+            card2: {
+              title: "Integridad Operativa",
+              item1: "Mantenemos controles internos para proteger informacion sensible y operaciones de la mision.",
+              item2: "Capacitamos a personal y socios en privacidad, salvaguarda y manejo responsable de datos.",
+              item3: "Mantenemos procedimientos de respuesta y remediacion de incidentes.",
+              item4: "Revisamos y fortalecemos practicas mediante supervision continua de gobernanza."
+            },
+            card3: {
+              title: "Salvaguarda y Rendicion de Cuentas",
+              item1: "Los compromisos de no discriminacion y no represalia se consideran en todos los niveles de nuestras operaciones.",
+              item2: "Nuestra gobernanza y toma de decisiones se mantiene independiente del control directo de gobiernos y partidos politicos.",
+              item3: "La participacion en nuestras iniciativas y colaboraciones es voluntaria.",
+              item4: "Operamos con legalidad e integridad en las comunidades a las que servimos.",
+              item5: "Mantenemos canales para reportar uso danino y abuso.",
+              item6: "Los cambios de alto impacto en politicas se elevan a revision de gobernanza segun necesidad y con procesos documentados."
+            },
+            card4: {
+              title: "Documentacion Publica",
+              link1: "Declaracion de Gobernanza",
+              link2: "Politica de Conflicto de Interes",
+              link3: "Cumplimiento de Solicitudes Caritativas",
+              link4: "Aviso de Privacidad",
+              link5: "Estandar de Salvaguarda",
+              link6: "Reportes de Transparencia",
+              link7: "Declaracion de Elegibilidad ONG (.NGO/.ONG)"
+            }
+          },
+          footer: {
+            name: "Sovereign ONG",
+            copy: "| Construido para dignidad, acceso y confianza verificable. | Ultima actualizacion: 26 de marzo de 2026"
+          }
+        },
+        fr: {
+          meta: {
+            title: "Sovereign ONG | Infrastructure publique conforme a la protection des donnees",
+            description: "Sovereign ONG construit une infrastructure publique numerique conforme a la protection des donnees pour l identite, les dossiers et l acces aux services communautaires."
+          },
+          ui: {
+            skip: "Aller au contenu principal",
+            languageLabel: "Langue",
+            navPlaceholder: "Aller a la section"
+          },
+          brand: {
+            name: "Sovereign ONG",
+            tagline: "Infrastructure publique numerique conforme a la protection des donnees"
+          },
+          nav: {
+            mission: "Mission",
+            impact: "Impact",
+            programs: "Programmes",
+            involved: "Participer",
+            trust: "Confiance"
+          },
+          hero: {
+            title: "Dignite numerique pour les personnes qui naviguent des services essentiels",
+            p1: "Sovereign ONG construit des outils d identite et de dossiers conformes a la protection des donnees afin que les personnes puissent avancer dans les programmes d aide, la sante et les services locaux avec moins de barrieres de donnees et plus de confiance.",
+            p2: "Notre travail repond a des defis reels des systemes de services: admissions repetitives, documents perdus, transferts incoherents et obligations strictes de confidentialite qui peuvent ralentir l aide lorsque les systemes sont fragmentes.",
+            p3: "Nous collaborons avec des prestataires communautaires, des equipes d interet public et des reseaux locaux afin de rendre l acces plus clair, plus sur et plus responsable tout en protegeant les donnees personnelles et la dignite humaine.",
+            ctaDemo: "Explorer la Demo",
+            ctaSupport: "Soutenir le Travail",
+            ctaPolicies: "Lire Nos Politiques"
+          },
+          snapshot: {
+            title: "Apercu de l Organisation",
+            legalNameLabel: "Nom Legal",
+            legalNameValue: "Sovereign Technology Initiative",
+            operatingNameLabel: "Nom d Usage",
+            operatingNameValue: "Sovereign ONG",
+            focusLabel: "Domaine Prioritaire",
+            focusValue: "Infrastructure d identite et d acces aux services",
+            modelLabel: "Modele",
+            modelValue: "Organisation a but non lucratif centree sur la mission; les revenus sont reinvestis dans les programmes",
+            typeLabel: "Type d Organisation",
+            typeValue: "Societe a but non lucratif d interet public",
+            generalContactLabel: "Contact General:",
+            partnerContactLabel: "Contact Partenaires:",
+            securityContactLabel: "Contact Securite:"
+          },
+          impact: {
+            title: "Impact Communautaire",
+            card1: {
+              title: "Decisions de Service Plus Rapides",
+              body: "Nous reduisons les delais entre le premier contact et l approbation du service en eliminant les admissions repetitives, les problemes de documents manquants et les autres retards lies aux documents."
+            },
+            card2: {
+              title: "Coordination Conforme a la Protection des Donnees",
+              body: "Le partage revocable base sur le consentement permet a chaque personne de controler les donnees partagees et avec quelles entites, tout en aidant les prestataires a coordonner l aide sans exposer plus de donnees personnelles que necessaire."
+            },
+            card3: {
+              title: "Responsabilite des Services Transparente",
+              body: "Nous publions des indicateurs de resultat desidentifies afin de garantir la responsabilite des programmes sans exposer de donnees personnelles sensibles."
+            }
+          },
+          programs: {
+            title: "Programmes et Coordination",
+            card1: {
+              title: "Consentement et Coordination des Services",
+              item1: "Aider les personnes a comprendre quelles informations sont demandees, pourquoi elles sont necessaires et qui peut y acceder.",
+              item2: "Fournir des controles simples en libre-service pour approuver, mettre a jour ou revoquer les decisions de partage.",
+              item3: "Soutenir une participation eclairee via notre hub de demonstration public: <a href=\"https://demo.sovereign.ngo/combined/\">demo du site</a>.",
+              item4: "Ameliorer la communication entre organisations pour eviter aux personnes de repeter leur histoire a chaque etape, et leur permettre d avancer avec plus de confiance et moins de stress."
+            },
+            card2: {
+              title: "Integration des Prestataires Communautaires",
+              item1: "Travailler avec les prestataires pour cartographier les flux actuels et les besoins d implementation.",
+              item2: "Implementer sans toucher aux donnees operationnelles existantes, grace a des connexions bidirectionnelles de lecture et d ecriture avec les systemes actuels.",
+              item3: "Accompagner l integration afin de connecter les systemes prestataires sans perturber les operations quotidiennes.",
+              item4: "Nous reproduisons d abord les transactions existantes, validons les resultats, puis transferons progressivement l execution vers le nouveau systeme lorsque le succes est prouve."
+            },
+            card3: {
+              title: "Verification des Documents et des Entites",
+              item1: "Mettre en place la verification des pieces d identite officielles et des enregistrements d entreprises.",
+              item2: "Configurer les controles aupres d autorites et de registres de confiance, y compris la correspondance d entite commerciale.",
+              item3: "Prendre en charge les flux ou un partenaire peut emettre des dossiers, les verifier, ou faire les deux.",
+              item4: "Etablir des normes de verification partagees afin que les resultats restent coherents, auditables et fiables entre organisations."
+            }
+          },
+          involved: {
+            title: "Participer",
+            card1: {
+              title: "Pour les Partenaires Communautaires",
+              item1: "Lancer un pilote local avec votre clinique ou reseau d assistance.",
+              item2: "Co-concevoir des flux pour votre environnement reel de services.",
+              item3: "Demander un accompagnement technique et une formation du personnel."
+            },
+            card2: {
+              title: "Pour les Soutiens",
+              item1: "Soutenir les operations et l implementation par des dons.",
+              item2: "Nous mettre en relation avec des organisations locales qui ont besoin de meilleurs outils.",
+              item3: "Contribuer au code open source pour renforcer les outils orientes vers la communaute."
+            }
+          },
+          trust: {
+            title: "Gouvernance et Responsabilite Publique",
+            card1: {
+              title: "Gestion Responsable des Donnees",
+              item1: "Nous concevons les programmes autour d une collecte minimale des donnees necessaires.",
+              item2: "Nous fournissons des explications claires et accessibles sur l utilisation et le partage des informations.",
+              item3: "Nous ne vendons pas d informations personnelles.",
+              item4: "Nous maintenons des canaux pour les demandes d acces, de correction et de suppression."
+            },
+            card2: {
+              title: "Integrite Operationnelle",
+              item1: "Nous maintenons des controles internes pour proteger les informations sensibles et les operations de mission.",
+              item2: "Nous formons le personnel et les partenaires a la vie privee, a la sauvegarde et a la gestion responsable des donnees.",
+              item3: "Nous maintenons des procedures de reponse et de remediation en cas d incident.",
+              item4: "Nous renforcons nos pratiques grace a une supervision continue de la gouvernance."
+            },
+            card3: {
+              title: "Sauvegarde et Responsabilite",
+              item1: "Les engagements de non-discrimination et de non-represailles sont pris en compte a tous les niveaux de nos operations.",
+              item2: "Notre gouvernance et nos decisions restent independantes du controle direct des gouvernements et des partis politiques.",
+              item3: "La participation a nos initiatives et collaborations est volontaire.",
+              item4: "Nous operons legalement et avec integrite dans les communautes que nous servons.",
+              item5: "Nous maintenons des canaux de signalement des usages nuisibles et des abus.",
+              item6: "Les changements de politique a fort impact sont soumis a un examen de gouvernance selon les besoins et des processus documentes."
+            },
+            card4: {
+              title: "Documentation Publique",
+              link1: "Declaration de Gouvernance",
+              link2: "Politique de Conflit d Interets",
+              link3: "Conformite aux Sollicitations Caritatives",
+              link4: "Avis de Confidentialite",
+              link5: "Norme de Sauvegarde",
+              link6: "Rapports de Transparence",
+              link7: "Declaration d Eligibilite ONG (.NGO/.ONG)"
+            }
+          },
+          footer: {
+            name: "Sovereign ONG",
+            copy: "| Construit pour la dignite, l acces et une confiance verifiable. | Derniere mise a jour: 26 mars 2026"
+          }
+        },
+        pt: {
+          meta: {
+            title: "Sovereign ONG | Infraestrutura publica compativel com privacidade",
+            description: "Sovereign ONG desenvolve infraestrutura publica digital compativel com privacidade para identidade, registros e acesso a servicos comunitarios."
+          },
+          ui: {
+            skip: "Ir para o conteudo principal",
+            languageLabel: "Idioma",
+            navPlaceholder: "Ir para secao"
+          },
+          brand: {
+            name: "Sovereign ONG",
+            tagline: "Infraestrutura publica digital compativel com privacidade"
+          },
+          nav: {
+            mission: "Missao",
+            impact: "Impacto",
+            programs: "Programas",
+            involved: "Participe",
+            trust: "Confianca"
+          },
+          hero: {
+            title: "Dignidade digital para pessoas em servicos essenciais",
+            p1: "A Sovereign ONG desenvolve ferramentas de identidade e registros compativeis com privacidade para que as pessoas avancem por programas de assistencia, saude e servicos locais com menos barreiras de dados e mais confianca pessoal.",
+            p2: "Nosso trabalho responde a desafios reais dos sistemas de servicos: triagem repetida, documentos perdidos, encaminhamentos inconsistentes e obrigacoes rigidas de confidencialidade que podem atrasar o atendimento quando os sistemas estao fragmentados.",
+            p3: "Atuamos com provedores comunitarios, equipes de interesse publico e redes locais para tornar os caminhos de acesso mais claros, seguros e responsaveis, protegendo dados pessoais e dignidade humana.",
+            ctaDemo: "Explorar a Demo",
+            ctaSupport: "Apoiar o Trabalho",
+            ctaPolicies: "Ler Nossas Politicas"
+          },
+          snapshot: {
+            title: "Visao da Organizacao",
+            legalNameLabel: "Nome Legal",
+            legalNameValue: "Sovereign Technology Initiative",
+            operatingNameLabel: "Nome de Operacao",
+            operatingNameValue: "Sovereign ONG",
+            focusLabel: "Area de Foco",
+            focusValue: "Infraestrutura de identidade e acesso a servicos",
+            modelLabel: "Modelo",
+            modelValue: "Organizacao sem fins lucrativos orientada por missao; a receita e reinvestida em programas",
+            typeLabel: "Tipo de Organizacao",
+            typeValue: "Corporacao sem fins lucrativos de beneficio publico",
+            generalContactLabel: "Contato Geral:",
+            partnerContactLabel: "Contato para Parcerias:",
+            securityContactLabel: "Contato de Seguranca:"
+          },
+          impact: {
+            title: "Impacto Comunitario",
+            card1: {
+              title: "Decisoes de Servico Mais Rapidas",
+              body: "Reduzimos atrasos do primeiro contato ate a aprovacao do servico ao eliminar triagens repetidas, problemas de documentos ausentes e outros atrasos baseados em documentos."
+            },
+            card2: {
+              title: "Coordenacao Compativel com Privacidade",
+              body: "O compartilhamento revogavel com base em consentimento mantem cada pessoa no controle dos dados compartilhados e com quais entidades, enquanto ajuda provedores a coordenar apoio sem expor mais dados pessoais do que o necessario."
+            },
+            card3: {
+              title: "Responsabilizacao Transparente dos Servicos",
+              body: "Publicamos metricas de resultado sem identificacao pessoal para manter programas responsaveis sem expor dados sensiveis."
+            }
+          },
+          programs: {
+            title: "Programas e Coordenacao",
+            card1: {
+              title: "Consentimento e Coordenacao de Servicos",
+              item1: "Ajudar pessoas a entender quais informacoes sao solicitadas, por que sao necessarias e quem pode acessa-las.",
+              item2: "Oferecer controles simples de autoatendimento para aprovar, atualizar ou revogar decisoes de compartilhamento.",
+              item3: "Apoiar participacao informada por meio do nosso hub publico de demonstracao em <a href=\"https://demo.sovereign.ngo/combined/\">demo do site</a>.",
+              item4: "Melhorar a comunicacao entre organizacoes para que as pessoas nao precisem repetir sua historia em cada etapa e possam seguir com mais confianca e menos estresse."
+            },
+            card2: {
+              title: "Integracao de Provedores Comunitarios",
+              item1: "Trabalho de campo com provedores para mapear fluxos atuais e necessidades de implementacao.",
+              item2: "Implementacao que preserva dados operacionais existentes, com conexoes bidirecionais de leitura e escrita aos sistemas atuais.",
+              item3: "Onboarding pratico para colocar sistemas de provedores online sem interromper operacoes diarias.",
+              item4: "Primeiro espelhamos transacoes existentes, validamos resultados e depois transferimos gradualmente a execucao para o novo sistema conforme o sucesso e comprovado."
+            },
+            card3: {
+              title: "Verificacao de Documentos e Entidades",
+              item1: "Configurar verificacao de documentos de identidade emitidos por governo e registros empresariais.",
+              item2: "Configurar validacoes com autoridades e registros confiaveis, incluindo correspondencia de entidade empresarial.",
+              item3: "Apoiar fluxos em que um parceiro pode emitir registros, verificar registros ou ambos.",
+              item4: "Estabelecer padroes compartilhados de verificacao para manter resultados consistentes, auditaveis e confiaveis entre organizacoes."
+            }
+          },
+          involved: {
+            title: "Participe",
+            card1: {
+              title: "Para Parceiros Comunitarios",
+              item1: "Hospede um piloto local com sua clinica ou rede de assistencia.",
+              item2: "Co-crie fluxos para seu ambiente real de servicos.",
+              item3: "Solicite onboarding tecnico e capacitacao de equipe."
+            },
+            card2: {
+              title: "Para Apoiadores",
+              item1: "Apoie operacoes e implementacao por meio de doacoes.",
+              item2: "Conecte-nos a organizacoes locais que precisam de ferramentas melhores.",
+              item3: "Contribua com codigo aberto para fortalecer ferramentas voltadas a comunidade."
+            }
+          },
+          trust: {
+            title: "Governanca e Responsabilizacao Publica",
+            card1: {
+              title: "Gestao de Dados",
+              item1: "Desenhamos programas com coleta minima necessaria de dados.",
+              item2: "Fornecemos explicacoes claras e em linguagem simples sobre como as informacoes sao usadas e compartilhadas.",
+              item3: "Nao vendemos informacoes pessoais.",
+              item4: "Mantemos canais para solicitacoes de acesso, correcao e exclusao."
+            },
+            card2: {
+              title: "Integridade Operacional",
+              item1: "Mantemos controles internos para proteger informacoes sensiveis e operacoes da missao.",
+              item2: "Treinamos equipe e parceiros em privacidade, salvaguarda e tratamento responsavel de dados.",
+              item3: "Mantemos procedimentos de resposta e remediacao de incidentes.",
+              item4: "Revisamos e fortalecemos nossas praticas com supervisao continua de governanca."
+            },
+            card3: {
+              title: "Salvaguarda e Responsabilizacao",
+              item1: "Compromissos de nao discriminacao e nao retaliação sao considerados em todos os niveis de nossas operacoes.",
+              item2: "Nossa governanca e tomada de decisao permanecem independentes de controle direto de governo e partidos politicos.",
+              item3: "A participacao em nossas iniciativas e colaboracoes e voluntaria.",
+              item4: "Atuamos com legalidade e integridade nas comunidades que atendemos.",
+              item5: "Mantemos canais para relatar uso nocivo e abuso.",
+              item6: "Mudancas de politica de alto impacto sao escaladas para revisao de governanca quando necessario e com processos documentados."
+            },
+            card4: {
+              title: "Documentacao Publica",
+              link1: "Declaracao de Governanca",
+              link2: "Politica de Conflito de Interesses",
+              link3: "Conformidade de Solicitacoes Filantropicas",
+              link4: "Aviso de Privacidade",
+              link5: "Padrao de Salvaguarda",
+              link6: "Relatorios de Transparencia",
+              link7: "Declaracao de Elegibilidade ONG (.NGO/.ONG)"
+            }
+          },
+          footer: {
+            name: "Sovereign ONG",
+            copy: "| Construido para dignidade, acesso e confianca verificavel. | Ultima atualizacao: 26 de marco de 2026"
+          }
+        },
+        it: {
+          meta: {
+            title: "Sovereign ONG | Infrastruttura pubblica conforme alla privacy",
+            description: "Sovereign ONG costruisce infrastruttura pubblica digitale conforme alla privacy per identita, documenti e accesso ai servizi della comunita."
+          },
+          ui: {
+            skip: "Vai al contenuto principale",
+            languageLabel: "Lingua",
+            navPlaceholder: "Vai alla sezione"
+          },
+          brand: {
+            name: "Sovereign ONG",
+            tagline: "Infrastruttura pubblica digitale conforme alla privacy"
+          },
+          nav: {
+            mission: "Missione",
+            impact: "Impatto",
+            programs: "Programmi",
+            involved: "Partecipa",
+            trust: "Fiducia"
+          },
+          hero: {
+            title: "Dignita digitale per chi attraversa servizi essenziali",
+            p1: "Sovereign ONG sviluppa strumenti di identita e documenti conformi alla privacy affinche le persone possano accedere a programmi di assistenza, sanita e servizi locali con meno barriere nei dati e maggiore fiducia personale.",
+            p2: "Il nostro lavoro risponde a sfide reali nei sistemi di servizio: intake ripetuti, documenti smarriti, passaggi incoerenti e obblighi rigorosi di riservatezza che possono rallentare il supporto quando i sistemi sono frammentati.",
+            p3: "Collaboriamo con fornitori della comunita, team di interesse pubblico e reti locali per rendere i percorsi di accesso piu chiari, sicuri e responsabili, proteggendo i dati personali e la dignita umana.",
+            ctaDemo: "Esplora la Demo",
+            ctaSupport: "Sostieni il Lavoro",
+            ctaPolicies: "Leggi le Nostre Policy"
+          },
+          snapshot: {
+            title: "Panoramica Organizzazione",
+            legalNameLabel: "Nome Legale",
+            legalNameValue: "Sovereign Technology Initiative",
+            operatingNameLabel: "Nome Operativo",
+            operatingNameValue: "Sovereign ONG",
+            focusLabel: "Area di Focus",
+            focusValue: "Infrastruttura per identita e accesso ai servizi",
+            modelLabel: "Modello",
+            modelValue: "Nonprofit orientata alla missione; i ricavi vengono reinvestiti nei programmi",
+            typeLabel: "Tipo di Organizzazione",
+            typeValue: "Societa nonprofit di pubblico beneficio",
+            generalContactLabel: "Contatto Generale:",
+            partnerContactLabel: "Contatto Partner:",
+            securityContactLabel: "Contatto Sicurezza:"
+          },
+          impact: {
+            title: "Impatto Comunitario",
+            card1: {
+              title: "Decisioni di Servizio piu Veloci",
+              body: "Riduciamo i ritardi dal primo contatto all approvazione del servizio eliminando intake ripetuti, problemi di documenti mancanti e altri ritardi legati ai documenti."
+            },
+            card2: {
+              title: "Coordinamento Conforme alla Privacy",
+              body: "La condivisione revocabile basata sul consenso mantiene ogni persona in controllo su quali dati condividere e con quali enti, aiutando i fornitori a coordinare il supporto senza esporre piu dati personali del necessario."
+            },
+            card3: {
+              title: "Responsabilita Trasparente dei Servizi",
+              body: "Pubblichiamo metriche di risultato de-identificate per mantenere i programmi responsabili senza esporre dati personali sensibili."
+            }
+          },
+          programs: {
+            title: "Programmi e Coordinamento",
+            card1: {
+              title: "Consenso e Coordinamento dei Servizi",
+              item1: "Aiutiamo le persone a capire quali informazioni vengono richieste, perche servono e chi puo vederle.",
+              item2: "Forniamo controlli self-service semplici per approvare, aggiornare o revocare le decisioni di condivisione.",
+              item3: "Supportiamo una partecipazione informata tramite il nostro hub demo pubblico su <a href=\"https://demo.sovereign.ngo/combined/\">demo del sito</a>.",
+              item4: "Miglioriamo la comunicazione tra organizzazioni di servizio affinche le persone non debbano ripetere la propria storia a ogni passaggio e possano muoversi con piu fiducia e meno stress."
+            },
+            card2: {
+              title: "Onboarding dei Fornitori della Comunita",
+              item1: "Attivita sul territorio con i fornitori per mappare i flussi attuali e i bisogni di implementazione.",
+              item2: "Implementazione che lascia intatti i dati operativi esistenti, con connessioni bidirezionali di lettura e scrittura ai sistemi correnti.",
+              item3: "Onboarding pratico per portare online i sistemi dei fornitori senza interrompere le operazioni quotidiane.",
+              item4: "Prima replichiamo le transazioni esistenti, validiamo i risultati e poi spostiamo gradualmente l esecuzione al nuovo sistema quando il successo e dimostrato."
+            },
+            card3: {
+              title: "Verifica di Documenti ed Entita",
+              item1: "Attiviamo la verifica per documenti di identita emessi dal governo e registri aziendali.",
+              item2: "Configuriamo controlli su autorita e registri affidabili, inclusa la corrispondenza dell entita aziendale.",
+              item3: "Supportiamo flussi in cui un partner puo emettere documenti, verificarli o fare entrambe le cose.",
+              item4: "Definiamo standard condivisi di verifica per mantenere risultati coerenti, verificabili e affidabili tra organizzazioni."
+            }
+          },
+          involved: {
+            title: "Partecipa",
+            card1: {
+              title: "Per i Partner della Comunita",
+              item1: "Ospita un progetto pilota locale con la tua clinica o rete di assistenza.",
+              item2: "Co-progetta i flussi per il tuo ambiente reale di servizio.",
+              item3: "Richiedi onboarding tecnico e formazione del personale."
+            },
+            card2: {
+              title: "Per i Sostenitori",
+              item1: "Sostieni operazioni e implementazione tramite donazioni.",
+              item2: "Mettici in contatto con organizzazioni locali che hanno bisogno di strumenti migliori.",
+              item3: "Contribuisci con codice open-source per rafforzare gli strumenti rivolti alla comunita."
+            }
+          },
+          trust: {
+            title: "Governance e Responsabilita Pubblica",
+            card1: {
+              title: "Gestione dei Dati",
+              item1: "Progettiamo i programmi sulla base della raccolta minima necessaria dei dati.",
+              item2: "Forniamo spiegazioni chiare e semplici su come le informazioni vengono usate e condivise.",
+              item3: "Non vendiamo informazioni personali.",
+              item4: "Manteniamo canali per richieste di accesso, correzione e cancellazione."
+            },
+            card2: {
+              title: "Integrita Operativa",
+              item1: "Manteniamo controlli interni per proteggere informazioni sensibili e operazioni della missione.",
+              item2: "Formiamo personale e partner su privacy, safeguarding e gestione responsabile dei dati.",
+              item3: "Manteniamo procedure di risposta e rimedio agli incidenti.",
+              item4: "Rivediamo e rafforziamo le pratiche tramite supervisione continua di governance."
+            },
+            card3: {
+              title: "Safeguarding e Responsabilita",
+              item1: "Gli impegni di non discriminazione e non ritorsione sono considerati a ogni livello delle nostre operazioni.",
+              item2: "La nostra governance e il processo decisionale restano indipendenti dal controllo diretto di governi e partiti politici.",
+              item3: "La partecipazione alle nostre iniziative e collaborazioni e volontaria.",
+              item4: "Operiamo in modo legale e con integrita nelle comunita che serviamo.",
+              item5: "Manteniamo canali per segnalare uso dannoso e abusi.",
+              item6: "Le modifiche di policy ad alto impatto vengono portate a revisione di governance quando necessario e con processi documentati."
+            },
+            card4: {
+              title: "Documentazione Pubblica",
+              link1: "Dichiarazione di Governance",
+              link2: "Policy sui Conflitti di Interesse",
+              link3: "Conformita alle Sollecitazioni Caritative",
+              link4: "Informativa Privacy",
+              link5: "Standard di Safeguarding",
+              link6: "Report di Trasparenza",
+              link7: "Dichiarazione di Idoneita ONG (.NGO/.ONG)"
+            }
+          },
+          footer: {
+            name: "Sovereign ONG",
+            copy: "| Costruito per dignita, accesso e fiducia verificabile. | Ultimo aggiornamento: 26 marzo 2026"
+          }
+        },
+        ro: {
+          meta: {
+            title: "Sovereign ONG | Infrastructura publica conforma cu confidentialitatea",
+            description: "Sovereign ONG construieste infrastructura publica digitala conforma cu confidentialitatea pentru identitate, inregistrari si acces la servicii comunitare."
+          },
+          ui: {
+            skip: "Mergi la continutul principal",
+            languageLabel: "Limba",
+            navPlaceholder: "Mergi la sectiune"
+          },
+          brand: {
+            name: "Sovereign ONG",
+            tagline: "Infrastructura publica digitala conforma cu confidentialitatea"
+          },
+          nav: {
+            mission: "Misiune",
+            impact: "Impact",
+            programs: "Programe",
+            involved: "Implica-te",
+            trust: "Incredere"
+          },
+          hero: {
+            title: "Demnitate digitala pentru oameni care navigheaza servicii esentiale",
+            p1: "Sovereign ONG construieste instrumente de identitate si inregistrari conforme cu confidentialitatea, astfel incat oamenii sa poata trece prin programe de asistenta, sanatate si servicii locale cu mai putine bariere de date si mai multa incredere personala.",
+            p2: "Munca noastra raspunde provocarilor reale ale sistemelor de servicii: intake repetat, documente pierdute, transferuri inconsistente si obligatii stricte de confidentialitate care pot incetini sprijinul cand sistemele sunt fragmentate.",
+            p3: "Colaboram cu furnizori comunitari, echipe de interes public si retele locale de servicii pentru a face traseele de acces mai clare, mai sigure si mai responsabile, protejand datele personale si demnitatea umana.",
+            ctaDemo: "Exploreaza Demo-ul",
+            ctaSupport: "Sustine Munca",
+            ctaPolicies: "Citeste Politicile Noastre"
+          },
+          snapshot: {
+            title: "Imagine de Ansamblu",
+            legalNameLabel: "Nume Legal",
+            legalNameValue: "Sovereign Technology Initiative",
+            operatingNameLabel: "Nume de Operare",
+            operatingNameValue: "Sovereign ONG",
+            focusLabel: "Arie de Focus",
+            focusValue: "Infrastructura de identitate si acces la servicii",
+            modelLabel: "Model",
+            modelValue: "Nonprofit orientat pe misiune; veniturile sunt reinvestite in programe",
+            typeLabel: "Tip Organizatie",
+            typeValue: "Corporatie nonprofit de beneficiu public",
+            generalContactLabel: "Contact General:",
+            partnerContactLabel: "Contact Parteneri:",
+            securityContactLabel: "Contact Securitate:"
+          },
+          impact: {
+            title: "Impact Comunitar",
+            card1: {
+              title: "Decizii de Serviciu mai Rapide",
+              body: "Reducem intarzierile de la primul contact pana la aprobarea serviciului prin eliminarea intake-urilor repetate, a problemelor cu documente lipsa si a altor intarzieri bazate pe documente."
+            },
+            card2: {
+              title: "Coordonare Conforma cu Confidentialitatea",
+              body: "Partajarea revocabila bazata pe consimtamant mentine fiecare persoana in control asupra datelor partajate si a entitatilor care le vad, ajutand in acelasi timp furnizorii sa coordoneze sprijinul fara a expune mai multe date personale decat este necesar."
+            },
+            card3: {
+              title: "Responsabilitate Transparenta a Serviciilor",
+              body: "Publicam metrici de rezultat de-identificate pentru a mentine programele responsabile fara a expune date personale sensibile."
+            }
+          },
+          programs: {
+            title: "Programe si Coordonare",
+            card1: {
+              title: "Consimtamant si Coordonarea Serviciilor",
+              item1: "Ajutam oamenii sa inteleaga ce informatii sunt solicitate, de ce sunt necesare si cine le poate vedea.",
+              item2: "Oferim controale self-service simple pentru aprobare, actualizare sau revocare a deciziilor de partajare.",
+              item3: "Sustinem participarea informata prin hub-ul nostru demo public la <a href=\"https://demo.sovereign.ngo/combined/\">demo website</a>.",
+              item4: "Imbunatatim comunicarea intre organizatii de servicii astfel incat oamenii sa nu fie nevoiti sa isi repete povestea la fiecare pas si sa poata avansa cu mai multa incredere si mai putin stres."
+            },
+            card2: {
+              title: "Onboarding pentru Furnizori Comunitari",
+              item1: "Lucru direct cu furnizorii pentru a mapa fluxurile actuale si nevoile de implementare.",
+              item2: "Implementare care pastreaza datele operationale existente neatinse, folosind conexiuni bidirectionale de citire si scriere cu sistemele actuale.",
+              item3: "Onboarding practic pentru a aduce sistemele furnizorilor online fara a intrerupe operatiunile zilnice.",
+              item4: "Mai intai oglindim tranzactiile existente, validam rezultatele, apoi mutam gradual executia pe noul sistem pe masura ce succesul este demonstrat."
+            },
+            card3: {
+              title: "Verificare Documente si Entitati",
+              item1: "Configuram verificarea pentru documente de identitate emise de guvern si inregistrari de business.",
+              item2: "Configuram verificari cu autoritati si registre de incredere, inclusiv potrivirea entitatii de business.",
+              item3: "Sustinem fluxuri in care un partener poate emite inregistrari, le poate verifica sau poate face ambele.",
+              item4: "Stabilim standarde comune de verificare astfel incat rezultatele sa ramana consecvente, auditabile si de incredere intre organizatii."
+            }
+          },
+          involved: {
+            title: "Implica-te",
+            card1: {
+              title: "Pentru Parteneri Comunitari",
+              item1: "Gazduieste un pilot local cu clinica sau reteaua ta de asistenta.",
+              item2: "Co-proiecteaza fluxuri pentru mediul tau real de servicii.",
+              item3: "Solicita onboarding tehnic si instruire pentru personal."
+            },
+            card2: {
+              title: "Pentru Sustinatori",
+              item1: "Sustine operatiunile si implementarea prin donatii.",
+              item2: "Pune-ne in legatura cu organizatii locale care au nevoie de instrumente mai bune.",
+              item3: "Contribuie cu cod open-source pentru a consolida instrumentele orientate spre comunitate."
+            }
+          },
+          trust: {
+            title: "Guvernanta si Responsabilitate Publica",
+            card1: {
+              title: "Administrarea Datelor",
+              item1: "Proiectam programele in jurul colectarii minime necesare de date.",
+              item2: "Oferim explicatii clare, in limbaj simplu, despre cum sunt folosite si partajate informatiile.",
+              item3: "Nu vindem informatii personale.",
+              item4: "Asiguram canale pentru solicitari de acces, corectare si stergere."
+            },
+            card2: {
+              title: "Integritate Operationala",
+              item1: "Mentinem controale interne pentru a proteja informatiile sensibile si operatiunile misiunii.",
+              item2: "Instruim personalul si partenerii privind confidentialitatea, safeguarding-ul si manipularea responsabila a datelor.",
+              item3: "Mentinem proceduri de raspuns si remediere a incidentelor.",
+              item4: "Revizuim si consolidam practicile prin supraveghere continua de guvernanta."
+            },
+            card3: {
+              title: "Safeguarding si Responsabilitate",
+              item1: "Angajamentele de nediscriminare si anti-represalii sunt luate in considerare la toate nivelurile operatiunilor noastre.",
+              item2: "Guvernanta si procesul nostru decizional raman independente fata de controlul direct al guvernelor si al partidelor politice.",
+              item3: "Participarea la initiativele si colaborarile noastre este voluntara.",
+              item4: "Operam legal si cu integritate in comunitatile pe care le deservim.",
+              item5: "Mentinem canale pentru raportarea utilizarii daunatoare si a abuzului.",
+              item6: "Schimbarile de politica cu impact ridicat sunt escaladate pentru revizuire de guvernanta, la nevoie, prin procese documentate."
+            },
+            card4: {
+              title: "Documentatie Publica",
+              link1: "Declaratie de Guvernanta",
+              link2: "Politica privind Conflictul de Interese",
+              link3: "Conformitate pentru Solicitari Caritabile",
+              link4: "Notificare de Confidentialitate",
+              link5: "Standard de Safeguarding",
+              link6: "Rapoarte de Transparenta",
+              link7: "Declaratie de Eligibilitate ONG (.NGO/.ONG)"
+            }
+          },
+          footer: {
+            name: "Sovereign ONG",
+            copy: "| Construit pentru demnitate, acces si incredere verificabila. | Ultima actualizare: 26 martie 2026"
+          }
+        }
+      };
+
+      const metaDescription = document.querySelector('meta[name="description"]');
+      const languageSelect = document.getElementById("language-select");
+      const navSelect = document.getElementById("nav-select");
+      const identityTagline = document.querySelector('.identity span[data-i18n="brand.tagline"]');
+      const languageOptionLabels = {
+        en: { full: "English", short: "EN" },
+        es: { full: "Español", short: "ES" },
+        fr: { full: "Français", short: "FR" },
+        it: { full: "Italiano", short: "IT" },
+        pt: { full: "Português", short: "PT" },
+        ro: { full: "Română", short: "RO" }
+      };
+      const compactLanguageBreakpoint = 700;
+      const compactMenuBreakpoint = 620;
+
+      function readPath(obj, path) {
+        return path.split(".").reduce((acc, segment) => (acc && acc[segment] !== undefined ? acc[segment] : undefined), obj);
+      }
+
+      function getString(lang, key) {
+        const selected = readPath(translations[lang], key);
+        if (typeof selected === "string") {
+          return selected;
+        }
+        const fallback = readPath(translations.en, key);
+        return typeof fallback === "string" ? fallback : "";
+      }
+
+      function isTaglineWrapped() {
+        if (!identityTagline) {
+          return false;
+        }
+        const style = window.getComputedStyle(identityTagline);
+        const lineHeight = parseFloat(style.lineHeight);
+        const height = identityTagline.getBoundingClientRect().height;
+        if (lineHeight > 0) {
+          return height > lineHeight * 1.35;
+        }
+        return identityTagline.scrollWidth > identityTagline.clientWidth + 1;
+      }
+
+      function updateTaglineWrapLayout() {
+        document.body.classList.remove("tagline-wrapped");
+        if (window.innerWidth > compactMenuBreakpoint) {
+          return;
+        }
+        if (isTaglineWrapped()) {
+          document.body.classList.add("tagline-wrapped");
+        }
+      }
+
+      function applyLanguage(lang) {
+        const locale = translations[lang] ? lang : "en";
+        document.documentElement.lang = locale;
+        document.title = getString(locale, "meta.title");
+        if (metaDescription) {
+          metaDescription.setAttribute("content", getString(locale, "meta.description"));
+        }
+
+        document.querySelectorAll("[data-i18n]").forEach(function (node) {
+          const key = node.getAttribute("data-i18n");
+          node.textContent = getString(locale, key);
+        });
+
+        document.querySelectorAll("[data-i18n-html]").forEach(function (node) {
+          const key = node.getAttribute("data-i18n-html");
+          node.innerHTML = getString(locale, key);
+        });
+
+        languageSelect.value = locale;
+        try {
+          window.localStorage.setItem("sovereign_ngo_lang", locale);
+        } catch (err) {
+        }
+
+        try {
+          const params = new URLSearchParams(window.location.search);
+          if (locale === "en") {
+            params.delete("lang");
+          } else {
+            params.set("lang", locale);
+          }
+          const query = params.toString();
+          const nextUrl = query ? window.location.pathname + "?" + query + window.location.hash : window.location.pathname + window.location.hash;
+          window.history.replaceState(null, "", nextUrl);
+        } catch (err) {
+        }
+
+        window.requestAnimationFrame(updateTaglineWrapLayout);
+      }
+
+      function updateLanguageOptionLabels() {
+        const compact = window.innerWidth < compactLanguageBreakpoint;
+        languageSelect.querySelectorAll("option").forEach(function (option) {
+          const labels = languageOptionLabels[option.value];
+          if (!labels) {
+            return;
+          }
+          option.textContent = compact ? labels.short : labels.full;
+        });
+      }
+
+      function resolveInitialLanguage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLang = (urlParams.get("lang") || "").toLowerCase();
+        if (translations[urlLang]) {
+          return urlLang;
+        }
+
+        try {
+          const saved = (window.localStorage.getItem("sovereign_ngo_lang") || "").toLowerCase();
+          if (translations[saved]) {
+            return saved;
+          }
+        } catch (err) {
+        }
+
+        const browserPrimary = (navigator.language || "en").slice(0, 2).toLowerCase();
+        if (translations[browserPrimary]) {
+          return browserPrimary;
+        }
+        return "en";
+      }
+
+      function syncCompactNavSelection() {
+        if (!navSelect) {
+          return;
+        }
+        const hash = window.location.hash || "";
+        const hasMatchingOption = Array.from(navSelect.options).some(function (option) {
+          return option.value === hash;
+        });
+        navSelect.value = hasMatchingOption ? hash : "";
+      }
+
+      languageSelect.addEventListener("change", function (event) {
+        applyLanguage(event.target.value);
+      });
+
+      if (navSelect) {
+        navSelect.addEventListener("change", function (event) {
+          const targetHash = event.target.value;
+          if (!targetHash) {
+            return;
+          }
+          window.location.hash = targetHash.replace(/^#/, "");
+        });
+        window.addEventListener("hashchange", syncCompactNavSelection);
+      }
+
+      window.addEventListener("resize", function () {
+        updateLanguageOptionLabels();
+        updateTaglineWrapLayout();
+      });
+      updateLanguageOptionLabels();
+      applyLanguage(resolveInitialLanguage());
+      syncCompactNavSelection();
+      updateTaglineWrapLayout();
+    })();
+  </script>
 </body>
 </html>

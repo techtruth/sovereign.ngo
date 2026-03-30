@@ -1,0 +1,125 @@
+{
+  "datacoreId": "existing-business-datacore-demo",
+  "purpose": "Represents provider-owned operational data already stored in existing business systems.",
+  "governance": {
+    "systemOfRecordOwnership": "provider-owned",
+    "mutationPolicy": "read-and-reference",
+    "crossSharePolicy": "encrypted-overlays-only"
+  },
+  "providers": [
+    {
+      "providerId": "care-resource-center",
+      "existingSystem": "case-management-db",
+      "records": [
+        {
+          "recordId": "req-1001",
+          "recordType": "service-request",
+          "status": "pending-review",
+          "residentRef": "resident-101"
+        },
+        {
+          "recordId": "ref-2001",
+          "recordType": "referral",
+          "status": "awaiting-acceptance",
+          "residentRef": "resident-101"
+        }
+      ]
+    },
+    {
+      "providerId": "community-health-clinic",
+      "existingSystem": "ehr-lite",
+      "records": [
+        {
+          "recordId": "tr-3001",
+          "recordType": "facility-transfer",
+          "status": "proposed",
+          "residentRef": "resident-102"
+        }
+      ]
+    },
+    {
+      "providerId": "fairmannor-house",
+      "existingSystem": "prevention-stabilization-db",
+      "records": [
+        {
+          "recordId": "prev-4001",
+          "recordType": "prevention-case",
+          "status": "active",
+          "residentRef": "resident-101"
+        }
+      ]
+    },
+    {
+      "providerId": "safeharbor-shelter",
+      "existingSystem": "shelter-operations-db",
+      "records": [
+        {
+          "recordId": "sh-5001",
+          "recordType": "shelter-intake",
+          "status": "placed",
+          "residentRef": "resident-102"
+        }
+      ]
+    },
+    {
+      "providerId": "riverstone-radiology-center",
+      "existingSystem": "radiology-imaging-db",
+      "records": [
+        {
+          "recordId": "rad-6001",
+          "recordType": "radiology-appointment",
+          "status": "scheduled",
+          "residentRef": "resident-101"
+        }
+      ]
+    },
+    {
+      "providerId": "summitview-emergency-department",
+      "existingSystem": "emergency-room-ops-db",
+      "records": [
+        {
+          "recordId": "er-7001",
+          "recordType": "er-intake",
+          "status": "triage-in-progress",
+          "residentRef": "resident-102"
+        }
+      ]
+    },
+    {
+      "providerId": "bridgeway-family-services",
+      "existingSystem": "family-services-db",
+      "records": [
+        {
+          "recordId": "fam-8001",
+          "recordType": "family-support-intake",
+          "status": "active",
+          "residentRef": "resident-101"
+        }
+      ]
+    },
+    {
+      "providerId": "pioneer-legal-benefits-navigation",
+      "existingSystem": "legal-benefits-navigation-db",
+      "records": [
+        {
+          "recordId": "lb-9001",
+          "recordType": "benefits-navigation-case",
+          "status": "in-review",
+          "residentRef": "resident-102"
+        }
+      ]
+    }
+  ],
+  "residents": [
+    {
+      "residentId": "resident-101",
+      "displayName": "Sample Resident A",
+      "consentState": "granted-limited"
+    },
+    {
+      "residentId": "resident-102",
+      "displayName": "Sample Resident B",
+      "consentState": "revocable-active"
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign NGO | Combined Demo</title>
+  <meta name="description" content="Combined multi-role demo for holder, explorer, issuer, and verifier views.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="/demo.css">
+</head>
+<body>
+  <main class="container">
+    <div class="topbar">
+      <div>
+        <h1>Combined Demo View</h1>
+        <nav class="mode-nav" aria-label="Demo modes">
+          <a href="/individual/">Individual</a>
+          <a href="/provider/">Provider</a>
+          <a class="active" href="/combined/">Combined</a>
+        </nav>
+      </div>
+      <div>
+        <a href="https://sovereign.ngo/">Nonprofit Website</a>
+      </div>
+    </div>
+
+    <p class="note">Set iframe URLs below (local ports or hosted components), then refresh all frames.</p>
+    <p class="note">Combined mode demonstrates multiple front ends against one backend contract, with encrypted cross-share overlays layered on top of existing provider records.</p>
+
+    <section class="controls" aria-label="Combined frame controls">
+      <label>
+        Holder / Wallet
+        <input id="url1" value="http://localhost:8180/">
+      </label>
+      <label>
+        Credential Explorer
+        <input id="url2" value="http://localhost:8070/">
+      </label>
+      <label>
+        Issuer Portal
+        <input id="url3" value="http://localhost:8081/">
+      </label>
+      <label>
+        Verifier Portal
+        <input id="url4" value="http://localhost:8091/">
+      </label>
+      <button id="applyBtn" type="button">Refresh Frames</button>
+    </section>
+
+    <section class="grid four-up" aria-label="Embedded combined demos">
+      <article class="panel">
+        <h2>Holder / Wallet</h2>
+        <iframe id="frame1" title="Holder Wallet Demo" src="http://localhost:8180/"></iframe>
+      </article>
+      <article class="panel">
+        <h2>Credential Explorer</h2>
+        <iframe id="frame2" title="Credential Explorer Demo" src="http://localhost:8070/"></iframe>
+      </article>
+      <article class="panel">
+        <h2>Issuer Portal</h2>
+        <iframe id="frame3" title="Issuer Portal Demo" src="http://localhost:8081/"></iframe>
+      </article>
+      <article class="panel">
+        <h2>Verifier Portal</h2>
+        <iframe id="frame4" title="Verifier Portal Demo" src="http://localhost:8091/"></iframe>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const apply = () => {
+      const pairs = [
+        ["url1", "frame1"],
+        ["url2", "frame2"],
+        ["url3", "frame3"],
+        ["url4", "frame4"]
+      ];
+      for (const [inputId, frameId] of pairs) {
+        const value = document.getElementById(inputId).value.trim();
+        document.getElementById(frameId).src = value || "about:blank";
+      }
+    };
+    document.getElementById("applyBtn").addEventListener("click", apply);
+  </script>
+</body>
+</html>

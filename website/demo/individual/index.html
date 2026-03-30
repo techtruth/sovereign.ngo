@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign NGO | Individual Services Demo</title>
+  <meta name="description" content="Individual-facing demo for hospital, housing, and essential services portals.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="/demo.css">
+  <style>
+    .sovereign-row {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 12px;
+    }
+
+    .sovereign-row .panel {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0;
+    }
+    .sovereign-row .panel-pod {
+      flex: 0 1 35%;
+    }
+    .sovereign-row .panel-credential-manager {
+      flex: 1 1 65%;
+    }
+
+    .sovereign-row .panel iframe {
+      width: 100%;
+      height: min(78vh, 980px);
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .healthcare-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .healthcare-row .panel {
+      min-width: 0;
+      padding: 10px;
+      gap: 8px;
+      border: 1px solid var(--line);
+    }
+
+    .healthcare-row .panel iframe {
+      width: 100%;
+      height: min(78vh, 980px);
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 0;
+    }
+    .frame-title-select {
+      margin: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f7fbff;
+    }
+    .frame-title-select select {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #1a4d6e;
+      font: 700 0.95rem "Trebuchet MS", "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .frame-title-select select:focus-visible {
+      outline: none;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    @media (max-width: 980px) {
+      .sovereign-row {
+        flex-wrap: wrap;
+      }
+      .sovereign-row .panel-pod,
+      .sovereign-row .panel-credential-manager {
+        flex: 1 1 100%;
+      }
+      .healthcare-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <main class="container wide">
+    <div class="topbar">
+      <div>
+        <h1>Individual Services View</h1>
+        <nav class="mode-nav" aria-label="Demo modes">
+          <a class="active" href="/individual/">Individual</a>
+          <a href="/provider/">Provider</a>
+          <a href="/combined/">Combined</a>
+        </nav>
+      </div>
+      <div>
+        <a href="https://sovereign.ngo/">Nonprofit Website</a>
+      </div>
+    </div>
+
+    <p class="note">Resident service portals shown below as full-size embeds inside card containers.</p>
+    <p class="note">This front end is one view of the shared API core. Existing provider systems remain source-of-record; Sovereign adds encrypted cross-sharing overlays only.</p>
+
+    <section class="sovereign-row" aria-label="Sovereign's Data">
+      <article class="panel panel-pod">
+        <iframe title="Sovereign Solid Pod" src="http://localhost:8180/"></iframe>
+      </article>
+      <article class="panel panel-credential-manager">
+        <iframe title="Sovereign Credential Manager" src="http://localhost:8070/"></iframe>
+      </article>
+    </section>
+
+    <section class="grid one-up" aria-label="Embedded individual hospital service portals">
+      <article class="panel">
+        <h2>Hospital Services</h2>
+        <div class="healthcare-row">
+          <article class="panel">
+            <div class="frame-title-select">
+              <label class="sr-only" for="hospitalUrl">Hospital Services</label>
+              <select id="hospitalUrl" aria-label="Hospital Services">
+                <option value="http://localhost:8081/" selected>Nolichucky Family Clinic</option>
+                <option value="http://localhost:8084/">Riverstone Radiology Center</option>
+                <option value="http://localhost:8085/">Summitview Emergency Department</option>
+                <option value="about:blank">Blank</option>
+              </select>
+            </div>
+            <iframe id="hospitalFrame" title="Hospital Services Portal" src="http://localhost:8081/"></iframe>
+          </article>
+          <article class="panel">
+            <div class="frame-title-select">
+              <label class="sr-only" for="radiologyUrl">Radiology</label>
+              <select id="radiologyUrl" aria-label="Radiology">
+                <option value="http://localhost:8084/" selected>Riverstone Radiology Center</option>
+                <option value="http://localhost:8081/">Nolichucky Family Clinic</option>
+                <option value="http://localhost:8085/">Summitview Emergency Department</option>
+                <option value="about:blank">Blank</option>
+              </select>
+            </div>
+            <iframe id="radiologyFrame" title="Riverstone Radiology Center" src="http://localhost:8084/"></iframe>
+          </article>
+          <article class="panel">
+            <div class="frame-title-select">
+              <label class="sr-only" for="emergencyUrl">Emergency Department</label>
+              <select id="emergencyUrl" aria-label="Emergency Department">
+                <option value="http://localhost:8085/" selected>Summitview Emergency Department</option>
+                <option value="http://localhost:8081/">Nolichucky Family Clinic</option>
+                <option value="http://localhost:8084/">Riverstone Radiology Center</option>
+                <option value="about:blank">Blank</option>
+              </select>
+            </div>
+            <iframe id="emergencyFrame" title="Summitview Emergency Department" src="http://localhost:8085/"></iframe>
+          </article>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid two-up" aria-label="Embedded individual crisis prevention and direct help service portals">
+      <article class="panel">
+        <h2>Crisis Prevention</h2>
+        <iframe title="FairMannor House" src="http://localhost:8082/"></iframe>
+        <iframe title="Bridgeway Family Services" src="http://localhost:8087/"></iframe>
+      </article>
+      <article class="panel">
+        <h2>Direct Help</h2>
+        <iframe title="SafeHarborHouse Shelter" src="http://localhost:8083/"></iframe>
+        <iframe title="Pioneer Legal and Benefits Navigation" src="http://localhost:8086/"></iframe>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const applyHospitalFrameSelections = () => {
+      const pairs = [
+        ['hospitalUrl', 'hospitalFrame'],
+        ['radiologyUrl', 'radiologyFrame'],
+        ['emergencyUrl', 'emergencyFrame']
+      ];
+      for (const [selectId, frameId] of pairs) {
+        const selectEl = document.getElementById(selectId);
+        const frameEl = document.getElementById(frameId);
+        if (!selectEl || !frameEl) continue;
+        frameEl.src = selectEl.value || 'about:blank';
+      }
+    };
+
+    ['hospitalUrl', 'radiologyUrl', 'emergencyUrl'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', applyHospitalFrameSelections);
+    });
+  </script>
+</body>
+</html>
