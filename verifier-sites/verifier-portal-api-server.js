@@ -9,8 +9,37 @@ const signingSecret = process.env.SIGNING_SECRET || 'local-dev-secret';
 const mockAlwaysAccept = (process.env.MOCK_ALWAYS_ACCEPT || 'true').toLowerCase() === 'true';
 const sovereignInternalOrigin = process.env.SOVEREIGN_INTERNAL_ORIGIN || 'http://sovereign_gateway';
 const demoWebId = process.env.DEMO_WEBID || 'http://holder_sovereign:3000/profile/card#me';
+const demoOrigin = (() => {
+  try {
+    return new URL(demoWebId).origin;
+  } catch {
+    return 'http://localhost:8180';
+  }
+})();
+const defaultDemoIdentityWebId = demoWebId.endsWith('/profile/card#me')
+  ? `${demoOrigin}/profile/card#8N4Q7Z2K`
+  : demoWebId;
+const stephenStafferWebId = `${demoOrigin}/profile/card#S7T4F9R2`;
+const demoIdentityOptions = [
+  { label: 'Alex Sovereign', webId: `${demoOrigin}/profile/card#8N4Q7Z2K` },
+  { label: 'Betty Medina', webId: `${demoOrigin}/profile/card#3H9X5M1R` },
+  { label: 'Charlie Krier', webId: `${demoOrigin}/profile/card#W2C8J6P4` },
+  { label: 'Debra Harbor', webId: `${demoOrigin}/profile/card#7T1B9LQ5` },
+  { label: 'Ed Erins', webId: `${demoOrigin}/profile/card#K4D3R8X2` },
+  { label: 'Stephen Staffer', webId: stephenStafferWebId }
+];
+if (!demoIdentityOptions.some((entry) => entry.webId === defaultDemoIdentityWebId)) {
+  demoIdentityOptions.unshift({ label: 'Default Demo Identity', webId: defaultDemoIdentityWebId });
+}
 
 const sessions = new Map();
+const escapeHtml = (value) =>
+  String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 
 const schemas = {
   drivers_license: {
@@ -596,13 +625,25 @@ const signPayload = (payload) =>
     .digest('base64url');
 
 const deriveSubjectDidFromWebId = (webId) => {
+  const toDidComponent = (value) =>
+    encodeURIComponent(String(value || '').trim())
+      .replace(/%20/g, '+');
+
   try {
     const u = new URL(webId);
-    const joined = `${u.hostname}${u.pathname}`.replace(/\/+$/, '');
-    const sanitized = joined.replace(/[^a-zA-Z0-9]/g, ':').replace(/:+/g, ':').replace(/^:|:$/g, '');
-    return `did:web:${sanitized || 'subject'}`;
+    const hostComponent = toDidComponent(u.port ? `${u.hostname}:${u.port}` : u.hostname);
+    const pathComponents = u.pathname
+      .split('/')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => toDidComponent(part))
+      .filter(Boolean);
+    const fragmentComponent = toDidComponent(u.hash.startsWith('#') ? u.hash.slice(1) : '');
+    const didComponents = [hostComponent, ...pathComponents];
+    if (fragmentComponent) didComponents.push(fragmentComponent);
+    return `did:web:${didComponents.join(':') || 'subject'}`;
   } catch {
-    const cleaned = String(webId || 'subject').replace(/[^a-zA-Z0-9]/g, ':').replace(/:+/g, ':').replace(/^:|:$/g, '');
+    const cleaned = toDidComponent(webId || 'subject');
     return `did:web:${cleaned || 'subject'}`;
   }
 };
@@ -940,9 +981,9 @@ const renderHomePage = () => `<!doctype html>
     h1, h2 { margin-top: 0; }
     p { color: var(--muted); }
     label { display: block; margin: 8px 0 4px; font-weight: 700; }
-    input, button { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font: inherit; }
+    input, select, button { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font: inherit; }
     button { background: var(--primary); color: #fff; border: 0; font-weight: 700; cursor: pointer; margin-top: 10px; }
-    pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 10px; min-height: 180px; overflow: auto; }
+    pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 10px; min-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -961,8 +1002,13 @@ const renderHomePage = () => `<!doctype html>
 
     <section class="panel">
       <h2>WebID Login</h2>
+      <label for="identityPreset">Sovereign Identity</label>
+      <select id="identityPreset">
+        ${demoIdentityOptions.map((entry) => `<option value="${escapeHtml(entry.webId)}"${entry.webId === defaultDemoIdentityWebId ? ' selected' : ''}>${escapeHtml(entry.label)}</option>`).join('')}
+        <option value="__custom__">Custom WebID</option>
+      </select>
       <label for="webId">WebID</label>
-      <input id="webId" value="${demoWebId}">
+      <input id="webId" value="${escapeHtml(defaultDemoIdentityWebId)}">
       <button id="loginBtn">Login With WebID</button>
       <p id="loginStatus">Not logged in.</p>
     </section>
@@ -995,6 +1041,9 @@ const renderHomePage = () => `<!doctype html>
     const isSelfPresence = ${verifierProfile === 'self_presence' ? 'true' : 'false'};
     let token = '';
     let mockLiveVideoBase64 = '';
+    const customIdentityPresetValue = '__custom__';
+    const namedIdentityPresets = ${JSON.stringify(demoIdentityOptions)};
+    const identityPresetByWebId = new Map(namedIdentityPresets.map((entry) => [String(entry.webId || '').trim(), entry]));
 
     const toBase64 = (file) => new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1011,6 +1060,26 @@ const renderHomePage = () => `<!doctype html>
     const statusEl = document.getElementById('status');
     const outputEl = document.getElementById('output');
     const mockCaptureBtn = document.getElementById('mockCaptureBtn');
+    const identityPresetEl = document.getElementById('identityPreset');
+    const webIdEl = document.getElementById('webId');
+
+    const syncIdentityPresetFromWebId = () => {
+      if (!identityPresetEl || !webIdEl) return;
+      const currentWebId = webIdEl.value.trim();
+      if (!currentWebId) {
+        identityPresetEl.value = customIdentityPresetValue;
+        return;
+      }
+      identityPresetEl.value = identityPresetByWebId.has(currentWebId) ? currentWebId : customIdentityPresetValue;
+    };
+
+    const applyIdentityPresetToWebId = () => {
+      if (!identityPresetEl || !webIdEl) return;
+      const selectedWebId = String(identityPresetEl.value || '').trim();
+      if (!selectedWebId || selectedWebId === customIdentityPresetValue) return;
+      webIdEl.value = selectedWebId;
+      syncIdentityPresetFromWebId();
+    };
 
     if (isSelfPresence && mockCaptureBtn) {
       mockCaptureBtn.addEventListener('click', () => {
@@ -1018,11 +1087,19 @@ const renderHomePage = () => `<!doctype html>
         statusEl.textContent = 'Mock live video captured.';
       });
     }
+    if (identityPresetEl) {
+      identityPresetEl.addEventListener('change', applyIdentityPresetToWebId);
+    }
+    if (webIdEl) {
+      webIdEl.addEventListener('input', syncIdentityPresetFromWebId);
+      webIdEl.addEventListener('blur', syncIdentityPresetFromWebId);
+    }
+    syncIdentityPresetFromWebId();
 
     document.getElementById('loginBtn').addEventListener('click', async () => {
       loginStatusEl.textContent = 'Logging in...';
       try {
-        const webId = document.getElementById('webId').value.trim();
+        const webId = webIdEl.value.trim();
         const res = await fetch('/api/login-webid', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

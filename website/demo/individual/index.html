@@ -54,6 +54,28 @@
       border: 1px solid var(--line);
       border-radius: 0;
     }
+
+    .crisis-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .crisis-row .panel {
+      min-width: 0;
+      padding: 10px;
+      gap: 8px;
+      border: 1px solid var(--line);
+    }
+
+    .crisis-row .panel iframe {
+      width: 100%;
+      height: min(78vh, 980px);
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 0;
+    }
+
     .frame-title-select {
       margin: 0;
       padding: 10px 12px;
@@ -93,6 +115,9 @@
         flex: 1 1 100%;
       }
       .healthcare-row {
+        grid-template-columns: 1fr;
+      }
+      .crisis-row {
         grid-template-columns: 1fr;
       }
     }
@@ -171,16 +196,37 @@
       </article>
     </section>
 
-    <section class="grid two-up" aria-label="Embedded individual crisis prevention and direct help service portals">
+    <section class="grid one-up" aria-label="Embedded individual crisis prevention service portals">
       <article class="panel">
         <h2>Crisis Prevention</h2>
-        <iframe title="FairMannor House" src="http://localhost:8082/"></iframe>
-        <iframe title="Bridgeway Family Services" src="http://localhost:8087/"></iframe>
+        <div class="crisis-row">
+          <article class="panel">
+            <iframe title="FairMannor House" src="http://localhost:8082/"></iframe>
+          </article>
+          <article class="panel">
+            <iframe title="Bridgeway Family Services" src="http://localhost:8087/"></iframe>
+          </article>
+          <article class="panel">
+            <iframe title="Salutation Army" src="http://localhost:8088/"></iframe>
+          </article>
+        </div>
       </article>
+    </section>
+
+    <section class="grid one-up" aria-label="Embedded individual direct help service portals">
       <article class="panel">
         <h2>Direct Help</h2>
-        <iframe title="SafeHarborHouse Shelter" src="http://localhost:8083/"></iframe>
-        <iframe title="Pioneer Legal and Benefits Navigation" src="http://localhost:8086/"></iframe>
+        <div class="crisis-row">
+          <article class="panel">
+            <iframe title="SafeHarbor Shelter" src="http://localhost:8083/"></iframe>
+          </article>
+          <article class="panel">
+            <iframe title="Pioneer Legal and Benefits Navigation" src="http://localhost:8086/"></iframe>
+          </article>
+          <article class="panel">
+            <iframe title="Transport Services" src="http://localhost:8089/"></iframe>
+          </article>
+        </div>
       </article>
     </section>
   </main>

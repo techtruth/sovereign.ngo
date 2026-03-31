@@ -27,14 +27,12 @@
     <section class="hero">
       <span class="tag">Issuer: Doctor's Office</span>
       <h1>Nolichucky Family Clinic</h1>
-      <p>Primary care issuer for visit, imaging, and medical record credentials.</p>
-      <p><strong>Main purpose:</strong> Verify identity and presence before sensitive services like imaging.</p>
+      <p>Your local family clinic and a front-line partner in your family's health, from routine care to next-step referrals.</p>
       <div class="workflow">
         <h3>Current Verification Workflow</h3>
         <p>1) Login with your sovereign WebID</p>
-        <p>2) Identity check passes with <strong>Driver License</strong> or <strong>Passport</strong> VC</p>
-        <p>3) Self-presence VC is required for X-ray authorization</p>
-        <p>4) X-ray data stays in doctor records; sovereign stores a signed link credential for delegated access</p>
+        <p>2) Select a self-service action or a staff service action</p>
+        <p>3) If applicable, referrals can be fulfilled by any qualified provider</p>
         <span class="chip">Driver License</span>
         <span class="chip">Passport</span>
         <span class="chip">Self-Presence</span>
@@ -44,14 +42,15 @@
     <section class="grid">
       <article class="panel">
         <h2>What We Issue</h2>
+        <p style="color:var(--warn);"><strong>Note:</strong> The clinic keeps full medical records in the clinic pod and can issue signed proof links to the sovereign pod when needed.</p>
         <ul>
-          <li>Visit verification credential</li>
-          <li>Follow-up plan credential</li>
-          <li>Bloodwork result credential</li>
-          <li>X-ray authorization ticket</li>
-          <li>Allergy profile credential</li>
+          <li>Appointment and walk-in check-in records</li>
+          <li>Treatment request and visit verification credentials</li>
+          <li>Follow-up plan credentials</li>
+          <li>Bloodwork result credentials</li>
+          <li>X-ray and ultrasound referral credentials</li>
+          <li>Allergy profile credentials</li>
         </ul>
-        <p style="color:var(--warn);"><strong>Note:</strong> Doctor keeps full medical record and always stores signed proof link in patient pod.</p>
       </article>
       <article class="panel">
         <h2>Clinical Operations</h2>
@@ -59,7 +58,7 @@
           <li>Hours: Mon-Fri, 8:00 AM - 6:00 PM</li>
           <li>Walk-ins accepted before 4:30 PM</li>
           <li>Identity desk: Window B</li>
-          <li>Imaging authorization: Radiology-Room-2</li>
+          <li>Imaging referrals: Any qualified X-ray or ultrasound processing provider</li>
           <li>Lab processing: Clinical Lab</li>
         </ul>
       </article>

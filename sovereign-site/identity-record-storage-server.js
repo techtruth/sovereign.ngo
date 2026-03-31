@@ -5,6 +5,28 @@ const podName = process.env.POD_NAME || 'holder-pod';
 const businessName = process.env.BUSINESS_NAME || 'business';
 const configuredWebId = process.env.SOVEREIGN_WEBID || 'https://sovereign.example/profile/card#me';
 const configuredWalletApi = process.env.SOVEREIGN_WALLET_API || `http://holder_sovereign:${port}/wallet/credentials`;
+const demoOrigin = (() => {
+  try {
+    return new URL(configuredWebId).origin;
+  } catch {
+    return 'http://localhost:8180';
+  }
+})();
+const defaultDemoIdentityWebId = configuredWebId.endsWith('/profile/card#me')
+  ? `${demoOrigin}/profile/card#8N4Q7Z2K`
+  : configuredWebId;
+const stephenStafferWebId = `${demoOrigin}/profile/card#S7T4F9R2`;
+const demoIdentityOptions = [
+  { label: 'Alex Sovereign', webId: `${demoOrigin}/profile/card#8N4Q7Z2K` },
+  { label: 'Betty Medina', webId: `${demoOrigin}/profile/card#3H9X5M1R` },
+  { label: 'Charlie Krier', webId: `${demoOrigin}/profile/card#W2C8J6P4` },
+  { label: 'Debra Harbor', webId: `${demoOrigin}/profile/card#7T1B9LQ5` },
+  { label: 'Ed Erins', webId: `${demoOrigin}/profile/card#K4D3R8X2` },
+  { label: 'Stephen Staffer', webId: stephenStafferWebId }
+];
+if (!demoIdentityOptions.some((entry) => entry.webId === defaultDemoIdentityWebId)) {
+  demoIdentityOptions.unshift({ label: 'Default Demo Identity', webId: defaultDemoIdentityWebId });
+}
 
 const credentialsByWebId = new Map();
 
@@ -77,13 +99,13 @@ const renderHomePage = () => `<!doctype html>
     h1, h2 { margin-top: 0; }
     p { color: var(--muted); }
     label { display: block; margin: 8px 0 4px; font-weight: 600; }
-    input, button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; font: inherit; }
+    input, select, button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; font: inherit; }
     button { background: var(--primary); color: #fff; border: 0; cursor: pointer; font-weight: 700; margin-top: 10px; }
     button:hover { filter: brightness(1.05); }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; vertical-align: top; font-size: 13px; }
     th { background: #f8fafc; }
-    pre { background: #111827; color: #f9fafb; padding: 12px; border-radius: 10px; overflow: auto; min-height: 180px; margin-top: 10px; }
+    pre { background: #111827; color: #f9fafb; padding: 12px; border-radius: 10px; overflow: auto; min-height: 180px; margin-top: 10px; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; }
     .hint { font-size: 13px; color: var(--muted); }
   </style>
 </head>
@@ -97,8 +119,13 @@ const renderHomePage = () => `<!doctype html>
 
     <section class="panel">
       <h2>Pod Browser</h2>
+      <label for="identityPreset">Sovereign Identity</label>
+      <select id="identityPreset" name="identityPreset">
+        ${demoIdentityOptions.map((entry) => `<option value="${escapeHtml(entry.webId)}"${entry.webId === defaultDemoIdentityWebId ? ' selected' : ''}>${escapeHtml(entry.label)}</option>`).join('')}
+        <option value="__custom__">Custom WebID</option>
+      </select>
       <label for="webId">WebID</label>
-      <input id="webId" name="webId" value="${escapeHtml(configuredWebId)}" />
+      <input id="webId" name="webId" value="${escapeHtml(defaultDemoIdentityWebId)}" />
       <button id="refreshWallet" type="button">Browse Records</button>
       <p class="hint">Showing credential records stored for the selected WebID.</p>
       <table>
@@ -120,6 +147,26 @@ const renderHomePage = () => `<!doctype html>
     const walletOutEl = document.getElementById("walletOut");
     const recordsTableEl = document.getElementById("recordsTable");
     const webIdEl = document.getElementById("webId");
+    const identityPresetEl = document.getElementById("identityPreset");
+    const customIdentityPresetValue = "__custom__";
+    const namedIdentityPresets = ${JSON.stringify(demoIdentityOptions)};
+    const identityPresetByWebId = new Map(namedIdentityPresets.map((entry) => [String(entry.webId || "").trim(), entry]));
+
+    const syncIdentityPresetFromWebId = () => {
+      const currentWebId = webIdEl.value.trim();
+      if (!currentWebId) {
+        identityPresetEl.value = customIdentityPresetValue;
+        return;
+      }
+      identityPresetEl.value = identityPresetByWebId.has(currentWebId) ? currentWebId : customIdentityPresetValue;
+    };
+
+    const applyIdentityPresetToWebId = () => {
+      const selectedWebId = String(identityPresetEl.value || "").trim();
+      if (!selectedWebId || selectedWebId === customIdentityPresetValue) return;
+      webIdEl.value = selectedWebId;
+      syncIdentityPresetFromWebId();
+    };
 
     const refreshWallet = async () => {
       const webId = webIdEl.value.trim();
@@ -160,6 +207,10 @@ const renderHomePage = () => `<!doctype html>
       }
     });
 
+    identityPresetEl.addEventListener("change", applyIdentityPresetToWebId);
+    webIdEl.addEventListener("input", syncIdentityPresetFromWebId);
+    webIdEl.addEventListener("blur", syncIdentityPresetFromWebId);
+    syncIdentityPresetFromWebId();
     refreshWallet();
   </script>
 </body>

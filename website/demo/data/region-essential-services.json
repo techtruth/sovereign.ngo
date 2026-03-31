@@ -97,6 +97,17 @@
       ]
     },
     {
+      "providerId": "transport-services",
+      "displayName": "Transport Services",
+      "type": "service-transport-assistance",
+      "capabilities": [
+        "ride-request-intake",
+        "dispatch-coordination",
+        "pickup-dropoff-verification",
+        "service-handoff-continuity"
+      ]
+    },
+    {
       "providerId": "benefits-legal-aid",
       "displayName": "Benefits and Legal Aid",
       "type": "benefits-support",

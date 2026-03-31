@@ -5,8 +5,8 @@
       "types": ["VerifiableCredential", "AssistanceIntakeReceiptCredential"],
       "storage": "sovereign",
       "subjectDefaults": {
-        "issuerOrganization": "Salutation Army",
-        "serviceArea": "TN"
+        "issuerOrganization": "FairMannor House",
+        "serviceDomain": "homelessness-prevention-and-stabilization"
       },
       "subjectFromPayload": {
         "intakeId": "intakeId",

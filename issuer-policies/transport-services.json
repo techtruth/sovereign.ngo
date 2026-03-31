@@ -1,0 +1,49 @@
+{
+  "actionTemplates": {
+    "issue_transport_request_receipt": {
+      "context": ["https://www.w3.org/ns/credentials/v2"],
+      "types": ["VerifiableCredential", "TransportRequestReceiptCredential"],
+      "storage": "sovereign",
+      "subjectDefaults": {
+        "issuerOrganization": "Transport Services",
+        "serviceDomain": "direct-help-transport-coordination"
+      },
+      "subjectFromPayload": {
+        "requestId": "requestId",
+        "destinationType": "destinationType",
+        "destinationName": "destinationName"
+      },
+      "includePayload": true
+    },
+    "dispatch_transport_assistance": {
+      "context": ["https://www.w3.org/ns/credentials/v2"],
+      "types": ["VerifiableCredential", "TransportDispatchCredential"],
+      "storage": "issuer",
+      "subjectDefaults": {
+        "issuerOrganization": "Transport Services",
+        "serviceDomain": "direct-help-transport-coordination"
+      },
+      "subjectFromPayload": {
+        "dispatchId": "dispatchId",
+        "pickupWindow": "pickupWindow",
+        "destinationName": "destinationName"
+      },
+      "includePayload": true
+    },
+    "issue_transport_completion_record": {
+      "context": ["https://www.w3.org/ns/credentials/v2"],
+      "types": ["VerifiableCredential", "TransportCompletionCredential"],
+      "storage": "sovereign",
+      "subjectDefaults": {
+        "issuerOrganization": "Transport Services",
+        "serviceDomain": "direct-help-transport-coordination"
+      },
+      "subjectFromPayload": {
+        "completionId": "completionId",
+        "dropoffConfirmedAt": "dropoffConfirmedAt",
+        "destinationName": "destinationName"
+      },
+      "includePayload": true
+    }
+  }
+}

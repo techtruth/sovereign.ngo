@@ -90,7 +90,7 @@ services:
     image: sovereign-issuer-car-repair-shop:latest
     container_name: sovereign-issuer-car-repair-shop
     environment:
-      SITE_DIR: car-repair-shop
+      SITE_DIR: fairmannor-house
       PORT: 3000
       SOLID_POD_URL: http://holder_car_repair_shop:3000/
       SOVEREIGN_POD_URL: http://localhost:8180/
@@ -124,7 +124,7 @@ services:
     image: sovereign-issuer-sports-park:latest
     container_name: sovereign-issuer-sports-park
     environment:
-      SITE_DIR: sports-park
+      SITE_DIR: safeharbor-shelter
       PORT: 3000
       SOLID_POD_URL: http://holder_sports_park:3000/
       SOVEREIGN_POD_URL: http://localhost:8180/
@@ -158,7 +158,7 @@ services:
     image: sovereign-issuer-national-metal-works:latest
     container_name: sovereign-issuer-national-metal-works
     environment:
-      SITE_DIR: national-metal-works
+      SITE_DIR: radiology-center
       PORT: 3000
       SOLID_POD_URL: http://holder_national_metal_works:3000/
       SOVEREIGN_POD_URL: http://localhost:8180/
@@ -192,7 +192,7 @@ services:
     image: sovereign-issuer-apple-seed-insurance:latest
     container_name: sovereign-issuer-apple-seed-insurance
     environment:
-      SITE_DIR: apple-seed-insurance
+      SITE_DIR: emergency-department
       PORT: 3000
       SOLID_POD_URL: http://holder_apple_seed_insurance:3000/
       SOVEREIGN_POD_URL: http://localhost:8180/
@@ -226,7 +226,7 @@ services:
     image: sovereign-issuer-assistance-charity:latest
     container_name: sovereign-issuer-assistance-charity
     environment:
-      SITE_DIR: assistance-charity
+      SITE_DIR: legal-benefits-aid
       PORT: 3000
       SOLID_POD_URL: http://holder_assistance_charity:3000/
       SOVEREIGN_POD_URL: http://localhost:8180/
@@ -238,6 +238,108 @@ services:
       - holder_assistance_charity
     networks:
       - assistance_charity_net
+      - default
+
+  holder_salutation_army:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.solid-pod
+    image: sovereign-holder-salutation-army:latest
+    container_name: sovereign-holder-salutation-army
+    environment:
+      CSS_BASE_URL: http://holder_salutation_army:3000/
+    tmpfs:
+      - /data
+    networks:
+      - salutation_army_net
+
+  issuer_salutation_army:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.issuer-portal
+    image: sovereign-issuer-salutation-army:latest
+    container_name: sovereign-issuer-salutation-army
+    environment:
+      SITE_DIR: assistance-charity
+      PORT: 3000
+      SOLID_POD_URL: http://holder_salutation_army:3000/
+      SOVEREIGN_POD_URL: http://localhost:8180/
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
+    ports:
+      - "8088:3000"
+    depends_on:
+      - holder_salutation_army
+    networks:
+      - salutation_army_net
+      - default
+
+  holder_family_services:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.solid-pod
+    image: sovereign-holder-family-services:latest
+    container_name: sovereign-holder-family-services
+    environment:
+      CSS_BASE_URL: http://holder_family_services:3000/
+    tmpfs:
+      - /data
+    networks:
+      - family_services_net
+
+  issuer_family_services:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.issuer-portal
+    image: sovereign-issuer-family-services:latest
+    container_name: sovereign-issuer-family-services
+    environment:
+      SITE_DIR: family-services
+      PORT: 3000
+      SOLID_POD_URL: http://holder_family_services:3000/
+      SOVEREIGN_POD_URL: http://localhost:8180/
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
+    ports:
+      - "8087:3000"
+    depends_on:
+      - holder_family_services
+    networks:
+      - family_services_net
+      - default
+
+  holder_transport_services:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.solid-pod
+    image: sovereign-holder-transport-services:latest
+    container_name: sovereign-holder-transport-services
+    environment:
+      CSS_BASE_URL: http://holder_transport_services:3000/
+    tmpfs:
+      - /data
+    networks:
+      - transport_services_net
+
+  issuer_transport_services:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.issuer-portal
+    image: sovereign-issuer-transport-services:latest
+    container_name: sovereign-issuer-transport-services
+    environment:
+      SITE_DIR: transport-services
+      PORT: 3000
+      SOLID_POD_URL: http://holder_transport_services:3000/
+      SOVEREIGN_POD_URL: http://localhost:8180/
+      SOVEREIGN_INTERNAL_ORIGIN: http://sovereign_gateway:80
+      DEMO_WEBID: http://localhost:8180/profile/card#me
+    ports:
+      - "8089:3000"
+    depends_on:
+      - holder_transport_services
+    networks:
+      - transport_services_net
       - default
 
   verifier_drivers_license:
@@ -373,3 +475,6 @@ networks:
   national_metal_works_net:
   apple_seed_insurance_net:
   assistance_charity_net:
+  salutation_army_net:
+  family_services_net:
+  transport_services_net:

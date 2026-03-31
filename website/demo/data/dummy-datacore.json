@@ -108,6 +108,18 @@
           "residentRef": "resident-102"
         }
       ]
+    },
+    {
+      "providerId": "transport-services",
+      "existingSystem": "transport-dispatch-db",
+      "records": [
+        {
+          "recordId": "trn-10001",
+          "recordType": "ride-dispatch",
+          "status": "en-route",
+          "residentRef": "resident-101"
+        }
+      ]
     }
   ],
   "residents": [

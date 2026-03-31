@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Riverstone Radiology Center</title>
+  <style>
+    :root { --bg:#f2f7ff; --panel:#fff; --primary:#1e40af; --accent:#dbeafe; --text:#0f172a; --muted:#334155; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Trebuchet MS", "Segoe UI", sans-serif; background: linear-gradient(180deg, #eaf2ff, var(--bg)); color: var(--text); }
+    .wrap { max-width: 920px; margin: 2rem auto; padding: 0 1rem; }
+    .hero, .panel { background: var(--panel); border-radius: 16px; padding: 1.2rem; box-shadow: 0 12px 28px rgba(30, 64, 175, .12); }
+    .hero { border-left: 10px solid var(--primary); }
+    .tag { display: inline-block; background: var(--accent); color: var(--primary); padding: .25rem .7rem; border-radius: 999px; font-weight: 700; font-size: .9rem; }
+    h1 { margin: .6rem 0; color: var(--primary); }
+    p { color: var(--muted); margin: .4rem 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    ul { margin: .5rem 0 0 1rem; line-height: 1.6; }
+    .workflow { margin-top: 12px; border: 1px solid #bfdbfe; background: #f8fbff; border-radius: 12px; padding: .9rem; }
+    .workflow h3 { margin: .2rem 0 .4rem; color: #1d4ed8; }
+    .chip { display: inline-block; margin-right: 6px; margin-top: 4px; padding: .2rem .55rem; border-radius: 999px; font-size: .82rem; font-weight: 700; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="tag">Issuer: Riverstone Radiology Center</span>
+      <h1>Riverstone Radiology Center</h1>
+      <p>Imaging-only portal for referral intake, X-ray results, and ultrasound results.</p>
+      <p><strong>Main purpose:</strong> Accept doctor referrals and issue signed imaging records.</p>
+      <div class="workflow">
+        <h3>Radiology Workflow</h3>
+        <p>1) Person logs in with their WebID at the radiology provider</p>
+        <p>2) Person presents a doctor-issued imaging referral</p>
+        <p>3) Provider staff performs imaging and issues the signed result credential</p>
+        <span class="chip">Doctor Referral</span>
+        <span class="chip">X-Ray</span>
+        <span class="chip">Ultrasound</span>
+        <span class="chip">Signed Result VC</span>
+      </div>
+    </section>
+    <section class="grid">
+      <article class="panel">
+        <h2>What We Issue</h2>
+        <ul>
+          <li>X-ray imaging result credential</li>
+          <li>Ultrasound imaging result credential</li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h2>Operational Scope</h2>
+        <ul>
+          <li>Imaging services only (radiology, X-ray, ultrasound)</li>
+          <li>No unrelated primary care workflows</li>
+          <li>Referral-first processing from doctor office</li>
+        </ul>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

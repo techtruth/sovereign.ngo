@@ -5,8 +5,8 @@
       "types": ["VerifiableCredential", "AssistanceIntakeReceiptCredential"],
       "storage": "sovereign",
       "subjectDefaults": {
-        "issuerOrganization": "Salutation Army",
-        "serviceArea": "TN"
+        "issuerOrganization": "Pioneer Legal and Benefits Navigation",
+        "serviceDomain": "legal-aid-and-benefits-navigation"
       },
       "subjectFromPayload": {
         "intakeId": "intakeId",
