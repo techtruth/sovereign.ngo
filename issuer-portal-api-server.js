@@ -22,23 +22,10 @@ const demoOrigin = (() => {
     return 'http://localhost:8180';
   }
 })();
-const defaultDemoIdentityWebId = demoWebId.endsWith('/profile/card#me')
-  ? `${demoOrigin}/profile/card#8N4Q7Z2K`
-  : demoWebId;
-const stephenStafferWebId = `${demoOrigin}/profile/card#S7T4F9R2`;
-const demoIdentityOptions = [
-  { label: 'Alex Sovereign', webId: `${demoOrigin}/profile/card#8N4Q7Z2K` },
-  { label: 'Betty Medina', webId: `${demoOrigin}/profile/card#3H9X5M1R` },
-  { label: 'Charlie Krier', webId: `${demoOrigin}/profile/card#W2C8J6P4` },
-  { label: 'Debra Harbor', webId: `${demoOrigin}/profile/card#7T1B9LQ5` },
-  { label: 'Ed Erins', webId: `${demoOrigin}/profile/card#K4D3R8X2` },
-  { label: 'Stephen Staffer', webId: stephenStafferWebId }
-];
-if (!demoIdentityOptions.some((entry) => entry.webId === defaultDemoIdentityWebId)) {
-  demoIdentityOptions.unshift({ label: 'Default Demo Identity', webId: defaultDemoIdentityWebId });
-}
-const subjectIdentityOptions = demoIdentityOptions.filter((entry) => entry.webId !== stephenStafferWebId);
+const stephenStafferWebId = String(process.env.STAFF_WEBID || `${demoOrigin}/profile/card#S7T4F9R2`).trim();
+const subjectIdentityOptions = [];
 const emergencyJohnDoeWebIdPrefix = `${demoOrigin}/profile/card#john-doe-`;
+const isEmergencyJohnDoeWebId = (webId) => String(webId || '').trim().toLowerCase().startsWith(emergencyJohnDoeWebIdPrefix.toLowerCase());
 const providerStaffCredentialType = 'ProviderStaffCredential';
 const providerStaffIssuerDid = 'did:example:issuer:sovereign-platform';
 const providerStaffIssuerName = 'Sovereign Platform';
@@ -81,6 +68,98 @@ const createEmergencyJohnDoeIdentity = ({ incidentId = '' } = {}) => {
     alias,
     caseSlug,
     suffix
+  };
+};
+
+const emergencyObservedAttributeKeyMap = new Map([
+  ['estimatedage', 'estimatedAge'],
+  ['estimatedagerange', 'estimatedAgeRange'],
+  ['apparentsex', 'apparentSex'],
+  ['apparentgender', 'apparentGender'],
+  ['foundlocation', 'foundLocation'],
+  ['notabledetails', 'notableDetails'],
+  ['distinguishingfeatures', 'distinguishingFeatures'],
+  ['presentingcondition', 'presentingCondition'],
+  ['triagenotes', 'triageNotes'],
+  ['itemsfound', 'itemsFound'],
+  ['languagespoken', 'languageSpoken'],
+  ['spokennamehint', 'spokenNameHint'],
+  ['dateofbirthhint', 'dateOfBirthHint']
+]);
+
+const normalizeEmergencyObservedAttributes = (input) => {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const normalized = {};
+  for (const [rawKey, rawValue] of Object.entries(input)) {
+    const sourceKey = String(rawKey || '').trim();
+    if (!sourceKey) continue;
+    const mappedKey = emergencyObservedAttributeKeyMap.get(sourceKey.toLowerCase()) || sourceKey;
+    if (rawValue === undefined || rawValue === null) continue;
+    if (Array.isArray(rawValue)) {
+      const list = rawValue
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)
+        .slice(0, 25);
+      if (list.length > 0) normalized[mappedKey] = list;
+      continue;
+    }
+    if (typeof rawValue === 'string') {
+      const value = rawValue.trim().slice(0, 300);
+      if (value) normalized[mappedKey] = value;
+      continue;
+    }
+    if (typeof rawValue === 'number' || typeof rawValue === 'boolean') {
+      normalized[mappedKey] = rawValue;
+    }
+  }
+  return normalized;
+};
+
+const buildEmergencySubjectProfileSummary = (profile) => {
+  if (!profile || typeof profile !== 'object') return null;
+  return {
+    profileId: profile.profileId || null,
+    webId: profile.webId || null,
+    subjectDid: profile.subjectDid || null,
+    alias: profile.alias || null,
+    incidentId: profile.incidentId || null,
+    caseSlug: profile.caseSlug || null,
+    status: profile.status || null,
+    observedAttributes: profile.observedAttributes || {},
+    merge: profile.merge || null,
+    createdAt: profile.createdAt || null,
+    updatedAt: profile.updatedAt || null
+  };
+};
+
+const createEmergencySubjectProfile = ({
+  johnDoeIdentity,
+  incidentId = '',
+  observedAttributes = {},
+  createdByStaffWebId = ''
+}) => {
+  const createdAt = new Date().toISOString();
+  const normalizedAttributes = normalizeEmergencyObservedAttributes(observedAttributes);
+  return {
+    profileId: `emergency-subject-${crypto.randomUUID()}`,
+    webId: johnDoeIdentity.webId,
+    subjectDid: deriveSubjectDidFromWebId(johnDoeIdentity.webId),
+    alias: johnDoeIdentity.alias,
+    incidentId: incidentId || null,
+    caseSlug: johnDoeIdentity.caseSlug || null,
+    status: 'temporary_unidentified',
+    observedAttributes: normalizedAttributes,
+    createdByStaffWebId: String(createdByStaffWebId || '').trim() || null,
+    createdAt,
+    updatedAt: createdAt,
+    merge: {
+      state: 'pending',
+      mergedIntoWebId: null,
+      identifiedLabel: null,
+      mergedAt: null,
+      mergedByStaffWebId: null,
+      mergeReason: null
+    }
   };
 };
 
@@ -335,6 +414,8 @@ const encryptedDoctorRecords = new Map();
 const doctorRecordConsentGrants = new Map();
 const interAgencyConsentGrantsBySubject = new Map();
 const emergencyBreakGlassAccessLog = [];
+const emergencySubjectProfilesByWebId = new Map();
+const emergencySubjectMergeLog = [];
 const encryptedDatastoreStats = {
   recordsStored: 0,
   fetchAttempts: 0,
@@ -344,6 +425,12 @@ const encryptedDatastoreStats = {
   consentGrantsRevoked: 0,
   lastUpdatedAt: null
 };
+const maxAuditEvents = parsePositiveInt(process.env.AUDIT_MAX_EVENTS, 5000, 100);
+const maxIdempotencyEntries = parsePositiveInt(process.env.IDEMPOTENCY_MAX_ENTRIES, 1500, 100);
+const idempotencyTtlMs = parsePositiveInt(process.env.IDEMPOTENCY_TTL_MS, 10 * 60 * 1000, 1000);
+const serviceAuditEvents = [];
+const idempotencyCache = new Map();
+
 let issuerTemplatePolicy = { actionTemplates: {} };
 try {
   const policyRaw = fs.readFileSync(templatePolicyPath, 'utf8');
@@ -450,9 +537,112 @@ const readBody = (req) =>
   });
 
 const json = (res, status, payload) => {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(payload));
+  const requestId = String(res.__requestId || '').trim();
+  const idempotencyMeta = res.__idempotencyMeta && typeof res.__idempotencyMeta === 'object'
+    ? res.__idempotencyMeta
+    : null;
+  const body = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? {
+      ...payload,
+      ...(requestId && !payload.requestId ? { requestId } : {}),
+      ...(idempotencyMeta && !payload.idempotency ? { idempotency: idempotencyMeta } : {})
+    }
+    : payload;
+
+  if (res.__idempotencyCacheKey && status < 500) {
+    idempotencyCache.set(res.__idempotencyCacheKey, {
+      status,
+      payload: body,
+      storedAtMs: Date.now()
+    });
+  }
+
+  if (!res.__auditSuppressed && res.__auditContext && typeof res.__auditContext === 'object') {
+    const summary = body && typeof body === 'object' && !Array.isArray(body)
+      ? {
+        ok: body.ok,
+        error: body.error || null,
+        actionId: body.actionId || body?.action?.id || null,
+        subjectDid: body.subjectDid || null,
+        authenticatedWebId: body.authenticatedWebId || null,
+        targetAgencyDid: body.targetAgencyDid || body.sourceIssuerDid || null
+      }
+      : { ok: status < 400, error: status >= 400 ? 'non_object_response' : null };
+    serviceAuditEvents.push({
+      id: `audit-${crypto.randomUUID()}`,
+      timestamp: new Date().toISOString(),
+      requestId: requestId || null,
+      method: res.__auditContext.method || null,
+      path: res.__auditContext.path || null,
+      siteDir,
+      issuerDid,
+      status,
+      ...summary
+    });
+    if (serviceAuditEvents.length > maxAuditEvents) {
+      serviceAuditEvents.splice(0, serviceAuditEvents.length - maxAuditEvents);
+    }
+  }
+
+  if (idempotencyCache.size > maxIdempotencyEntries) {
+    const sorted = [...idempotencyCache.entries()].sort((a, b) => (a[1]?.storedAtMs || 0) - (b[1]?.storedAtMs || 0));
+    const trimCount = Math.max(1, sorted.length - maxIdempotencyEntries);
+    for (let index = 0; index < trimCount; index += 1) {
+      idempotencyCache.delete(sorted[index][0]);
+    }
+  }
+
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+    ...(requestId ? { 'X-Request-Id': requestId } : {})
+  });
+  res.end(JSON.stringify(body));
 };
+
+const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+const isLikelyDid = (value) => /^did:[a-z0-9]+:[A-Za-z0-9:._-]+$/.test(String(value || '').trim());
+const isLikelyWebId = (value) => {
+  try {
+    const url = new URL(String(value || '').trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+const normalizeRequestId = (value) => String(value || '').trim().slice(0, 120);
+const generateRequestId = () => `req-${crypto.randomUUID()}`;
+
+const parseIdempotencyKey = (req, body) => {
+  const headerKey = String(req.headers['x-idempotency-key'] || '').trim();
+  const bodyKey = isPlainObject(body)
+    ? String(body.idempotencyKey || body.idempotency_key || '').trim()
+    : '';
+  const raw = headerKey || bodyKey;
+  return raw ? raw.slice(0, 180) : '';
+};
+
+const readCachedIdempotentResponse = (cacheKey) => {
+  if (!cacheKey) return null;
+  const cached = idempotencyCache.get(cacheKey);
+  if (!cached) return null;
+  if (!Number.isFinite(cached.storedAtMs) || (Date.now() - cached.storedAtMs) > idempotencyTtlMs) {
+    idempotencyCache.delete(cacheKey);
+    return null;
+  }
+  return cached;
+};
+
+const requireObjectBody = (body, contextLabel) => {
+  if (!isPlainObject(body)) {
+    return `${contextLabel} payload must be a JSON object`;
+  }
+  return '';
+};
+
+const allowedInterAgencyScopes = new Set(['subject_records', 'doctor_record_access', 'medical_record_access']);
 
 const getAuthToken = (req) => {
   const auth = req.headers.authorization || '';
@@ -594,6 +784,64 @@ const normalizeInterAgencyConstraints = (input) => {
   if (actionIds.length > 0) out.actionIds = actionIds;
   if (sourceContainers.length > 0) out.sourceContainers = sourceContainers;
   return out;
+};
+
+const validateInterAgencyConstraintShape = (body) => {
+  const issues = [];
+  const value = body && typeof body === 'object' ? body : {};
+  const emergencyAccess = value.emergencyAccess;
+  if (emergencyAccess !== undefined && !isPlainObject(emergencyAccess)) {
+    issues.push('emergencyAccess must be an object when provided');
+  }
+
+  const maybeListFields = [
+    'allowedCategories', 'allowedRecordTypes', 'allowedRecordIds', 'allowedActionIds', 'allowedSourceContainers',
+    'categories', 'recordTypes', 'recordIds', 'actionIds', 'sourceContainers'
+  ];
+  for (const field of maybeListFields) {
+    if (value[field] === undefined || value[field] === null) continue;
+    const entry = value[field];
+    if (!(typeof entry === 'string' || Array.isArray(entry))) {
+      issues.push(`${field} must be a comma-separated string or array`);
+    }
+  }
+  return issues;
+};
+
+const validateCommandPayloadShape = (actionId, payload) => {
+  const issues = [];
+  if (!isPlainObject(payload)) {
+    issues.push('payload must be an object');
+    return issues;
+  }
+
+  const referralActions = new Set(['present_imaging_referral', 'issue_xray_result', 'issue_ultrasound_result']);
+  if (referralActions.has(actionId)) {
+    if (payload.referralRecordId !== undefined && typeof payload.referralRecordId !== 'string') {
+      issues.push('payload.referralRecordId must be a string');
+    }
+    if (payload.referralCredentialId !== undefined && typeof payload.referralCredentialId !== 'string') {
+      issues.push('payload.referralCredentialId must be a string');
+    }
+    if (payload.linkedCredentialId !== undefined && typeof payload.linkedCredentialId !== 'string') {
+      issues.push('payload.linkedCredentialId must be a string');
+    }
+  }
+
+  if (actionId === 'request_xray' || actionId === 'request_ultrasound') {
+    if (payload.imagingOrder !== undefined && !isPlainObject(payload.imagingOrder)) {
+      issues.push('payload.imagingOrder must be an object');
+    }
+    if (payload.recommendationNote !== undefined && typeof payload.recommendationNote !== 'string') {
+      issues.push('payload.recommendationNote must be a string');
+    }
+  }
+
+  if (actionId === 'draw_blood' && payload.orderDocument !== undefined && !isPlainObject(payload.orderDocument)) {
+    issues.push('payload.orderDocument must be an object');
+  }
+
+  return issues;
 };
 
 const hasInterAgencyConstraints = (constraints) => Object.keys(constraints || {}).length > 0;
@@ -1063,6 +1311,95 @@ const listCredentialResourceUrls = async (containerUrl) => {
   return { ok: true, resources };
 };
 
+const deleteJsonResourcesFromContainer = async (containerUrl) => {
+  const listed = await listCredentialResourceUrls(containerUrl);
+  if (!listed.ok) {
+    return {
+      ok: false,
+      containerUrl,
+      listed,
+      deletedCount: 0,
+      failedCount: 0
+    };
+  }
+
+  let deletedCount = 0;
+  let failedCount = 0;
+  const failures = [];
+  for (const resourceUrl of listed.resources) {
+    try {
+      const response = await fetch(resourceUrl, { method: 'DELETE' });
+      if (response.ok || response.status === 404) {
+        deletedCount += 1;
+        continue;
+      }
+      failedCount += 1;
+      if (failures.length < 10) {
+        failures.push({ resourceUrl, status: response.status });
+      }
+    } catch (err) {
+      failedCount += 1;
+      if (failures.length < 10) {
+        failures.push({ resourceUrl, error: err.message });
+      }
+    }
+  }
+
+  return {
+    ok: failedCount === 0,
+    containerUrl,
+    listedCount: listed.resources.length,
+    deletedCount,
+    failedCount,
+    failures
+  };
+};
+
+const resetEncryptedDatastoreStats = () => {
+  encryptedDatastoreStats.recordsStored = 0;
+  encryptedDatastoreStats.fetchAttempts = 0;
+  encryptedDatastoreStats.fetchAllowed = 0;
+  encryptedDatastoreStats.fetchDenied = 0;
+  encryptedDatastoreStats.consentGrantsIssued = 0;
+  encryptedDatastoreStats.consentGrantsRevoked = 0;
+  encryptedDatastoreStats.lastUpdatedAt = new Date().toISOString();
+};
+
+const resetIssuerRuntimeState = () => {
+  sessions.clear();
+  doctorRecords.clear();
+  employmentRegistry.clear();
+  issuedAccessBadges.clear();
+  revokedCredentialIds.clear();
+  encryptedDoctorRecords.clear();
+  doctorRecordConsentGrants.clear();
+  interAgencyConsentGrantsBySubject.clear();
+  sportsOperationalLogs.length = 0;
+  emergencyBreakGlassAccessLog.length = 0;
+  emergencySubjectProfilesByWebId.clear();
+  emergencySubjectMergeLog.length = 0;
+  resetEncryptedDatastoreStats();
+};
+
+const resetIssuerPodDemoData = async () => {
+  if (!solidPodUrl) {
+    return { ok: false, reason: 'issuer solid pod url not configured' };
+  }
+
+  const baseUrl = mapToInternalSovereignOrigin(solidPodUrl).replace(/\/+$/, '');
+  const containerUrls = [`${baseUrl}/issued-credentials/`, `${baseUrl}/records/`];
+  const containerResults = [];
+  for (const containerUrl of containerUrls) {
+    containerResults.push(await deleteJsonResourcesFromContainer(containerUrl));
+  }
+
+  return {
+    ok: containerResults.every((result) => result.ok),
+    containerUrls,
+    containerResults
+  };
+};
+
 const listIssuerPodIssuedRecordsSummary = async () => {
   if (!solidPodUrl) return { ok: false, reason: 'issuer solid pod url not configured' };
   try {
@@ -1224,6 +1561,48 @@ const decryptSharedEnvelopeForWebId = async ({ webId, envelope }) => {
       };
     }
     return { ok: true, payload };
+  } catch (err) {
+    return { ok: false, reason: err.message };
+  }
+};
+
+const fetchSovereignSubjectIdentities = async () => {
+  if (!credentialExplorerInternalOrigin) {
+    return { ok: false, reason: 'credential explorer internal origin is not configured' };
+  }
+
+  const normalizeOptions = (options) => {
+    const list = Array.isArray(options) ? options : [];
+    const deduped = [];
+    const seen = new Set();
+    for (const entry of list) {
+      const webId = String(entry && entry.webId || '').trim();
+      if (!webId || seen.has(webId)) continue;
+      const label = String(entry && entry.label || '').trim() || webId;
+      deduped.push({ label, webId });
+      seen.add(webId);
+    }
+    return deduped;
+  };
+
+  try {
+    const response = await fetch(`${credentialExplorerInternalOrigin}/api/subject-identities`);
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        reason: payload && payload.error ? payload.error : `subject identity request failed (${response.status})`
+      };
+    }
+    const options = normalizeOptions(payload && payload.subjectIdentityOptions);
+    const defaultWebId = String(payload && payload.defaultDemoIdentityWebId || '').trim();
+    return {
+      ok: true,
+      source: 'subject-identities',
+      defaultWebId: defaultWebId || (options[0] && options[0].webId) || '',
+      options
+    };
   } catch (err) {
     return { ok: false, reason: err.message };
   }
@@ -1511,6 +1890,11 @@ const buildIssuerBusinessRegistrationCredential = () => {
   const registrationStamp = issuedAt.slice(0, 10).replaceAll('-', '');
   const registrationSuffix = String(siteDir || 'issuer').toUpperCase().replace(/[^A-Z0-9]+/g, '-');
   const registrationNumber = `REG-${registrationSuffix}-${registrationStamp}`;
+  const businessTypeBySite = {
+    'doctors-office': '621111',
+    'radiology-center': '621512',
+    'emergency-department': '622110'
+  };
   return {
     '@context': ['https://www.w3.org/ns/credentials/v2'],
     id: `urn:uuid:${crypto.randomUUID()}`,
@@ -1529,7 +1913,7 @@ const buildIssuerBusinessRegistrationCredential = () => {
       registrationStatus: 'active',
       issuedDate: issuedAt.slice(0, 10),
       expiryDate: expiryAt.slice(0, 10),
-      businessType: 'Essential Services Provider'
+      businessType: businessTypeBySite[siteDir] || 'Essential Services Provider'
     },
     proof: {
       type: 'MockVerifierSignature2026',
@@ -2335,12 +2719,8 @@ const getApiPanelHtml = async () => {
 
       <label for="issuerIdentityPreset" style="display:block;font-weight:600;margin-bottom:4px;">Sovereign Identity</label>
       <select id="issuerIdentityPreset" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
-        ${subjectIdentityOptions.map((entry) => `<option value="${escapeHtml(entry.webId)}"${entry.webId === defaultDemoIdentityWebId ? ' selected' : ''}>${escapeHtml(entry.label)}</option>`).join('')}
-        <option value="__custom__">Custom WebID</option>
+        <option value="">Loading sovereign identities...</option>
       </select>
-
-      <label for="issuerWebId" style="display:block;font-weight:600;margin:8px 0 4px;">Sovereign WebID</label>
-      <input id="issuerWebId" value="${escapeHtml(defaultDemoIdentityWebId)}" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
 
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
         <button id="issuerLoginBtn" style="background:#0f766e;color:#fff;border:0;border-radius:8px;padding:10px 12px;font-weight:700;cursor:pointer;">Login With WebID</button>
@@ -2349,7 +2729,13 @@ const getApiPanelHtml = async () => {
     : ''}
       </div>
       ${isEmergencySite
-    ? '<input id="issuerEmergencyCaseId" placeholder="Emergency case ID (optional)" style="margin-top:8px;width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">'
+    ? `<div style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
+        <input id="issuerEmergencyCaseId" placeholder="Emergency case ID (optional)" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+        <input id="issuerEmergencyEstimatedAge" placeholder="Estimated age (optional)" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+        <input id="issuerEmergencyApparentSex" placeholder="Apparent sex/gender (optional)" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+        <input id="issuerEmergencyFoundLocation" placeholder="Found location (optional)" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+      </div>
+      <input id="issuerEmergencyNotableDetails" placeholder="Notable observed details (optional)" style="margin-top:8px;width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">`
     : ''}
       <p style="margin:.6rem 0 0;color:#334155;"><strong>Subject DID (active session):</strong> <span id="issuerSessionDid">not logged in</span></p>
       ${isEmergencySite
@@ -2472,14 +2858,11 @@ const getApiPanelHtml = async () => {
   <script>
     (() => {
       const staticActions = ${actionsJson};
-      const namedIdentityPresets = ${JSON.stringify(subjectIdentityOptions)};
-      const customIdentityPresetValue = '__custom__';
       let token = '';
       let actions = [...staticActions];
       let staffAuthorization = { authorized: false, reason: 'Stephen Staffer staff credential required to run staff actions.' };
 
       const identityPresetEl = document.getElementById('issuerIdentityPreset');
-      const webIdEl = document.getElementById('issuerWebId');
       const issuerStaffActionEl = document.getElementById('issuerStaffActionSelect');
       const selfServiceActionEl = document.getElementById('selfServiceActionSelect');
       const sessionDidEl = document.getElementById('issuerSessionDid');
@@ -2492,6 +2875,10 @@ const getApiPanelHtml = async () => {
       const loginBtn = document.getElementById('issuerLoginBtn');
       const emergencyOverrideBtn = document.getElementById('issuerEmergencyOverrideBtn');
       const emergencyCaseIdEl = document.getElementById('issuerEmergencyCaseId');
+      const emergencyEstimatedAgeEl = document.getElementById('issuerEmergencyEstimatedAge');
+      const emergencyApparentSexEl = document.getElementById('issuerEmergencyApparentSex');
+      const emergencyFoundLocationEl = document.getElementById('issuerEmergencyFoundLocation');
+      const emergencyNotableDetailsEl = document.getElementById('issuerEmergencyNotableDetails');
       const emergencySubjectLabelEl = document.getElementById('issuerEmergencySubjectLabel');
       const issuerStaffRunBtn = document.getElementById('issuerStaffRunBtn');
       const selfServiceRunBtn = document.getElementById('selfServiceRunBtn');
@@ -2525,7 +2912,7 @@ const getApiPanelHtml = async () => {
       const agencySourceContainersCustomEl = document.getElementById('agencySourceContainersCustom');
       const agencyGrantBtn = document.getElementById('agencyGrantBtn');
       const agencyRevokeBtn = document.getElementById('agencyRevokeBtn');
-      const identityPresetByWebId = new Map(namedIdentityPresets.map((entry) => [String(entry.webId || '').trim(), entry]));
+      const identityPresetByWebId = new Map();
       const customAgencyTargetDidValue = '__custom__';
       const defaultAgencyTargetDidOptions = [
         { value: '', label: 'Select provider DID...' },
@@ -2535,23 +2922,63 @@ const getApiPanelHtml = async () => {
       let erSharedRecordEntries = [];
       let staffActorWebId = '';
       const fulfilledReferralKeys = new Set();
+      let identityOptionsLoaded = false;
 
-      const syncIdentityPresetFromWebId = () => {
-        if (!identityPresetEl || !webIdEl) return;
-        const currentWebId = webIdEl.value.trim();
-        if (!currentWebId) {
-          identityPresetEl.value = customIdentityPresetValue;
+      const selectedSovereignWebId = () => String(identityPresetEl && identityPresetEl.value || '').trim();
+
+      const renderSovereignIdentityOptions = (identities, preferredWebId) => {
+        if (!identityPresetEl) return;
+        const list = Array.isArray(identities) ? identities : [];
+        identityPresetByWebId.clear();
+        identityPresetEl.innerHTML = '';
+        const seen = new Set();
+        for (const entry of list) {
+          const webId = String(entry && entry.webId || '').trim();
+          if (!webId || seen.has(webId)) continue;
+          const label = String(entry && entry.label || '').trim() || webId;
+          seen.add(webId);
+          identityPresetByWebId.set(webId, { label, webId });
+          const option = document.createElement('option');
+          option.value = webId;
+          option.textContent = label;
+          identityPresetEl.appendChild(option);
+        }
+        if (identityPresetEl.options.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = 'No sovereign identities available';
+          identityPresetEl.appendChild(option);
+          identityPresetEl.value = '';
           return;
         }
-        identityPresetEl.value = identityPresetByWebId.has(currentWebId) ? currentWebId : customIdentityPresetValue;
+        const requestedWebId = String(preferredWebId || '').trim();
+        const fallbackWebId = String(identityPresetEl.options[0].value || '').trim();
+        identityPresetEl.value = identityPresetByWebId.has(requestedWebId) ? requestedWebId : fallbackWebId;
       };
 
-      const applyIdentityPresetToWebId = () => {
-        if (!identityPresetEl || !webIdEl) return;
-        const selectedWebId = String(identityPresetEl.value || '').trim();
-        if (!selectedWebId || selectedWebId === customIdentityPresetValue) return;
-        webIdEl.value = selectedWebId;
-        syncIdentityPresetFromWebId();
+      const loadSovereignIdentityOptions = async () => {
+        identityOptionsLoaded = false;
+        try {
+          const res = await fetch('/api/sovereign-identities');
+          const data = await res.json();
+          if (!res.ok) {
+            renderSovereignIdentityOptions([], '');
+            statusEl.textContent = 'Unable to load sovereign identities.';
+            outEl.textContent = JSON.stringify(data, null, 2);
+            renderActions();
+            return;
+          }
+          renderSovereignIdentityOptions(Array.isArray(data.identities) ? data.identities : [], data.defaultWebId || '');
+          identityOptionsLoaded = true;
+          if (!token) {
+            statusEl.textContent = 'Select a sovereign identity, then login.';
+          }
+        } catch (err) {
+          renderSovereignIdentityOptions([], '');
+          statusEl.textContent = 'Unable to load sovereign identities.';
+          outEl.textContent = JSON.stringify({ ok: false, error: String(err && err.message ? err.message : err) }, null, 2);
+        }
+        renderActions();
       };
 
       const normalizeImagingModalityFromRecordType = (recordType) => {
@@ -2724,6 +3151,14 @@ const getApiPanelHtml = async () => {
           ? 'Run self-service action as logged-in WebID subject.'
           : (token ? 'No self-service actions available.' : 'Login with WebID to run self-service actions.');
 
+        if (loginBtn) {
+          const canLogin = identityOptionsLoaded && Boolean(selectedSovereignWebId());
+          loginBtn.disabled = !canLogin;
+          loginBtn.style.cursor = canLogin ? 'pointer' : 'not-allowed';
+          loginBtn.style.opacity = canLogin ? '1' : '.55';
+          loginBtn.title = canLogin ? 'Login using selected sovereign identity.' : 'Load and select a sovereign identity first.';
+        }
+
         const hasFulfillableReferral = fulfillableThirdPartyEntries.length > 0 && Boolean(getSelectedFulfillableEntry());
         const canUseReferral = Boolean(token) && hasFulfillableReferral;
         if (thirdPartyUseReferralBtn) {
@@ -2871,13 +3306,13 @@ const getApiPanelHtml = async () => {
       syncEmergencyBypassVisibility();
       updateEmergencySubjectLabel('none');
       if (identityPresetEl) {
-        identityPresetEl.addEventListener('change', applyIdentityPresetToWebId);
+        identityPresetEl.addEventListener('change', () => {
+          if (!token) {
+            statusEl.textContent = 'Select a sovereign identity, then login.';
+          }
+          renderActions();
+        });
       }
-      if (webIdEl) {
-        webIdEl.addEventListener('input', syncIdentityPresetFromWebId);
-        webIdEl.addEventListener('blur', syncIdentityPresetFromWebId);
-      }
-      syncIdentityPresetFromWebId();
       renderAgencyTargetDidOptions([]);
       renderFulfillableThirdPartyEntries([]);
       renderErSharedRecordOptions([]);
@@ -2939,6 +3374,12 @@ const getApiPanelHtml = async () => {
       };
 
       renderActions();
+      loadSovereignIdentityOptions().catch((err) => {
+        renderSovereignIdentityOptions([], '');
+        statusEl.textContent = 'Unable to load sovereign identities.';
+        outEl.textContent = JSON.stringify({ ok: false, error: String(err && err.message ? err.message : err) }, null, 2);
+        renderActions();
+      });
 
       const resetSessionViewState = () => {
         token = '';
@@ -2961,9 +3402,11 @@ const getApiPanelHtml = async () => {
         staffActorWebId = String(data && data.staffActor && data.staffActor.webId || '').trim();
         actions = data.availableActions || staticActions;
         staffAuthorization = data.staffAuthorization || { authorized: false, reason: 'Stephen Staffer staff credential required to run staff actions.' };
-        if (webIdEl && data && data.authenticatedWebId) {
-          webIdEl.value = String(data.authenticatedWebId).trim();
-          syncIdentityPresetFromWebId();
+        if (identityPresetEl && data && data.authenticatedWebId) {
+          const loggedInWebId = String(data.authenticatedWebId).trim();
+          if (identityPresetByWebId.has(loggedInWebId)) {
+            identityPresetEl.value = loggedInWebId;
+          }
         }
         renderActions();
         await loadAgencyTargetDidOptions();
@@ -2974,11 +3417,17 @@ const getApiPanelHtml = async () => {
       loginBtn.addEventListener('click', async () => {
         statusEl.textContent = 'Logging in with WebID...';
         resetSessionViewState();
+        const webId = selectedSovereignWebId();
+        if (!webId) {
+          statusEl.textContent = 'Select a sovereign identity first.';
+          renderActions();
+          return;
+        }
         try {
           const res = await fetch('/api/login-webid', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ webId: webIdEl.value.trim() })
+            body: JSON.stringify({ webId })
           });
           const data = await res.json();
           outEl.textContent = JSON.stringify(data, null, 2);
@@ -3004,6 +3453,18 @@ const getApiPanelHtml = async () => {
           const incidentId = readElValue(emergencyCaseIdEl);
           const requestBody = {};
           if (incidentId) requestBody.incidentId = incidentId;
+          const observedAttributes = {};
+          const estimatedAge = readElValue(emergencyEstimatedAgeEl);
+          const apparentSex = readElValue(emergencyApparentSexEl);
+          const foundLocation = readElValue(emergencyFoundLocationEl);
+          const notableDetails = readElValue(emergencyNotableDetailsEl);
+          if (estimatedAge) observedAttributes.estimatedAge = estimatedAge;
+          if (apparentSex) observedAttributes.apparentSex = apparentSex;
+          if (foundLocation) observedAttributes.foundLocation = foundLocation;
+          if (notableDetails) observedAttributes.notableDetails = notableDetails;
+          if (Object.keys(observedAttributes).length > 0) {
+            requestBody.observedAttributes = observedAttributes;
+          }
           try {
             const res = await fetch('/api/login-emergency-override', {
               method: 'POST',
@@ -3376,6 +3837,7 @@ const createAuthenticatedSession = async ({
   authenticationMethod = 'webid',
   verificationMode = 'webid_login',
   verificationNote = 'credential checks are enforced per protected action',
+  matchedCredentialType = null,
   emergencyOverride = null
 }) => {
   const token = crypto.randomUUID();
@@ -3393,7 +3855,8 @@ const createAuthenticatedSession = async ({
       active: true,
       subjectAlias: String(emergencyOverride.subjectAlias || '').trim() || 'John Doe',
       incidentId: String(emergencyOverride.incidentId || '').trim() || null,
-      caseSlug: String(emergencyOverride.caseSlug || '').trim() || null
+      caseSlug: String(emergencyOverride.caseSlug || '').trim() || null,
+      subjectProfile: buildEmergencySubjectProfileSummary(emergencyOverride.subjectProfile)
     }
     : null;
 
@@ -3405,7 +3868,7 @@ const createAuthenticatedSession = async ({
     createdAt: new Date().toISOString(),
     authenticationMethod,
     verification,
-    matchedCredentialType: null,
+    matchedCredentialType: matchedCredentialType || null,
     emergencyOverride: emergencySessionContext,
     staffAuthorization: staffAuthorization.ok
       ? { authorized: true, mode: staffAuthorization.mode, credentialId: staffAuthorization.credentialId || null }
@@ -3415,6 +3878,7 @@ const createAuthenticatedSession = async ({
   return {
     token,
     subjectDid,
+    matchedCredentialType: matchedCredentialType || null,
     staffWebId,
     staffProvisioning,
     staffAuthorization,
@@ -3429,7 +3893,7 @@ const buildLoginSuccessPayload = ({ webId, sessionData }) => ({
   issuer: siteProfile.issuerName,
   authenticatedWebId: webId,
   subjectDid: sessionData.subjectDid,
-  matchedCredentialType: null,
+  matchedCredentialType: sessionData.matchedCredentialType || null,
   verification: sessionData.verification,
   staffActor: {
     label: 'Stephen Staffer',
@@ -3463,12 +3927,28 @@ const handleLoginWebId = async (req, res) => {
       json(res, 400, { ok: false, error: 'webId is required' });
       return;
     }
+    if (!isLikelyWebId(webId)) {
+      json(res, 400, { ok: false, error: 'webId must be a valid http(s) WebID URL' });
+      return;
+    }
+    if (isEmergencyJohnDoeWebId(webId)) {
+      json(res, 400, { ok: false, error: 'emergency identities must use emergency override login flow' });
+      return;
+    }
+
+    const identityCheck = await verifyIdentityWithSovereign(webId);
+    const matchedCredentialType = identityCheck.ok ? (identityCheck.matchedCredentialType || null) : null;
+    const verificationMode = identityCheck.ok ? 'credential_bound_webid_login' : 'webid_login_no_identity_preload';
+    const verificationNote = identityCheck.ok
+      ? 'trusted identity credential verified at login'
+      : 'webid login accepted; identity credential checks run only when required by protected actions';
 
     const sessionData = await createAuthenticatedSession({
       webId,
       authenticationMethod: 'webid',
-      verificationMode: 'webid_login',
-      verificationNote: 'credential checks are enforced per protected action'
+      verificationMode,
+      verificationNote,
+      matchedCredentialType
     });
 
     json(res, 200, buildLoginSuccessPayload({ webId, sessionData }));
@@ -3487,7 +3967,29 @@ const handleLoginEmergencyOverride = async (req, res) => {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
     const incidentId = String(body.incidentId || body.caseId || '').trim();
+    const observedAttributeInput = {
+      ...(isPlainObject(body.observedAttributes) ? body.observedAttributes : {})
+    };
+    const topLevelObservedEntries = [
+      ['estimatedAge', body.estimatedAge],
+      ['apparentSex', body.apparentSex],
+      ['foundLocation', body.foundLocation],
+      ['notableDetails', body.notableDetails]
+    ];
+    for (const [key, value] of topLevelObservedEntries) {
+      if (value !== undefined && value !== null) {
+        observedAttributeInput[key] = value;
+      }
+    }
+    const observedAttributes = normalizeEmergencyObservedAttributes(observedAttributeInput);
     const johnDoeIdentity = createEmergencyJohnDoeIdentity({ incidentId });
+    const subjectProfile = createEmergencySubjectProfile({
+      johnDoeIdentity,
+      incidentId,
+      observedAttributes,
+      createdByStaffWebId: stephenStafferWebId
+    });
+    emergencySubjectProfilesByWebId.set(johnDoeIdentity.webId, subjectProfile);
     const sessionData = await createAuthenticatedSession({
       webId: johnDoeIdentity.webId,
       authenticationMethod: 'emergency_override',
@@ -3496,13 +3998,130 @@ const handleLoginEmergencyOverride = async (req, res) => {
       emergencyOverride: {
         subjectAlias: johnDoeIdentity.alias,
         incidentId: incidentId || null,
-        caseSlug: johnDoeIdentity.caseSlug || null
+        caseSlug: johnDoeIdentity.caseSlug || null,
+        subjectProfile
       }
     });
 
     json(res, 200, buildLoginSuccessPayload({ webId: johnDoeIdentity.webId, sessionData }));
   } catch (err) {
     json(res, 500, { ok: false, error: 'emergency override login request failed', detail: err.message });
+  }
+};
+
+const handleListEmergencySubjects = (req, res) => {
+  if (siteDir !== emergencyDepartmentSiteDir) {
+    json(res, 404, { ok: false, error: 'emergency subject listing is only available for emergency-department issuer' });
+    return;
+  }
+  const session = getSession(req);
+  if (!session) {
+    json(res, 401, { ok: false, error: 'unauthorized' });
+    return;
+  }
+
+  const subjects = Array.from(emergencySubjectProfilesByWebId.values())
+    .map((entry) => buildEmergencySubjectProfileSummary(entry))
+    .filter(Boolean)
+    .sort((a, b) => (Date.parse(b?.createdAt || '') || 0) - (Date.parse(a?.createdAt || '') || 0));
+
+  json(res, 200, {
+    ok: true,
+    issuer: siteProfile.issuerName,
+    authenticatedWebId: session.webId,
+    totalSubjects: subjects.length,
+    subjects
+  });
+};
+
+const handleMergeEmergencySubject = async (req, res) => {
+  if (siteDir !== emergencyDepartmentSiteDir) {
+    json(res, 404, { ok: false, error: 'emergency subject merge is only available for emergency-department issuer' });
+    return;
+  }
+  const session = getSession(req);
+  if (!session) {
+    json(res, 401, { ok: false, error: 'unauthorized' });
+    return;
+  }
+
+  try {
+    const raw = await readBody(req);
+    const body = raw ? JSON.parse(raw) : {};
+    const bodyError = requireObjectBody(body, 'merge emergency subject');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
+      return;
+    }
+
+    const temporaryWebId = String(body.temporaryWebId || body.tempWebId || body.webId || '').trim();
+    const identifiedWebId = String(body.identifiedWebId || body.resolvedWebId || '').trim();
+    const identifiedLabel = String(body.identifiedLabel || body.name || '').trim();
+    const mergeReason = String(body.mergeReason || body.reason || '').trim();
+
+    if (!temporaryWebId || !isEmergencyJohnDoeWebId(temporaryWebId)) {
+      json(res, 400, { ok: false, error: 'temporaryWebId must be a John Doe emergency WebID' });
+      return;
+    }
+    if (!identifiedWebId || !isLikelyWebId(identifiedWebId)) {
+      json(res, 400, { ok: false, error: 'identifiedWebId must be a valid http(s) WebID URL' });
+      return;
+    }
+    if (normalizeMatchToken(identifiedWebId) === normalizeMatchToken(temporaryWebId)) {
+      json(res, 400, { ok: false, error: 'identifiedWebId must be different from temporaryWebId' });
+      return;
+    }
+
+    const existing = emergencySubjectProfilesByWebId.get(temporaryWebId);
+    if (!existing) {
+      json(res, 404, { ok: false, error: 'temporary emergency subject not found' });
+      return;
+    }
+
+    const mergedAt = new Date().toISOString();
+    const updated = {
+      ...existing,
+      status: 'merged_identified',
+      updatedAt: mergedAt,
+      merge: {
+        ...(existing.merge && typeof existing.merge === 'object' ? existing.merge : {}),
+        state: 'merged',
+        mergedIntoWebId: identifiedWebId,
+        identifiedLabel: identifiedLabel || null,
+        mergedAt,
+        mergedByStaffWebId: session.staffWebId || session.webId || null,
+        mergeReason: mergeReason || null
+      }
+    };
+    emergencySubjectProfilesByWebId.set(temporaryWebId, updated);
+
+    emergencySubjectMergeLog.push({
+      id: `emergency-merge-${crypto.randomUUID()}`,
+      mergedAt,
+      temporaryWebId,
+      identifiedWebId,
+      identifiedLabel: identifiedLabel || null,
+      mergeReason: mergeReason || null,
+      mergedByStaffWebId: session.staffWebId || session.webId || null
+    });
+    if (emergencySubjectMergeLog.length > 500) {
+      emergencySubjectMergeLog.splice(0, emergencySubjectMergeLog.length - 500);
+    }
+
+    json(res, 200, {
+      ok: true,
+      issuer: siteProfile.issuerName,
+      merge: {
+        temporaryWebId,
+        identifiedWebId,
+        identifiedLabel: identifiedLabel || null,
+        mergeReason: mergeReason || null,
+        mergedAt
+      },
+      subjectProfile: buildEmergencySubjectProfileSummary(updated)
+    });
+  } catch (err) {
+    json(res, 400, { ok: false, error: 'invalid merge request payload', detail: err.message });
   }
 };
 
@@ -3518,6 +4137,46 @@ const handleActions = (req, res) => {
     issuer: siteProfile.issuerName,
     authenticatedWebId: session.webId,
     actions: scopedActions
+  });
+};
+
+const handleAuditEvents = (req, res) => {
+  const session = getSession(req);
+  if (!session) {
+    json(res, 401, { ok: false, error: 'unauthorized' });
+    return;
+  }
+
+  const requestUrl = new URL(req.url, `http://localhost:${port}`);
+  const limitRaw = Number.parseInt(String(requestUrl.searchParams.get('limit') || '100'), 10);
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 100;
+  const events = serviceAuditEvents.slice(-limit).reverse();
+  json(res, 200, {
+    ok: true,
+    issuer: siteProfile.issuerName,
+    authenticatedWebId: session.webId,
+    totalEvents: serviceAuditEvents.length,
+    returnedEvents: events.length,
+    events
+  });
+};
+
+const handleSovereignIdentities = async (req, res) => {
+  const result = await fetchSovereignSubjectIdentities();
+  if (!result.ok) {
+    json(res, 502, {
+      ok: false,
+      error: 'failed to load sovereign identities',
+      reason: result.reason || 'unknown'
+    });
+    return;
+  }
+
+  json(res, 200, {
+    ok: true,
+    source: result.source,
+    defaultWebId: result.defaultWebId || '',
+    identities: result.options
   });
 };
 
@@ -3752,15 +4411,55 @@ const handleGrantInterAgencyConsent = async (req, res) => {
   try {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
-    const targetAgencyDid = String(body.targetAgencyDid || '').trim();
-    const scope = String(body.scope || 'subject_records').trim();
-    const constraints = normalizeInterAgencyConstraints(body);
-    if (!targetAgencyDid) {
-      json(res, 400, { ok: false, error: 'targetAgencyDid is required' });
+    const bodyError = requireObjectBody(body, 'grant inter-agency consent');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
       return;
     }
 
     const subjectDid = session.subjectDid || deriveSubjectDidFromWebId(session.webId);
+    res.__auditContext = {
+      ...(res.__auditContext || {}),
+      authenticatedWebId: session.webId,
+      subjectDid
+    };
+
+    const idempotencyKey = parseIdempotencyKey(req, body);
+    if (idempotencyKey) {
+      const cacheKey = `grant-interagency:${siteDir}:${subjectDid}:${idempotencyKey}`;
+      const cached = readCachedIdempotentResponse(cacheKey);
+      if (cached) {
+        json(res, cached.status, {
+          ...(cached.payload && typeof cached.payload === 'object' ? cached.payload : {}),
+          idempotency: { key: idempotencyKey, replayed: true }
+        });
+        return;
+      }
+      res.__idempotencyCacheKey = cacheKey;
+      res.__idempotencyMeta = { key: idempotencyKey, replayed: false };
+    }
+
+    const targetAgencyDid = String(body.targetAgencyDid || '').trim();
+    const scope = String(body.scope || 'subject_records').trim();
+    if (!targetAgencyDid) {
+      json(res, 400, { ok: false, error: 'targetAgencyDid is required' });
+      return;
+    }
+    if (!isLikelyDid(targetAgencyDid)) {
+      json(res, 400, { ok: false, error: 'targetAgencyDid must be a valid DID' });
+      return;
+    }
+    if (!allowedInterAgencyScopes.has(scope)) {
+      json(res, 400, { ok: false, error: 'scope must be one of subject_records, doctor_record_access, medical_record_access' });
+      return;
+    }
+    const constraintIssues = validateInterAgencyConstraintShape(body);
+    if (constraintIssues.length > 0) {
+      json(res, 400, { ok: false, error: 'invalid inter-agency constraint payload', issues: constraintIssues });
+      return;
+    }
+
+    const constraints = normalizeInterAgencyConstraints(body);
     const grant = grantInterAgencyConsent({
       subjectDid,
       targetAgencyDid,
@@ -3791,10 +4490,50 @@ const handleRevokeInterAgencyConsent = async (req, res) => {
   try {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
+    const bodyError = requireObjectBody(body, 'revoke inter-agency consent');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
+      return;
+    }
+
     const grantId = String(body.grantId || '').trim();
     const targetAgencyDid = String(body.targetAgencyDid || '').trim();
     const scope = String(body.scope || '').trim();
     const subjectDid = session.subjectDid || deriveSubjectDidFromWebId(session.webId);
+    res.__auditContext = {
+      ...(res.__auditContext || {}),
+      authenticatedWebId: session.webId,
+      subjectDid
+    };
+
+    if (!grantId && !targetAgencyDid && !scope) {
+      json(res, 400, { ok: false, error: 'one of grantId, targetAgencyDid, or scope is required' });
+      return;
+    }
+    if (targetAgencyDid && !isLikelyDid(targetAgencyDid)) {
+      json(res, 400, { ok: false, error: 'targetAgencyDid must be a valid DID when provided' });
+      return;
+    }
+    if (scope && !allowedInterAgencyScopes.has(scope)) {
+      json(res, 400, { ok: false, error: 'scope must be one of subject_records, doctor_record_access, medical_record_access' });
+      return;
+    }
+
+    const idempotencyKey = parseIdempotencyKey(req, body);
+    if (idempotencyKey) {
+      const cacheKey = `revoke-interagency:${siteDir}:${subjectDid}:${idempotencyKey}`;
+      const cached = readCachedIdempotentResponse(cacheKey);
+      if (cached) {
+        json(res, cached.status, {
+          ...(cached.payload && typeof cached.payload === 'object' ? cached.payload : {}),
+          idempotency: { key: idempotencyKey, replayed: true }
+        });
+        return;
+      }
+      res.__idempotencyCacheKey = cacheKey;
+      res.__idempotencyMeta = { key: idempotencyKey, replayed: false };
+    }
+
     const revokedCount = revokeInterAgencyConsent({
       subjectDid,
       grantId: grantId || null,
@@ -3819,6 +4558,11 @@ const handleExportSharedSubjectRecords = async (req, res) => {
   try {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
+    const bodyError = requireObjectBody(body, 'export shared subject records');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
+      return;
+    }
     const subjectDid = String(body.subjectDid || '').trim();
     const targetAgencyDid = String(body.targetAgencyDid || '').trim();
     const scope = String(body.scope || 'subject_records').trim();
@@ -3829,6 +4573,19 @@ const handleExportSharedSubjectRecords = async (req, res) => {
     }
     if (!targetAgencyDid) {
       json(res, 400, { ok: false, error: 'targetAgencyDid is required' });
+      return;
+    }
+    if (!isLikelyDid(targetAgencyDid)) {
+      json(res, 400, { ok: false, error: 'targetAgencyDid must be a valid DID' });
+      return;
+    }
+    if (!allowedInterAgencyScopes.has(scope)) {
+      json(res, 400, { ok: false, error: 'scope must be one of subject_records, doctor_record_access, medical_record_access' });
+      return;
+    }
+    const constraintIssues = validateInterAgencyConstraintShape(body);
+    if (constraintIssues.length > 0) {
+      json(res, 400, { ok: false, error: 'invalid inter-agency export payload', issues: constraintIssues });
       return;
     }
 
@@ -3986,14 +4743,37 @@ const handleListSharedSourceRecords = async (req, res) => {
   try {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
+    const bodyError = requireObjectBody(body, 'list shared source records');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
+      return;
+    }
     const sourceIssuerDid = String(body.sourceIssuerDid || body.targetAgencyDid || '').trim();
     if (!sourceIssuerDid) {
       json(res, 400, { ok: false, error: 'sourceIssuerDid is required' });
       return;
     }
+    if (!isLikelyDid(sourceIssuerDid)) {
+      json(res, 400, { ok: false, error: 'sourceIssuerDid must be a valid DID' });
+      return;
+    }
 
     const scope = String(body.scope || 'subject_records').trim() || 'subject_records';
+    if (!allowedInterAgencyScopes.has(scope)) {
+      json(res, 400, { ok: false, error: 'scope must be one of subject_records, doctor_record_access, medical_record_access' });
+      return;
+    }
+    const constraintIssues = validateInterAgencyConstraintShape(body);
+    if (constraintIssues.length > 0) {
+      json(res, 400, { ok: false, error: 'invalid shared-source payload', issues: constraintIssues });
+      return;
+    }
     const subjectDid = session.subjectDid || deriveSubjectDidFromWebId(session.webId);
+    res.__auditContext = {
+      ...(res.__auditContext || {}),
+      authenticatedWebId: session.webId,
+      subjectDid
+    };
     const requestedConstraints = normalizeInterAgencyConstraints(body);
     const requestedEmergencyAccess = normalizeEmergencyBreakGlassRequest(body.emergencyAccess);
     let emergencyAccess = null;
@@ -4132,6 +4912,12 @@ const handleGrantDoctorRecordConsent = async (req, res) => {
   try {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
+    const bodyError = requireObjectBody(body, 'grant doctor-record consent');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
+      return;
+    }
+
     const recordId = String(body.recordId || '').trim();
     const requesterWebId = String(body.requesterWebId || '').trim();
     const purpose = String(body.purpose || 'medical-claim-review').trim();
@@ -4143,6 +4929,36 @@ const handleGrantDoctorRecordConsent = async (req, res) => {
       json(res, 400, { ok: false, error: 'requesterWebId is required' });
       return;
     }
+    if (!isLikelyWebId(requesterWebId)) {
+      json(res, 400, { ok: false, error: 'requesterWebId must be a valid http(s) WebID URL' });
+      return;
+    }
+    if (purpose.length < 3 || purpose.length > 180) {
+      json(res, 400, { ok: false, error: 'purpose must be between 3 and 180 characters' });
+      return;
+    }
+
+    const idempotencyKey = parseIdempotencyKey(req, body);
+    if (idempotencyKey) {
+      const cacheKey = `grant-record-consent:${siteDir}:${session.subjectDid || ''}:${recordId}:${requesterWebId}:${idempotencyKey}`;
+      const cached = readCachedIdempotentResponse(cacheKey);
+      if (cached) {
+        json(res, cached.status, {
+          ...(cached.payload && typeof cached.payload === 'object' ? cached.payload : {}),
+          idempotency: { key: idempotencyKey, replayed: true }
+        });
+        return;
+      }
+      res.__idempotencyCacheKey = cacheKey;
+      res.__idempotencyMeta = { key: idempotencyKey, replayed: false };
+    }
+
+    res.__auditContext = {
+      ...(res.__auditContext || {}),
+      authenticatedWebId: session.webId,
+      subjectDid: session.subjectDid
+    };
+
     const requesterDid = deriveSubjectDidFromWebId(requesterWebId);
     if (requesterDid === session.subjectDid) {
       json(res, 400, {
@@ -4240,12 +5056,43 @@ const handleRevokeDoctorRecordConsent = async (req, res) => {
   try {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
+    const bodyError = requireObjectBody(body, 'revoke doctor-record consent');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
+      return;
+    }
     const recordId = String(body.recordId || '').trim();
     const requesterWebId = String(body.requesterWebId || '').trim();
     if (!recordId) {
       json(res, 400, { ok: false, error: 'recordId is required' });
       return;
     }
+    if (requesterWebId && !isLikelyWebId(requesterWebId)) {
+      json(res, 400, { ok: false, error: 'requesterWebId must be a valid http(s) WebID URL when provided' });
+      return;
+    }
+
+    const idempotencyKey = parseIdempotencyKey(req, body);
+    if (idempotencyKey) {
+      const cacheKey = `revoke-record-consent:${siteDir}:${session.subjectDid || ''}:${recordId}:${requesterWebId || '*'}:${idempotencyKey}`;
+      const cached = readCachedIdempotentResponse(cacheKey);
+      if (cached) {
+        json(res, cached.status, {
+          ...(cached.payload && typeof cached.payload === 'object' ? cached.payload : {}),
+          idempotency: { key: idempotencyKey, replayed: true }
+        });
+        return;
+      }
+      res.__idempotencyCacheKey = cacheKey;
+      res.__idempotencyMeta = { key: idempotencyKey, replayed: false };
+    }
+
+    res.__auditContext = {
+      ...(res.__auditContext || {}),
+      authenticatedWebId: session.webId,
+      subjectDid: session.subjectDid
+    };
+
     if (requesterWebId) {
       const requesterDid = deriveSubjectDidFromWebId(requesterWebId);
       if (requesterDid === session.subjectDid) {
@@ -4296,6 +5143,11 @@ const handleCommand = async (req, res) => {
   try {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
+    const bodyError = requireObjectBody(body, 'command');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
+      return;
+    }
 
     const actionId = String(body.actionId || '').trim();
     const action = scopedActions.find((a) => a.id === actionId);
@@ -4305,7 +5157,35 @@ const handleCommand = async (req, res) => {
     }
 
     const subjectDid = session.subjectDid || deriveSubjectDidFromWebId(session.webId);
+    res.__auditContext = {
+      ...(res.__auditContext || {}),
+      authenticatedWebId: session.webId,
+      subjectDid,
+      actionId
+    };
+
+    const idempotencyKey = parseIdempotencyKey(req, body);
+    if (idempotencyKey) {
+      const cacheKey = `command:${siteDir}:${session.webId}:${actionId}:${idempotencyKey}`;
+      const cached = readCachedIdempotentResponse(cacheKey);
+      if (cached) {
+        json(res, cached.status, {
+          ...(cached.payload && typeof cached.payload === 'object' ? cached.payload : {}),
+          idempotency: { key: idempotencyKey, replayed: true }
+        });
+        return;
+      }
+      res.__idempotencyCacheKey = cacheKey;
+      res.__idempotencyMeta = { key: idempotencyKey, replayed: false };
+    }
+
     let payload = body.payload && typeof body.payload === 'object' ? body.payload : {};
+    const payloadIssues = validateCommandPayloadShape(actionId, payload);
+    if (payloadIssues.length > 0) {
+      json(res, 400, { ok: false, error: 'invalid command payload', issues: payloadIssues });
+      return;
+    }
+
     const actorMode = String(action.actorScope || inferActionScope(action.id)).trim();
     const staffWebId = session.staffWebId || stephenStafferWebId;
     const effectiveActorWebId = actorMode === 'issuer_staff' ? staffWebId : session.webId;
@@ -5984,7 +6864,39 @@ const handleRequestXray = async (req, res) => {
   try {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
+    const bodyError = requireObjectBody(body, 'request xray');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
+      return;
+    }
+    if (body.xrayDocument !== undefined && !isPlainObject(body.xrayDocument)) {
+      json(res, 400, { ok: false, error: 'xrayDocument must be an object when provided' });
+      return;
+    }
+
     const subjectDid = session.subjectDid || deriveSubjectDidFromWebId(session.webId);
+    res.__auditContext = {
+      ...(res.__auditContext || {}),
+      authenticatedWebId: session.webId,
+      subjectDid,
+      actionId: 'request_xray'
+    };
+
+    const idempotencyKey = parseIdempotencyKey(req, body);
+    if (idempotencyKey) {
+      const cacheKey = `request-xray:${siteDir}:${session.webId}:${idempotencyKey}`;
+      const cached = readCachedIdempotentResponse(cacheKey);
+      if (cached) {
+        json(res, cached.status, {
+          ...(cached.payload && typeof cached.payload === 'object' ? cached.payload : {}),
+          idempotency: { key: idempotencyKey, replayed: true }
+        });
+        return;
+      }
+      res.__idempotencyCacheKey = cacheKey;
+      res.__idempotencyMeta = { key: idempotencyKey, replayed: false };
+    }
+
     const xrayDocument =
       body.xrayDocument && typeof body.xrayDocument === 'object'
         ? body.xrayDocument
@@ -6129,8 +7041,40 @@ const handleDrawBlood = async (req, res) => {
   try {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
+    const bodyError = requireObjectBody(body, 'draw blood');
+    if (bodyError) {
+      json(res, 400, { ok: false, error: bodyError });
+      return;
+    }
+    if (body.orderDocument !== undefined && !isPlainObject(body.orderDocument)) {
+      json(res, 400, { ok: false, error: 'orderDocument must be an object when provided' });
+      return;
+    }
+
     const subjectDid = session.subjectDid || deriveSubjectDidFromWebId(session.webId);
     const webId = session.webId;
+    res.__auditContext = {
+      ...(res.__auditContext || {}),
+      authenticatedWebId: webId,
+      subjectDid,
+      actionId: 'draw_blood'
+    };
+
+    const idempotencyKey = parseIdempotencyKey(req, body);
+    if (idempotencyKey) {
+      const cacheKey = `draw-blood:${siteDir}:${webId}:${idempotencyKey}`;
+      const cached = readCachedIdempotentResponse(cacheKey);
+      if (cached) {
+        json(res, cached.status, {
+          ...(cached.payload && typeof cached.payload === 'object' ? cached.payload : {}),
+          idempotency: { key: idempotencyKey, replayed: true }
+        });
+        return;
+      }
+      res.__idempotencyCacheKey = cacheKey;
+      res.__idempotencyMeta = { key: idempotencyKey, replayed: false };
+    }
+
     const orderDocument =
       body.orderDocument && typeof body.orderDocument === 'object'
         ? body.orderDocument
@@ -6466,9 +7410,44 @@ const handleVerifyDoctorRecord = async (req, res) => {
   }
 };
 
+const handleResetDemoData = async (req, res) => {
+  const startedAt = new Date().toISOString();
+  const podReset = await resetIssuerPodDemoData();
+  resetIssuerRuntimeState();
+
+  const businessRegistrationProvision = await ensureIssuerBusinessRegistrationCredential();
+  const stephenStaffCredentialProvision = await ensureStephenStafferCredential(stephenStafferWebId);
+
+  json(res, 200, {
+    ok: Boolean(podReset.ok && businessRegistrationProvision.ok && stephenStaffCredentialProvision.ok),
+    siteDir,
+    issuer: siteProfile.issuerName,
+    startedAt,
+    runtimeStateReset: true,
+    podReset,
+    startupProvisioning: {
+      businessRegistrationProvision,
+      stephenStaffCredentialProvision
+    }
+  });
+};
+
 const server = http.createServer(async (req, res) => {
+  const requestId = normalizeRequestId(req.headers['x-request-id']) || generateRequestId();
+  req.requestId = requestId;
+  res.__requestId = requestId;
+  res.__auditContext = {
+    method: req.method,
+    path: String(req.url || '').split('?')[0]
+  };
+
   if (req.method === 'GET' && req.url === '/api/health') {
     json(res, 200, { ok: true, siteDir, issuer: siteProfile.issuerName });
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/api/demo/reset-data') {
+    await handleResetDemoData(req, res);
     return;
   }
 
@@ -6484,6 +7463,26 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && req.url === '/api/actions') {
     handleActions(req, res);
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/api/emergency/subjects') {
+    handleListEmergencySubjects(req, res);
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/api/emergency/merge-subject') {
+    await handleMergeEmergencySubject(req, res);
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/api/sovereign-identities') {
+    await handleSovereignIdentities(req, res);
+    return;
+  }
+
+  if (req.method === 'GET' && req.url.startsWith('/api/audit/events')) {
+    handleAuditEvents(req, res);
     return;
   }
 

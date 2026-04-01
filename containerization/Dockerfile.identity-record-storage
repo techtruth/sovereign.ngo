@@ -3,6 +3,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY sovereign-site/identity-record-storage-server.js ./identity-record-storage-server.js
+COPY containerization/preinit-demo-identities.js ./preinit-demo-identities.js
 
 ENV PORT=4000
 ENV POD_NAME=holder-pod
@@ -10,4 +11,4 @@ ENV BUSINESS_NAME=business
 
 EXPOSE 4000
 
-CMD ["node", "identity-record-storage-server.js"]
+CMD ["sh", "-c", "node preinit-demo-identities.js && node identity-record-storage-server.js"]

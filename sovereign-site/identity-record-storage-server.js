@@ -1,32 +1,83 @@
 const http = require('http');
+const fs = require('fs');
 
 const port = Number(process.env.PORT || 4000);
 const podName = process.env.POD_NAME || 'holder-pod';
 const businessName = process.env.BUSINESS_NAME || 'business';
 const configuredWebId = process.env.SOVEREIGN_WEBID || 'https://sovereign.example/profile/card#me';
 const configuredWalletApi = process.env.SOVEREIGN_WALLET_API || `http://holder_sovereign:${port}/wallet/credentials`;
+const demoWebId = String(process.env.DEMO_WEBID || configuredWebId).trim();
 const demoOrigin = (() => {
   try {
-    return new URL(configuredWebId).origin;
+    return new URL(demoWebId).origin;
   } catch {
     return 'http://localhost:8180';
   }
 })();
-const defaultDemoIdentityWebId = configuredWebId.endsWith('/profile/card#me')
-  ? `${demoOrigin}/profile/card#8N4Q7Z2K`
-  : configuredWebId;
-const stephenStafferWebId = `${demoOrigin}/profile/card#S7T4F9R2`;
-const demoIdentityOptions = [
-  { label: 'Alex Sovereign', webId: `${demoOrigin}/profile/card#8N4Q7Z2K` },
-  { label: 'Betty Medina', webId: `${demoOrigin}/profile/card#3H9X5M1R` },
-  { label: 'Charlie Krier', webId: `${demoOrigin}/profile/card#W2C8J6P4` },
-  { label: 'Debra Harbor', webId: `${demoOrigin}/profile/card#7T1B9LQ5` },
-  { label: 'Ed Erins', webId: `${demoOrigin}/profile/card#K4D3R8X2` },
-  { label: 'Stephen Staffer', webId: stephenStafferWebId }
-];
-if (!demoIdentityOptions.some((entry) => entry.webId === defaultDemoIdentityWebId)) {
-  demoIdentityOptions.unshift({ label: 'Default Demo Identity', webId: defaultDemoIdentityWebId });
-}
+const demoIdentitiesFile = String(process.env.DEMO_IDENTITIES_FILE || '/tmp/sovereign-demo-identities.json').trim() || '/tmp/sovereign-demo-identities.json';
+const loadDemoIdentityState = () => {
+  const fallbackStephenStafferWebId = `${demoOrigin}/profile/card#S7T4F9R2`;
+  const normalizeIdentityEntry = (entry) => {
+    const webId = String(entry?.webId || '').trim();
+    if (!webId) return null;
+    const label = String(entry?.label || '').trim() || webId;
+    return { label, webId };
+  };
+  const fallbackIdentities = [
+    { label: 'Default Demo Identity', webId: demoWebId },
+    { label: 'Stephen Staffer', webId: fallbackStephenStafferWebId }
+  ];
+  try {
+    const raw = fs.readFileSync(demoIdentitiesFile, 'utf8');
+    const parsed = JSON.parse(raw);
+    const list = Array.isArray(parsed?.identities) ? parsed.identities : [];
+    const deduped = [];
+    const seen = new Set();
+    for (const entry of list) {
+      const normalized = normalizeIdentityEntry(entry);
+      if (!normalized || seen.has(normalized.webId)) continue;
+      deduped.push(normalized);
+      seen.add(normalized.webId);
+    }
+    let stephenWebId = String(parsed?.stephenStafferWebId || '').trim();
+    if (!stephenWebId) {
+      const named = deduped.find((entry) => String(entry.label || '').trim().toLowerCase() === 'stephen staffer');
+      stephenWebId = named?.webId || fallbackStephenStafferWebId;
+    }
+    if (!seen.has(stephenWebId)) {
+      deduped.push({ label: 'Stephen Staffer', webId: stephenWebId });
+      seen.add(stephenWebId);
+    }
+    let defaultWebId = String(parsed?.defaultDemoIdentityWebId || '').trim();
+    if (!defaultWebId) {
+      const firstNonStaff = deduped.find((entry) => entry.webId !== stephenWebId);
+      defaultWebId = firstNonStaff?.webId || demoWebId;
+    }
+    if (!seen.has(defaultWebId)) {
+      deduped.unshift({ label: 'Default Demo Identity', webId: defaultWebId });
+    }
+    return {
+      defaultDemoIdentityWebId: defaultWebId,
+      demoIdentityOptions: deduped
+    };
+  } catch {
+    const dedupedFallback = [];
+    const seen = new Set();
+    for (const entry of fallbackIdentities) {
+      const normalized = normalizeIdentityEntry(entry);
+      if (!normalized || seen.has(normalized.webId)) continue;
+      dedupedFallback.push(normalized);
+      seen.add(normalized.webId);
+    }
+    return {
+      defaultDemoIdentityWebId: demoWebId,
+      demoIdentityOptions: dedupedFallback
+    };
+  }
+};
+const identityState = loadDemoIdentityState();
+const defaultDemoIdentityWebId = identityState.defaultDemoIdentityWebId;
+const demoIdentityOptions = identityState.demoIdentityOptions;
 
 const credentialsByWebId = new Map();
 

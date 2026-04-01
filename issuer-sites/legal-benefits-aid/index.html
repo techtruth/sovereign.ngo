@@ -16,6 +16,9 @@
     p { color:var(--muted); margin:.4rem 0; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
     ul { margin:.5rem 0 0 1rem; line-height:1.6; }
+    .workflow { margin-top:12px; border:1px solid #c7d2fe; background:#f5f8ff; border-radius:12px; padding:.9rem; }
+    .workflow h3 { margin:.2rem 0 .4rem; color:#4338ca; }
+    .chip { display:inline-block; margin-right:6px; margin-top:4px; padding:.2rem .55rem; border-radius:999px; font-size:.82rem; font-weight:700; background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; }
     @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
   </style>
 </head>
@@ -26,6 +29,15 @@
       <h1>Pioneer Legal and Benefits Navigation</h1>
       <p>Legal aid and public-benefits navigation service portal.</p>
       <p><strong>Main purpose:</strong> Help residents complete legal/benefits steps with signed continuity records.</p>
+      <div class="workflow">
+        <h3>Legal and Benefits Workflow</h3>
+        <p>1) Person logs in with sovereign WebID</p>
+        <p>2) Team reviews benefits and legal-aid needs</p>
+        <p>3) Signed decision records support continuity across partner services</p>
+        <span class="chip">WebID Login</span>
+        <span class="chip">Case Navigation</span>
+        <span class="chip">Decision Records</span>
+      </div>
     </section>
     <section class="grid">
       <article class="panel">
@@ -42,6 +54,7 @@
           <li>Benefits enrollment and follow-through support</li>
           <li>Legal aid intake and referral continuity</li>
           <li>Consent-aware cross-provider handoff records</li>
+          <li>Provider systems remain source-of-record for internal case files</li>
         </ul>
       </article>
     </section>

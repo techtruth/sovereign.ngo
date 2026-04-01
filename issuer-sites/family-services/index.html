@@ -16,6 +16,9 @@
     p { color:var(--muted); margin:.4rem 0; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
     ul { margin:.5rem 0 0 1rem; line-height:1.6; }
+    .workflow { margin-top:12px; border:1px solid #86efac; background:#f0fdf4; border-radius:12px; padding:.9rem; }
+    .workflow h3 { margin:.2rem 0 .4rem; color:#166534; }
+    .chip { display:inline-block; margin-right:6px; margin-top:4px; padding:.2rem .55rem; border-radius:999px; font-size:.82rem; font-weight:700; background:#dcfce7; color:#14532d; border:1px solid #86efac; }
     @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
   </style>
 </head>
@@ -26,6 +29,15 @@
       <h1>Bridgeway Family Services</h1>
       <p>Family-focused stabilization and crisis prevention service portal.</p>
       <p><strong>Main purpose:</strong> Support families before crisis escalation with signed continuity records.</p>
+      <div class="workflow">
+        <h3>Family Support Workflow</h3>
+        <p>1) Person logs in with sovereign WebID</p>
+        <p>2) Team reviews immediate family-stability needs</p>
+        <p>3) Portal issues signed records for continuity with partner providers</p>
+        <span class="chip">WebID Login</span>
+        <span class="chip">Stabilization Intake</span>
+        <span class="chip">Continuity Records</span>
+      </div>
     </section>
     <section class="grid">
       <article class="panel">
@@ -42,6 +54,7 @@
           <li>Family stabilization and prevention planning</li>
           <li>Parent/guardian support coordination</li>
           <li>Consent-aware handoff records for follow-up services</li>
+          <li>Provider systems remain source-of-record for internal case files</li>
         </ul>
       </article>
     </section>

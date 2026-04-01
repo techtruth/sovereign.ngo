@@ -1,5 +1,12 @@
 const http = require('http');
 const crypto = require('crypto');
+const fs = require('fs');
+
+const parsePositiveInt = (value, fallback, min = 1) => {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  if (!Number.isFinite(parsed) || parsed < min) return fallback;
+  return parsed;
+};
 
 const port = Number(process.env.PORT || 3000);
 const sovereignInternalOrigin = String(process.env.SOVEREIGN_INTERNAL_ORIGIN || '').trim();
@@ -29,25 +36,77 @@ const demoOrigin = (() => {
     return 'http://localhost:8180';
   }
 })();
-
-const defaultDemoIdentityWebId = demoWebId.endsWith('/profile/card#me')
-  ? `${demoOrigin}/profile/card#8N4Q7Z2K`
-  : demoWebId;
-const stephenStafferWebId = `${demoOrigin}/profile/card#S7T4F9R2`;
+const demoIdentitiesFile = String(process.env.DEMO_IDENTITIES_FILE || '/tmp/sovereign-demo-identities.json').trim() || '/tmp/sovereign-demo-identities.json';
+const loadDemoIdentityState = () => {
+  const fallbackStephenStafferWebId = `${demoOrigin}/profile/card#S7T4F9R2`;
+  const normalizeIdentityEntry = (entry) => {
+    const webId = String(entry?.webId || '').trim();
+    if (!webId) return null;
+    const label = String(entry?.label || '').trim() || webId;
+    return { label, webId };
+  };
+  const fallbackIdentities = [
+    { label: 'Default Demo Identity', webId: demoWebId },
+    { label: 'Stephen Staffer', webId: fallbackStephenStafferWebId }
+  ];
+  try {
+    const raw = fs.readFileSync(demoIdentitiesFile, 'utf8');
+    const parsed = JSON.parse(raw);
+    const list = Array.isArray(parsed?.identities) ? parsed.identities : [];
+    const deduped = [];
+    const seen = new Set();
+    for (const entry of list) {
+      const normalized = normalizeIdentityEntry(entry);
+      if (!normalized || seen.has(normalized.webId)) continue;
+      deduped.push(normalized);
+      seen.add(normalized.webId);
+    }
+    let stephenWebId = String(parsed?.stephenStafferWebId || '').trim();
+    if (!stephenWebId) {
+      const named = deduped.find((entry) => String(entry.label || '').trim().toLowerCase() === 'stephen staffer');
+      stephenWebId = named?.webId || fallbackStephenStafferWebId;
+    }
+    if (!seen.has(stephenWebId)) {
+      deduped.push({ label: 'Stephen Staffer', webId: stephenWebId });
+      seen.add(stephenWebId);
+    }
+    let defaultWebId = String(parsed?.defaultDemoIdentityWebId || '').trim();
+    if (!defaultWebId) {
+      const firstNonStaff = deduped.find((entry) => entry.webId !== stephenWebId);
+      defaultWebId = firstNonStaff?.webId || demoWebId;
+    }
+    if (!seen.has(defaultWebId)) {
+      deduped.unshift({ label: 'Default Demo Identity', webId: defaultWebId });
+    }
+    return {
+      defaultDemoIdentityWebId: defaultWebId,
+      stephenStafferWebId: stephenWebId,
+      demoIdentityOptions: deduped
+    };
+  } catch {
+    const dedupedFallback = [];
+    const seen = new Set();
+    for (const entry of fallbackIdentities) {
+      const normalized = normalizeIdentityEntry(entry);
+      if (!normalized || seen.has(normalized.webId)) continue;
+      dedupedFallback.push(normalized);
+      seen.add(normalized.webId);
+    }
+    return {
+      defaultDemoIdentityWebId: demoWebId,
+      stephenStafferWebId: fallbackStephenStafferWebId,
+      demoIdentityOptions: dedupedFallback
+    };
+  }
+};
+const identityState = loadDemoIdentityState();
+const defaultDemoIdentityWebId = identityState.defaultDemoIdentityWebId;
+const stephenStafferWebId = identityState.stephenStafferWebId;
 const emergencyJohnDoeWebIdPrefix = `${demoOrigin}/profile/card#john-doe-`;
-
-const demoIdentityOptions = [
-  { label: 'Alex Sovereign', webId: `${demoOrigin}/profile/card#8N4Q7Z2K` },
-  { label: 'Betty Medina', webId: `${demoOrigin}/profile/card#3H9X5M1R` },
-  { label: 'Charlie Krier', webId: `${demoOrigin}/profile/card#W2C8J6P4` },
-  { label: 'Debra Harbor', webId: `${demoOrigin}/profile/card#7T1B9LQ5` },
-  { label: 'Ed Erins', webId: `${demoOrigin}/profile/card#K4D3R8X2` },
-  { label: 'Stephen Staffer', webId: stephenStafferWebId }
-];
-if (!demoIdentityOptions.some((entry) => entry.webId === defaultDemoIdentityWebId)) {
-  demoIdentityOptions.unshift({ label: 'Default Demo Identity', webId: defaultDemoIdentityWebId });
-}
+const demoIdentityOptions = identityState.demoIdentityOptions;
+const subjectIdentityOptions = demoIdentityOptions.filter((entry) => entry.webId !== stephenStafferWebId);
 const allowedDemoWebIds = new Set([demoWebId, ...demoIdentityOptions.map((entry) => entry.webId)]);
+const allowedSubjectLoginWebIds = new Set(subjectIdentityOptions.map((entry) => entry.webId));
 const isEmergencyJohnDoeWebId = (webId) => {
   const candidate = String(webId || '').trim().toLowerCase();
   if (!candidate) return false;
@@ -66,8 +125,65 @@ const escapeHtml = (value) =>
     .replaceAll("'", '&#39;');
 
 const json = (res, status, payload) => {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(payload));
+  const requestId = String(res.__requestId || '').trim();
+  const idempotencyMeta = res.__idempotencyMeta && typeof res.__idempotencyMeta === 'object'
+    ? res.__idempotencyMeta
+    : null;
+  const body = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? {
+      ...payload,
+      ...(requestId && !payload.requestId ? { requestId } : {}),
+      ...(idempotencyMeta && !payload.idempotency ? { idempotency: idempotencyMeta } : {})
+    }
+    : payload;
+
+  if (res.__idempotencyCacheKey && status < 500) {
+    idempotencyCache.set(res.__idempotencyCacheKey, {
+      status,
+      payload: body,
+      storedAtMs: Date.now()
+    });
+  }
+
+  if (!res.__auditSuppressed && res.__auditContext) {
+    const summary = body && typeof body === 'object' && !Array.isArray(body)
+      ? {
+        ok: body.ok,
+        error: body.error || null,
+        webId: body.webId || null,
+        providerDid: body.providerDid || null
+      }
+      : { ok: status < 400, error: status >= 400 ? 'non_object_response' : null };
+    serviceAuditEvents.push({
+      id: `audit-${crypto.randomUUID()}`,
+      timestamp: new Date().toISOString(),
+      requestId: requestId || null,
+      method: res.__auditContext.method || null,
+      path: res.__auditContext.path || null,
+      status,
+      ...summary
+    });
+    if (serviceAuditEvents.length > maxAuditEvents) {
+      serviceAuditEvents.splice(0, serviceAuditEvents.length - maxAuditEvents);
+    }
+  }
+
+  if (idempotencyCache.size > maxIdempotencyEntries) {
+    const sorted = [...idempotencyCache.entries()].sort((a, b) => (a[1]?.storedAtMs || 0) - (b[1]?.storedAtMs || 0));
+    const trimCount = Math.max(1, sorted.length - maxIdempotencyEntries);
+    for (let index = 0; index < trimCount; index += 1) {
+      idempotencyCache.delete(sorted[index][0]);
+    }
+  }
+
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+    ...(requestId ? { 'X-Request-Id': requestId } : {})
+  });
+  res.end(JSON.stringify(body));
 };
 
 const readBody = (req) =>
@@ -127,6 +243,11 @@ const decryptSovereignSealedEnvelope = (envelope) => {
 };
 
 const sharingPermissionsByWebId = new Map();
+const maxAuditEvents = parsePositiveInt(process.env.AUDIT_MAX_EVENTS, 3000, 100);
+const maxIdempotencyEntries = parsePositiveInt(process.env.IDEMPOTENCY_MAX_ENTRIES, 1000, 100);
+const idempotencyTtlMs = parsePositiveInt(process.env.IDEMPOTENCY_TTL_MS, 10 * 60 * 1000, 1000);
+const serviceAuditEvents = [];
+const idempotencyCache = new Map();
 
 const normalizeMatchToken = (value) => String(value || '').trim().toLowerCase().replace(/\/+$/, '');
 
@@ -173,6 +294,20 @@ const credentialSubjectEntries = (credential) => {
   return [];
 };
 
+const credentialTypes = (credential) => {
+  const value = credential?.type;
+  if (Array.isArray(value)) return value.filter(Boolean).map((entry) => String(entry));
+  if (!value) return [];
+  return [String(value)];
+};
+
+const credentialIssuerDid = (credential) => {
+  const issuer = credential?.issuer;
+  if (typeof issuer === 'string') return issuer;
+  if (issuer && typeof issuer === 'object') return String(issuer.id || '').trim();
+  return '';
+};
+
 const credentialBelongsToWebId = (credential, webId) => {
   const subjects = credentialSubjectEntries(credential);
   if (subjects.length === 0) return false;
@@ -192,6 +327,83 @@ const parseCsvList = (value) =>
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
+
+const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+const isLikelyDid = (value) => /^did:[a-z0-9]+:[A-Za-z0-9:._-]+$/.test(String(value || '').trim());
+const isLikelyWebId = (value) => {
+  try {
+    const url = new URL(String(value || '').trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+const normalizeRequestId = (value) => String(value || '').trim().slice(0, 120);
+const generateRequestId = () => `req-${crypto.randomUUID()}`;
+const requireObjectBody = (body, contextLabel) => {
+  if (!isPlainObject(body)) return `${contextLabel} payload must be a JSON object`;
+  return '';
+};
+const parseIdempotencyKey = (req, body) => {
+  const headerKey = String(req.headers['x-idempotency-key'] || '').trim();
+  const bodyKey = isPlainObject(body)
+    ? String(body.idempotencyKey || body.idempotency_key || '').trim()
+    : '';
+  const raw = headerKey || bodyKey;
+  return raw ? raw.slice(0, 180) : '';
+};
+const readCachedIdempotentResponse = (cacheKey) => {
+  if (!cacheKey) return null;
+  const cached = idempotencyCache.get(cacheKey);
+  if (!cached) return null;
+  if (!Number.isFinite(cached.storedAtMs) || (Date.now() - cached.storedAtMs) > idempotencyTtlMs) {
+    idempotencyCache.delete(cacheKey);
+    return null;
+  }
+  return cached;
+};
+
+const explorerSessions = new Map();
+const explorerSessionTtlMs = parsePositiveInt(process.env.EXPLORER_SESSION_TTL_MS, 30 * 60 * 1000, 60 * 1000);
+
+const trustedIdentityIssuersByType = {
+  DriversLicenseCredential: new Set(['did:example:verifier:drivers-license']),
+  PassportCredential: new Set(['did:example:verifier:passport'])
+};
+
+const getAuthToken = (req) => {
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ')) return auth.slice(7).trim();
+  return String(req.headers['x-session-token'] || '').trim();
+};
+
+const getSession = (req) => {
+  const token = getAuthToken(req);
+  if (!token) return null;
+  const session = explorerSessions.get(token);
+  if (!session) return null;
+  if (!Number.isFinite(session.expiresAtMs) || session.expiresAtMs <= Date.now()) {
+    explorerSessions.delete(token);
+    return null;
+  }
+  session.lastSeenAt = new Date().toISOString();
+  session.expiresAtMs = Date.now() + explorerSessionTtlMs;
+  return session;
+};
+
+const createSession = (webId) => {
+  const token = crypto.randomUUID();
+  const nowIso = new Date().toISOString();
+  const session = {
+    token,
+    webId,
+    createdAt: nowIso,
+    lastSeenAt: nowIso,
+    expiresAtMs: Date.now() + explorerSessionTtlMs
+  };
+  explorerSessions.set(token, session);
+  return session;
+};
 
 const ensureSharingPermissionList = (webId) => {
   const key = String(webId || '').trim();
@@ -250,6 +462,48 @@ const listCredentialResourceUrls = async (containerUrl) => {
   return { ok: true, containerUrl, resources };
 };
 
+const deleteCredentialResources = async (resourceUrls) => {
+  let deletedCount = 0;
+  let failedCount = 0;
+  const failures = [];
+  for (const resourceUrl of resourceUrls) {
+    try {
+      const response = await fetch(resourceUrl, { method: 'DELETE' });
+      if (response.ok || response.status === 404) {
+        deletedCount += 1;
+        continue;
+      }
+      failedCount += 1;
+      if (failures.length < 10) failures.push({ resourceUrl, status: response.status });
+    } catch (err) {
+      failedCount += 1;
+      if (failures.length < 10) failures.push({ resourceUrl, error: err.message });
+    }
+  }
+  return {
+    ok: failedCount === 0,
+    listedCount: resourceUrls.length,
+    deletedCount,
+    failedCount,
+    failures
+  };
+};
+
+const resetSovereignDemoCredentials = async () => {
+  const containerUrl = deriveCredentialsContainerFromWebId(defaultDemoIdentityWebId);
+  const listed = await listCredentialResourceUrls(containerUrl);
+  if (!listed.ok) {
+    return { ok: false, containerUrl, listed };
+  }
+
+  const deletion = await deleteCredentialResources(listed.resources);
+  return {
+    ok: deletion.ok,
+    containerUrl,
+    deletion
+  };
+};
+
 const readCredentials = async (webId) => {
   const containerUrl = deriveCredentialsContainerFromWebId(webId);
   const listed = await listCredentialResourceUrls(containerUrl);
@@ -271,6 +525,54 @@ const readCredentials = async (webId) => {
     exists: true,
     credentials,
     resources: listed.resources
+  };
+};
+
+const verifyIdentityCredentialForLogin = async (webId) => {
+  if (isEmergencyJohnDoeWebId(webId)) {
+    return {
+      ok: true,
+      mode: 'emergency_override_identity',
+      matchedCredentialType: null
+    };
+  }
+
+  const credentialsRead = await readCredentials(webId);
+  if (!credentialsRead.ok) {
+    return {
+      ok: false,
+      reason: credentialsRead.reason || 'unable to read sovereign credentials for identity verification'
+    };
+  }
+
+  const credentials = Array.isArray(credentialsRead.credentials)
+    ? credentialsRead.credentials.map((entry) => entry.credential).filter(Boolean)
+    : [];
+
+  const match = credentials.find((credential) => {
+    const types = credentialTypes(credential);
+    const issuerDid = credentialIssuerDid(credential);
+    if (types.includes('DriversLicenseCredential') && trustedIdentityIssuersByType.DriversLicenseCredential.has(issuerDid)) return true;
+    if (types.includes('PassportCredential') && trustedIdentityIssuersByType.PassportCredential.has(issuerDid)) return true;
+    return false;
+  });
+
+  if (!match) {
+    return {
+      ok: false,
+      reason: 'trusted DriversLicenseCredential or PassportCredential is required for login'
+    };
+  }
+
+  const types = credentialTypes(match);
+  const matchedCredentialType = types.includes('DriversLicenseCredential')
+    ? 'DriversLicenseCredential'
+    : (types.includes('PassportCredential') ? 'PassportCredential' : null);
+
+  return {
+    ok: true,
+    mode: 'credential_bound_webid_login',
+    matchedCredentialType
   };
 };
 
@@ -462,16 +764,17 @@ const renderHomePage = () => `<!doctype html>
       <section class="panel">
         <label for="identityPreset">Identity</label>
         <select id="identityPreset">
-          ${demoIdentityOptions.map((entry) => `<option value="${escapeHtml(entry.webId)}"${entry.webId === defaultDemoIdentityWebId ? ' selected' : ''}>${escapeHtml(formatIdentityOptionLabel(entry))}</option>`).join('')}
+          ${subjectIdentityOptions.map((entry) => `<option value="${escapeHtml(entry.webId)}"${entry.webId === defaultDemoIdentityWebId ? ' selected' : ''}>${escapeHtml(formatIdentityOptionLabel(entry))}</option>`).join('')}
           <option value="__custom__">Custom WebID</option>
         </select>
         <label for="webId" style="margin-top:8px;">WebID</label>
         <input id="webId" value="${escapeHtml(defaultDemoIdentityWebId)}" />
         <div class="btns">
-          <button id="loadBtn">Load Credentials</button>
+          <button id="loginBtn">Login</button>
+          <button id="loadBtn" class="secondary">Load Credentials</button>
           <button id="listBtn" class="secondary">Browse Pod</button>
         </div>
-        <div id="meta" class="meta">Ready.</div>
+        <div id="meta" class="meta">Not logged in.</div>
         <table>
           <thead>
             <tr>
@@ -532,7 +835,7 @@ const renderHomePage = () => `<!doctype html>
   </div>
 
   <script>
-    const namedIdentityPresets = ${JSON.stringify(demoIdentityOptions)};
+    const namedIdentityPresets = ${JSON.stringify(subjectIdentityOptions)};
     const customIdentityPresetValue = '__custom__';
     const identityPresetEl = document.getElementById('identityPreset');
     const webIdEl = document.getElementById('webId');
@@ -549,14 +852,15 @@ const renderHomePage = () => `<!doctype html>
     const sharingRevokeBtn = document.getElementById('sharingRevokeBtn');
     const sharingMetaEl = document.getElementById('sharingMeta');
     const sharingRowsEl = document.getElementById('sharingRows');
+    const loginBtn = document.getElementById('loginBtn');
     const identityPresetByWebId = new Map(namedIdentityPresets.map((entry) => [String(entry.webId || '').trim(), entry]));
 
-    const setMeta = (text) => {
-      metaEl.textContent = text;
-    };
-    const setSharingMeta = (text) => {
-      sharingMetaEl.textContent = text;
-    };
+    let token = '';
+    let authenticatedWebId = '';
+
+    const setMeta = (text) => { metaEl.textContent = text; };
+    const setSharingMeta = (text) => { sharingMetaEl.textContent = text; };
+    const normalizeToken = (value) => String(value || '').trim().toLowerCase();
 
     const syncIdentityPresetFromWebId = () => {
       const currentWebId = webIdEl.value.trim();
@@ -574,18 +878,73 @@ const renderHomePage = () => `<!doctype html>
       syncIdentityPresetFromWebId();
     };
 
-    // Force break points into long, unspaced tokens so they cannot expand layout width.
-    const hardWrapLongTokens = (input, chunk = 56) => String(input ?? '').replace(/\\S{80,}/g, (token) => {
+    const hardWrapLongTokens = (input, chunk = 56) => String(input ?? '').replace(/\\S{80,}/g, (tokenValue) => {
       const parts = [];
-      for (let i = 0; i < token.length; i += chunk) parts.push(token.slice(i, i + chunk));
+      for (let i = 0; i < tokenValue.length; i += chunk) parts.push(tokenValue.slice(i, i + chunk));
       return parts.join('\\u200b');
     });
-
     const formatForOutput = (value) => hardWrapLongTokens(JSON.stringify(value, null, 2));
+
+    const clearAuthState = () => {
+      token = '';
+      authenticatedWebId = '';
+    };
+
+    const authHeaders = (extraHeaders = {}) => {
+      const headers = { ...extraHeaders };
+      if (token) headers.Authorization = 'Bearer ' + token;
+      return headers;
+    };
+
+    const loginWithWebId = async ({ silent = false } = {}) => {
+      const webId = webIdEl.value.trim();
+      if (!webId) {
+        if (!silent) setMeta('WebID is required.');
+        clearAuthState();
+        return false;
+      }
+
+      const res = await fetch('/api/login-webid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webId })
+      });
+      const data = await res.json();
+      outEl.textContent = formatForOutput(data);
+      if (!res.ok || !data.ok || !data.token) {
+        clearAuthState();
+        if (!silent) setMeta('Login failed.');
+        return false;
+      }
+
+      token = String(data.token || '').trim();
+      authenticatedWebId = String(data.authenticatedWebId || '').trim();
+      if (authenticatedWebId) {
+        webIdEl.value = authenticatedWebId;
+        syncIdentityPresetFromWebId();
+      }
+      if (!silent) {
+        const matched = data.matchedCredentialType ? (' using ' + data.matchedCredentialType) : '';
+        setMeta('Logged in as ' + authenticatedWebId + matched + '.');
+      }
+      return true;
+    };
+
+    const ensureAuthenticatedForSelectedIdentity = async () => {
+      const selectedWebId = webIdEl.value.trim();
+      if (!selectedWebId) {
+        setMeta('WebID is required.');
+        clearAuthState();
+        return false;
+      }
+      const sameIdentity = token && normalizeToken(authenticatedWebId) === normalizeToken(selectedWebId);
+      if (sameIdentity) return true;
+      return loginWithWebId({ silent: true });
+    };
 
     const renderRows = (credentials) => {
       rowsEl.innerHTML = credentials.map((cred, idx) => {
-        const types = Array.isArray(cred.type) ? cred.type.filter((t) => t !== 'VerifiableCredential').join(', ') : 'Unknown';
+        const types = Array.isArray(cred.type) ? cred.type.filter((entry) => entry !== 'VerifiableCredential').join(', ') : 'Unknown';
         const issuer = cred && cred.issuer ? (cred.issuer.name || cred.issuer.id || 'Unknown') : 'Unknown';
         const issued = cred && (cred.issuanceDate || cred.validFrom) ? (cred.issuanceDate || cred.validFrom) : 'Unknown';
         return '<tr>' +
@@ -628,13 +987,12 @@ const renderHomePage = () => `<!doctype html>
     };
 
     const loadSharingPermissions = async () => {
-      const webId = webIdEl.value.trim();
-      if (!webId) {
-        setSharingMeta('WebID is required.');
+      if (!(await ensureAuthenticatedForSelectedIdentity())) {
+        setSharingMeta('Login required.');
         renderSharingRows([]);
         return;
       }
-      const res = await fetch('/api/sharing-permissions?webId=' + encodeURIComponent(webId));
+      const res = await fetch('/api/sharing-permissions', { headers: authHeaders() });
       const data = await res.json();
       if (!res.ok || !data.ok) {
         setSharingMeta('Unable to load sharing permissions.');
@@ -646,25 +1004,24 @@ const renderHomePage = () => `<!doctype html>
     };
 
     const grantOrUpdateSharingPermission = async () => {
-      const webId = webIdEl.value.trim();
       const providerDid = providerDidEl.value.trim();
       const accessPreset = String(accessPresetEl.value || '').trim() || 'everything';
-      if (!webId) {
-        setSharingMeta('WebID is required.');
-        return;
-      }
       if (!providerDid) {
         setSharingMeta('Provider DID is required.');
         return;
       }
-      const body = { webId, providerDid, accessPreset };
+      if (!(await ensureAuthenticatedForSelectedIdentity())) {
+        setSharingMeta('Login required.');
+        return;
+      }
+      const body = { providerDid, accessPreset };
       if (accessPreset === 'custom') {
         body.allowedRecordTypes = sharingRecordTypesEl.value.trim();
         body.allowedRecordIds = sharingRecordIdsEl.value.trim();
       }
       const res = await fetch('/api/sharing-permissions/grant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body)
       });
       const data = await res.json();
@@ -678,20 +1035,19 @@ const renderHomePage = () => `<!doctype html>
     };
 
     const revokeSharingPermission = async () => {
-      const webId = webIdEl.value.trim();
       const providerDid = providerDidEl.value.trim();
-      if (!webId) {
-        setSharingMeta('WebID is required.');
-        return;
-      }
       if (!providerDid) {
         setSharingMeta('Provider DID is required.');
         return;
       }
+      if (!(await ensureAuthenticatedForSelectedIdentity())) {
+        setSharingMeta('Login required.');
+        return;
+      }
       const res = await fetch('/api/sharing-permissions/revoke', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webId, providerDid })
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ providerDid })
       });
       const data = await res.json();
       outEl.textContent = formatForOutput(data);
@@ -704,12 +1060,12 @@ const renderHomePage = () => `<!doctype html>
     };
 
     const loadCredentials = async () => {
-      const webId = webIdEl.value.trim();
-      if (!webId) {
-        setMeta('WebID is required.');
+      if (!(await ensureAuthenticatedForSelectedIdentity())) {
+        setMeta('Login required.');
+        rowsEl.innerHTML = '';
         return;
       }
-      const res = await fetch('/api/credentials?webId=' + encodeURIComponent(webId));
+      const res = await fetch('/api/credentials', { headers: authHeaders() });
       const data = await res.json();
       outEl.textContent = formatForOutput(data);
       if (!res.ok || !data.ok) {
@@ -722,9 +1078,12 @@ const renderHomePage = () => `<!doctype html>
     };
 
     const browsePod = async () => {
-      const webId = webIdEl.value.trim();
-      const query = webId ? '?webId=' + encodeURIComponent(webId) : '';
-      const res = await fetch('/api/browse' + query);
+      if (!(await ensureAuthenticatedForSelectedIdentity())) {
+        setMeta('Login required.');
+        linksEl.innerHTML = '';
+        return;
+      }
+      const res = await fetch('/api/browse', { headers: authHeaders() });
       const data = await res.json();
       outEl.textContent = formatForOutput(data);
       linksEl.innerHTML = '';
@@ -742,11 +1101,24 @@ const renderHomePage = () => `<!doctype html>
     };
 
     const refreshAllViews = async () => {
+      const loggedIn = await loginWithWebId({ silent: true });
+      if (!loggedIn) {
+        setMeta('Not logged in.');
+        rowsEl.innerHTML = '';
+        linksEl.innerHTML = '';
+        renderSharingRows([]);
+        return;
+      }
       await loadCredentials();
       await browsePod();
       await loadSharingPermissions();
     };
 
+    loginBtn.addEventListener('click', () => loginWithWebId().catch((e) => {
+      clearAuthState();
+      outEl.textContent = formatForOutput({ ok: false, error: String(e && e.message ? e.message : e) });
+      setMeta('Login failed.');
+    }));
     document.getElementById('loadBtn').addEventListener('click', () => loadCredentials().catch((e) => {
       outEl.textContent = formatForOutput({ ok: false, error: String(e && e.message ? e.message : e) });
       setMeta('Load failed.');
@@ -757,12 +1129,16 @@ const renderHomePage = () => `<!doctype html>
     }));
     identityPresetEl.addEventListener('change', () => {
       applyIdentityPresetToWebId();
+      clearAuthState();
       refreshAllViews().catch((e) => {
         outEl.textContent = formatForOutput({ ok: false, error: String(e && e.message ? e.message : e) });
         setMeta('Identity switch failed.');
       });
     });
-    webIdEl.addEventListener('input', syncIdentityPresetFromWebId);
+    webIdEl.addEventListener('input', () => {
+      syncIdentityPresetFromWebId();
+      clearAuthState();
+    });
     webIdEl.addEventListener('blur', syncIdentityPresetFromWebId);
 
     accessPresetEl.addEventListener('change', syncSharingCustomVisibility);
@@ -784,6 +1160,14 @@ const renderHomePage = () => `<!doctype html>
 
 const server = http.createServer(async (req, res) => {
   try {
+    const requestId = normalizeRequestId(req.headers['x-request-id']) || generateRequestId();
+    req.requestId = requestId;
+    res.__requestId = requestId;
+    res.__auditContext = {
+      method: req.method,
+      path: String(req.url || '').split('?')[0]
+    };
+
     if (req.method === 'GET' && req.url === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(renderHomePage());
@@ -798,11 +1182,62 @@ const server = http.createServer(async (req, res) => {
         demoWebId,
         defaultDemoIdentityWebId,
         demoIdentityOptions,
+        subjectIdentityOptions,
         allowedDemoWebIds: [...allowedDemoWebIds],
+        allowedSubjectLoginWebIds: [...allowedSubjectLoginWebIds],
         jwe: {
           activeKid: sovereignJweActiveKeyId,
           revokedKids: [...sovereignJweRevokedKidSet]
         }
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/api/subject-identities') {
+      json(res, 200, {
+        ok: true,
+        defaultDemoIdentityWebId,
+        subjectIdentityOptions
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/login-webid') {
+      const raw = await readBody(req);
+      const body = raw ? JSON.parse(raw) : {};
+      const bodyError = requireObjectBody(body, 'login-webid');
+      if (bodyError) {
+        json(res, 400, { ok: false, error: bodyError });
+        return;
+      }
+      const webId = String(body.webId || '').trim();
+      if (!webId) {
+        json(res, 400, { ok: false, error: 'webId is required' });
+        return;
+      }
+      if (!isLikelyWebId(webId)) {
+        json(res, 400, { ok: false, error: 'webId must be a valid http(s) WebID URL' });
+        return;
+      }
+      if (!allowedSubjectLoginWebIds.has(webId) && !isEmergencyJohnDoeWebId(webId)) {
+        json(res, 403, { ok: false, error: 'webId is not an approved sovereign identity for this demo environment' });
+        return;
+      }
+      const identityCheck = await verifyIdentityCredentialForLogin(webId);
+      const matchedCredentialType = identityCheck.ok ? (identityCheck.matchedCredentialType || null) : null;
+      const verificationMode = identityCheck.ok ? (identityCheck.mode || 'credential_bound_webid_login') : 'allowlisted_demo_identity_login';
+      const session = createSession(webId);
+      json(res, 200, {
+        ok: true,
+        token: session.token,
+        authenticatedWebId: webId,
+        subjectDid: deriveSubjectDidFromWebId(webId),
+        verification: {
+          authorized: true,
+          mode: verificationMode
+        },
+        matchedCredentialType,
+        expiresInSeconds: Math.floor(explorerSessionTtlMs / 1000)
       });
       return;
     }
@@ -816,13 +1251,50 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === 'GET' && req.url.startsWith('/api/credentials')) {
-      const url = new URL(req.url, `http://localhost:${port}`);
-      const webId = String(url.searchParams.get('webId') || '').trim();
-      if (!webId) {
-        json(res, 400, { ok: false, error: 'webId is required' });
+    if (req.method === 'POST' && req.url === '/api/demo/reset-data') {
+      sharingPermissionsByWebId.clear();
+      const sovereignCredentialReset = await resetSovereignDemoCredentials();
+      json(res, 200, {
+        ok: sovereignCredentialReset.ok,
+        sharingPermissionsReset: true,
+        sovereignCredentialReset
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && req.url.startsWith('/api/audit/events')) {
+      const session = getSession(req);
+      if (!session) {
+        json(res, 401, { ok: false, error: 'unauthorized' });
         return;
       }
+      const url = new URL(req.url, `http://localhost:${port}`);
+      const limitRaw = Number.parseInt(String(url.searchParams.get('limit') || '100'), 10);
+      const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 100;
+      const events = serviceAuditEvents.slice(-limit).reverse();
+      json(res, 200, {
+        ok: true,
+        authenticatedWebId: session.webId,
+        totalEvents: serviceAuditEvents.length,
+        returnedEvents: events.length,
+        events
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && req.url.startsWith('/api/credentials')) {
+      const session = getSession(req);
+      if (!session) {
+        json(res, 401, { ok: false, error: 'unauthorized' });
+        return;
+      }
+      const url = new URL(req.url, `http://localhost:${port}`);
+      const requestedWebId = String(url.searchParams.get('webId') || '').trim();
+      if (requestedWebId && normalizeMatchToken(requestedWebId) !== normalizeMatchToken(session.webId)) {
+        json(res, 403, { ok: false, error: 'requested webId does not match authenticated session' });
+        return;
+      }
+      const webId = session.webId;
 
       const credentialsRead = await readCredentials(webId);
       if (!credentialsRead.ok) {
@@ -844,8 +1316,18 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && req.url.startsWith('/api/browse')) {
+      const session = getSession(req);
+      if (!session) {
+        json(res, 401, { ok: false, error: 'unauthorized' });
+        return;
+      }
       const url = new URL(req.url, `http://localhost:${port}`);
-      const webId = String(url.searchParams.get('webId') || defaultDemoIdentityWebId).trim();
+      const requestedWebId = String(url.searchParams.get('webId') || '').trim();
+      if (requestedWebId && normalizeMatchToken(requestedWebId) !== normalizeMatchToken(session.webId)) {
+        json(res, 403, { ok: false, error: 'requested webId does not match authenticated session' });
+        return;
+      }
+      const webId = session.webId;
       const credentialsRead = await readCredentials(webId);
       if (!credentialsRead.ok) {
         json(res, 502, { ok: false, error: 'failed to browse selected identity resources', credentialsRead });
@@ -867,12 +1349,18 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && req.url.startsWith('/api/sharing-permissions')) {
-      const url = new URL(req.url, `http://localhost:${port}`);
-      const webId = String(url.searchParams.get('webId') || '').trim();
-      if (!webId) {
-        json(res, 400, { ok: false, error: 'webId is required' });
+      const session = getSession(req);
+      if (!session) {
+        json(res, 401, { ok: false, error: 'unauthorized' });
         return;
       }
+      const url = new URL(req.url, `http://localhost:${port}`);
+      const requestedWebId = String(url.searchParams.get('webId') || '').trim();
+      if (requestedWebId && normalizeMatchToken(requestedWebId) !== normalizeMatchToken(session.webId)) {
+        json(res, 403, { ok: false, error: 'requested webId does not match authenticated session' });
+        return;
+      }
+      const webId = session.webId;
       const list = ensureSharingPermissionList(webId);
       const permissions = [...list].sort((a, b) => (Date.parse(b.updatedAt || b.grantedAt || '') || 0) - (Date.parse(a.updatedAt || a.grantedAt || '') || 0));
       const activePermissionCount = permissions.filter((entry) => entry.status === 'active').length;
@@ -881,19 +1369,58 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && req.url === '/api/sharing-permissions/grant') {
+      const session = getSession(req);
+      if (!session) {
+        json(res, 401, { ok: false, error: 'unauthorized' });
+        return;
+      }
       const raw = await readBody(req);
       const body = raw ? JSON.parse(raw) : {};
-      const webId = String(body.webId || '').trim();
+      const bodyError = requireObjectBody(body, 'sharing-permissions grant');
+      if (bodyError) {
+        json(res, 400, { ok: false, error: bodyError });
+        return;
+      }
+
+      const requestedWebId = String(body.webId || '').trim();
+      if (requestedWebId && normalizeMatchToken(requestedWebId) !== normalizeMatchToken(session.webId)) {
+        json(res, 403, { ok: false, error: 'body webId does not match authenticated session' });
+        return;
+      }
+      const webId = session.webId;
       const providerDid = String(body.providerDid || '').trim();
       const accessPresetInput = String(body.accessPreset || 'everything').trim().toLowerCase();
       const accessPreset = allowedAccessPresets.has(accessPresetInput) ? accessPresetInput : 'everything';
-      if (!webId) {
-        json(res, 400, { ok: false, error: 'webId is required' });
-        return;
-      }
       if (!providerDid) {
         json(res, 400, { ok: false, error: 'providerDid is required' });
         return;
+      }
+      if (!isLikelyDid(providerDid)) {
+        json(res, 400, { ok: false, error: 'providerDid must be a valid DID' });
+        return;
+      }
+      if (body.allowedRecordTypes !== undefined && !(typeof body.allowedRecordTypes === 'string' || Array.isArray(body.allowedRecordTypes))) {
+        json(res, 400, { ok: false, error: 'allowedRecordTypes must be a comma-separated string or array when provided' });
+        return;
+      }
+      if (body.allowedRecordIds !== undefined && !(typeof body.allowedRecordIds === 'string' || Array.isArray(body.allowedRecordIds))) {
+        json(res, 400, { ok: false, error: 'allowedRecordIds must be a comma-separated string or array when provided' });
+        return;
+      }
+
+      const idempotencyKey = parseIdempotencyKey(req, body);
+      if (idempotencyKey) {
+        const cacheKey = `sharing-grant:${webId}:${providerDid}:${idempotencyKey}`;
+        const cached = readCachedIdempotentResponse(cacheKey);
+        if (cached) {
+          json(res, cached.status, {
+            ...(cached.payload && typeof cached.payload === 'object' ? cached.payload : {}),
+            idempotency: { key: idempotencyKey, replayed: true }
+          });
+          return;
+        }
+        res.__idempotencyCacheKey = cacheKey;
+        res.__idempotencyMeta = { key: idempotencyKey, replayed: false };
       }
 
       const allowedRecordTypes = accessPreset === 'custom' ? parseCsvList(body.allowedRecordTypes) : [];
@@ -941,17 +1468,48 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && req.url === '/api/sharing-permissions/revoke') {
-      const raw = await readBody(req);
-      const body = raw ? JSON.parse(raw) : {};
-      const webId = String(body.webId || '').trim();
-      const providerDid = String(body.providerDid || '').trim();
-      if (!webId) {
-        json(res, 400, { ok: false, error: 'webId is required' });
+      const session = getSession(req);
+      if (!session) {
+        json(res, 401, { ok: false, error: 'unauthorized' });
         return;
       }
+      const raw = await readBody(req);
+      const body = raw ? JSON.parse(raw) : {};
+      const bodyError = requireObjectBody(body, 'sharing-permissions revoke');
+      if (bodyError) {
+        json(res, 400, { ok: false, error: bodyError });
+        return;
+      }
+
+      const requestedWebId = String(body.webId || '').trim();
+      if (requestedWebId && normalizeMatchToken(requestedWebId) !== normalizeMatchToken(session.webId)) {
+        json(res, 403, { ok: false, error: 'body webId does not match authenticated session' });
+        return;
+      }
+      const webId = session.webId;
+      const providerDid = String(body.providerDid || '').trim();
       if (!providerDid) {
         json(res, 400, { ok: false, error: 'providerDid is required' });
         return;
+      }
+      if (!isLikelyDid(providerDid)) {
+        json(res, 400, { ok: false, error: 'providerDid must be a valid DID' });
+        return;
+      }
+
+      const idempotencyKey = parseIdempotencyKey(req, body);
+      if (idempotencyKey) {
+        const cacheKey = `sharing-revoke:${webId}:${providerDid}:${idempotencyKey}`;
+        const cached = readCachedIdempotentResponse(cacheKey);
+        if (cached) {
+          json(res, cached.status, {
+            ...(cached.payload && typeof cached.payload === 'object' ? cached.payload : {}),
+            idempotency: { key: idempotencyKey, replayed: true }
+          });
+          return;
+        }
+        res.__idempotencyCacheKey = cacheKey;
+        res.__idempotencyMeta = { key: idempotencyKey, replayed: false };
       }
 
       const now = new Date().toISOString();
@@ -978,10 +1536,19 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && req.url === '/api/decrypt-shared-envelope') {
       const raw = await readBody(req);
       const body = raw ? JSON.parse(raw) : {};
+      const bodyError = requireObjectBody(body, 'decrypt-shared-envelope');
+      if (bodyError) {
+        json(res, 400, { ok: false, error: bodyError });
+        return;
+      }
       const webId = String(body.webId || '').trim();
       const envelope = body.envelope;
       if (!webId) {
         json(res, 400, { ok: false, error: 'webId is required' });
+        return;
+      }
+      if (!isLikelyWebId(webId)) {
+        json(res, 400, { ok: false, error: 'webId must be a valid http(s) WebID URL' });
         return;
       }
       if (!allowedDemoWebIds.has(webId) && !isEmergencyJohnDoeWebId(webId)) {
@@ -990,6 +1557,10 @@ const server = http.createServer(async (req, res) => {
       }
       if (!envelope || typeof envelope !== 'object') {
         json(res, 400, { ok: false, error: 'envelope object is required' });
+        return;
+      }
+      if (!envelope.protected || !envelope.iv || !envelope.tag || !envelope.ciphertext) {
+        json(res, 400, { ok: false, error: 'envelope must include protected, iv, tag, and ciphertext' });
         return;
       }
 

@@ -6,6 +6,8 @@
   <title>Johnson City Briefing | Sovereign NGO</title>
   <meta name="description" content="Presentation briefing on Johnson City public-record context and service-system design opportunities.">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Widgets/widgets.css">
+  <link rel="icon" type="image/svg+xml" href="../logo.svg">
   <style>
     :root {
       --paper: #f5f0e8;
@@ -88,6 +90,15 @@
       max-width: none;
     }
 
+    .title-copy .rule {
+      margin-top: 12px;
+      margin-bottom: 10px;
+    }
+
+    .title-copy .lead {
+      margin-bottom: 0;
+    }
+
     .subtitle {
       margin: 7px 0 0;
       color: var(--ink-soft);
@@ -104,6 +115,7 @@
       min-height: 168px;
       display: flex;
       flex-direction: column;
+      align-self: center;
     }
 
     .cesium-window-bar {
@@ -120,9 +132,9 @@
 
     .cesium-window-body {
       flex: 1;
-      display: grid;
-      place-items: center;
-      padding: 10px;
+      position: relative;
+      padding: 0;
+      min-height: 240px;
       background:
         radial-gradient(circle at 24% 26%, rgba(255, 255, 255, 0.52), transparent 44%),
         linear-gradient(145deg, #f8f3eb 0%, #ece0d0 100%);
@@ -130,6 +142,162 @@
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
       font-size: 0.9rem;
       text-align: center;
+    }
+
+    .cesium-window-body:fullscreen,
+    .cesium-window-body:-webkit-full-screen {
+      width: 100vw;
+      height: 100vh;
+      min-height: 100vh;
+      max-width: none;
+      max-height: none;
+    }
+
+    .cesium-map {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .cesium-status {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      z-index: 2;
+      max-width: calc(100% - 18px);
+      border: 1px solid rgba(95, 76, 60, 0.35);
+      border-radius: 6px;
+      background: rgba(255, 252, 245, 0.9);
+      color: #4b3d31;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 8px;
+      text-align: left;
+      backdrop-filter: blur(1.5px);
+      pointer-events: none;
+    }
+
+    .cesium-status[data-state="ok"] {
+      opacity: 0;
+      transition: opacity 220ms ease;
+    }
+
+    .cesium-status[data-state="warning"] {
+      color: #6b4d18;
+      border-color: rgba(139, 107, 35, 0.45);
+      background: rgba(255, 249, 236, 0.94);
+    }
+
+    .cesium-layer-controls {
+      position: absolute;
+      top: 9px;
+      left: 9px;
+      z-index: 3;
+      width: min(270px, calc(100% - 18px));
+      max-height: calc(100% - 18px);
+      border: 1px solid rgba(95, 76, 60, 0.35);
+      border-radius: 6px;
+      background: rgba(255, 252, 245, 0.94);
+      color: #3f352c;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      text-align: left;
+      padding: 6px;
+      box-shadow: 0 2px 10px rgba(46, 37, 28, 0.12);
+      backdrop-filter: blur(1.5px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .cesium-layer-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      min-width: 140px;
+      border: 1px solid rgba(95, 76, 60, 0.3);
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #3f352c;
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 7px 8px;
+      cursor: pointer;
+    }
+
+    .cesium-layer-toggle:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .cesium-layer-toggle .caret {
+      font-size: 0.9rem;
+      line-height: 1;
+      transition: transform 180ms ease;
+    }
+
+    .cesium-layer-controls.is-collapsed .cesium-layer-toggle .caret {
+      transform: rotate(-90deg);
+    }
+
+    .cesium-layer-controls.is-collapsed .cesium-layer-panel {
+      display: none;
+    }
+
+    .cesium-layer-panel {
+      max-height: calc(100vh - 190px);
+      overflow: auto;
+      padding: 1px 3px 3px;
+    }
+
+    .cesium-layer-panel h4 {
+      margin: 0 0 6px;
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #5a4b3f;
+    }
+
+    .cesium-layer-control-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 5px;
+    }
+
+    .cesium-layer-control-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      color: #3f352c;
+    }
+
+    .cesium-layer-control-item input {
+      margin: 0;
+      width: 14px;
+      height: 14px;
+      accent-color: #225982;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .cesium-layer-control-item label {
+      margin: 0;
+      line-height: 1.25;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .cesium-layer-control-item[data-disabled="true"] {
+      opacity: 0.58;
     }
 
     .rule {
@@ -413,6 +581,22 @@
       h1 {
         max-width: none;
       }
+
+      .cesium-window-body {
+        min-height: 228px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .cesium-layer-controls {
+        width: calc(100% - 18px);
+        top: auto;
+        bottom: 9px;
+      }
+
+      .cesium-status {
+        max-width: calc(100% - 18px);
+      }
     }
   </style>
 </head>
@@ -428,17 +612,28 @@
         <div class="title-copy">
           <h1>Johnson City: What the Public Record Shows and What Still Needs Design Work</h1>
           <p class="subtitle">Prepared for use in community, partner, and civic planning conversations.</p>
+          <hr class="rule">
+          <p class="kicker">Core Takeaway</p>
+          <p class="lead">Johnson City already has key homelessness-response infrastructure in place. The strongest opportunity now is last-mile service design: fewer document failures, cleaner consent handoffs, and clearer outcome visibility for the people and teams trying to move services forward. This is not a build-from-zero problem; it is a last-mile coordination and usability problem.</p>
         </div>
-        <aside class="cesium-window" aria-label="CesiumJS placeholder window">
-          <div class="cesium-window-bar">Shared 3D Interactive Map</div>
-          <div class="cesium-window-body">Loading...</div>
+        <aside class="cesium-window" aria-label="Johnson City shared 3D interactive map">
+          <div class="cesium-window-bar">Shared 3D Map</div>
+          <div class="cesium-window-body">
+            <div id="cesiumMap" class="cesium-map" aria-label="Interactive 3D locality map"></div>
+            <div id="cesiumStatus" class="cesium-status" data-state="loading">Loading map and data layers...</div>
+            <aside id="cesiumLayerControls" class="cesium-layer-controls is-collapsed" aria-label="Map layer controls">
+              <button id="cesiumLayerToggle" class="cesium-layer-toggle" type="button" aria-expanded="false" aria-controls="cesiumLayerPanel">
+                <span>Map Layers</span>
+                <span class="caret" aria-hidden="true">▾</span>
+              </button>
+              <div id="cesiumLayerPanel" class="cesium-layer-panel" hidden>
+                <h4>Available Layers</h4>
+                <ul id="cesiumLayerControlList" class="cesium-layer-control-list"></ul>
+              </div>
+            </aside>
+          </div>
         </aside>
       </div>
-
-      <hr class="rule">
-
-      <p class="kicker">Core Takeaway</p>
-      <p class="lead">Johnson City already has key homelessness-response infrastructure in place. The strongest opportunity now is last-mile service design: fewer document failures, cleaner consent handoffs, and clearer outcome visibility for the people and teams trying to move services forward. This is not a build-from-zero problem; it is a last-mile coordination and usability problem.</p>
 
       <section class="state">
         <h2>Integrated Locality Report</h2>
@@ -641,5 +836,601 @@
       </section>
     </section>
   </main>
+  <script>
+    window.CESIUM_BASE_URL = 'https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/';
+  </script>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Cesium.js"></script>
+  <script>
+    (() => {
+      const mapEl = document.getElementById('cesiumMap');
+      const statusEl = document.getElementById('cesiumStatus');
+      const layerControlsEl = document.getElementById('cesiumLayerControls');
+      const layerToggleEl = document.getElementById('cesiumLayerToggle');
+      const layerPanelEl = document.getElementById('cesiumLayerPanel');
+      const layerControlListEl = document.getElementById('cesiumLayerControlList');
+      if (!mapEl) return;
+
+      const setStatus = (message, state) => {
+        if (!statusEl) return;
+        statusEl.textContent = message;
+        statusEl.dataset.state = state || 'loading';
+      };
+
+      if (!window.Cesium) {
+        setStatus('Cesium failed to load. Check internet access to the Cesium script CDN.', 'error');
+        return;
+      }
+
+      Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4OWQ5MDg2Mi02MDRmLTRhMWItYjZjZS1mMGE3YWI1MDAyOWYiLCJpZCI6MjIwODczLCJpYXQiOjE3NjQ4NjgxNDh9.Grk7U6JuiU7YNrP5bjCAsrifDqBJIxtQZF4Lf52ocMo';
+
+      if (Cesium.FeatureDetection && typeof Cesium.FeatureDetection.supportsWebWorkers === 'function') {
+        Cesium.FeatureDetection.supportsWebWorkers = () => false;
+      }
+
+      let viewer;
+      try {
+        viewer = new Cesium.Viewer('cesiumMap', {
+          animation: false,
+          baseLayerPicker: false,
+          fullscreenButton: true,
+          fullscreenElement: mapEl.parentElement || mapEl,
+          geocoder: false,
+          homeButton: true,
+          infoBox: true,
+          navigationHelpButton: false,
+          sceneModePicker: false,
+          timeline: false,
+          selectionIndicator: true,
+          shouldAnimate: false
+        });
+      } catch (err) {
+        setStatus('Map initialization failed. Check token, CDN access, and browser security settings.', 'error');
+        console.error('Cesium initialization error:', err);
+        return;
+      }
+
+      const initialCameraView = {
+        destination: Cesium.Cartesian3.fromDegrees(-82.366239, 36.405671, 2027.61),
+        orientation: {
+          heading: Cesium.Math.toRadians(189.145),
+          pitch: Cesium.Math.toRadians(-18.219),
+          roll: Cesium.Math.toRadians(0.000)
+        }
+      };
+
+      const applyInitialCameraView = (fly = false) => {
+        if (fly) {
+          viewer.camera.flyTo({
+            destination: initialCameraView.destination,
+            orientation: initialCameraView.orientation,
+            duration: 1.35
+          });
+          return;
+        }
+        viewer.camera.setView({
+          destination: initialCameraView.destination,
+          orientation: initialCameraView.orientation
+        });
+      };
+
+      applyInitialCameraView(false);
+
+      if (viewer.homeButton?.viewModel?.command?.beforeExecute) {
+        viewer.homeButton.viewModel.command.beforeExecute.addEventListener((event) => {
+          event.cancel = true;
+          applyInitialCameraView(true);
+        });
+      }
+
+      const printCameraPose = () => {
+        const camera = viewer.camera;
+        const cartographic = Cesium.Cartographic.fromCartesian(camera.positionWC);
+        if (!cartographic) {
+          console.warn('[Cesium Camera Pose] Unable to read camera cartographic position.');
+          return;
+        }
+
+        const longitudeDeg = Cesium.Math.toDegrees(cartographic.longitude);
+        const latitudeDeg = Cesium.Math.toDegrees(cartographic.latitude);
+        const heightMeters = cartographic.height;
+        const headingDeg = Cesium.Math.toDegrees(camera.heading);
+        const pitchDeg = Cesium.Math.toDegrees(camera.pitch);
+        const rollDeg = Cesium.Math.toDegrees(camera.roll);
+
+        const pose = {
+          longitudeDeg: Number(longitudeDeg.toFixed(6)),
+          latitudeDeg: Number(latitudeDeg.toFixed(6)),
+          heightMeters: Number(heightMeters.toFixed(2)),
+          headingDeg: Number(headingDeg.toFixed(3)),
+          pitchDeg: Number(pitchDeg.toFixed(3)),
+          rollDeg: Number(rollDeg.toFixed(3)),
+          destinationSnippet: `destination: Cesium.Cartesian3.fromDegrees(${longitudeDeg.toFixed(6)}, ${latitudeDeg.toFixed(6)}, ${heightMeters.toFixed(2)})`,
+          orientationSnippet: `orientation: { heading: Cesium.Math.toRadians(${headingDeg.toFixed(3)}), pitch: Cesium.Math.toRadians(${pitchDeg.toFixed(3)}), roll: Cesium.Math.toRadians(${rollDeg.toFixed(3)}) }`
+        };
+
+        console.log('[Cesium Camera Pose]', pose);
+      };
+
+      window.addEventListener('keydown', (event) => {
+        if (event.code !== 'Space') return;
+        const target = event.target;
+        if (target && typeof target.closest === 'function' && target.closest('input, textarea, select, button, a, label')) {
+          return;
+        }
+        if (target && target.isContentEditable) return;
+        event.preventDefault();
+        printCameraPose();
+      });
+
+      const humanizeDatasetName = (file) => decodeURIComponent(String(file || '')
+        .replace(/\.geojson$/i, '')
+        .replace(/_/g, ' ')
+        .trim());
+      const toLayerId = (file) => String(file || '')
+        .toLowerCase()
+        .replace(/\.geojson$/i, '')
+        .replace(/%2c/gi, '-')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      const datasetFiles = [
+        // 'Addresses.geojson', // 220.7 MB
+        // 'City_Limits.geojson', // 6.4 MB
+        'County_Boundaries.geojson',
+        'EMS_Stations.geojson',
+        'Education_Facility.geojson',
+        'Fire_District.geojson',
+        'Fire_Stations.geojson',
+        'Hospitals.geojson',
+        // 'Land_Use%2C_Current.geojson', // 46.9 MB
+        'Libraries.geojson',
+        'Mountain_Home_Veterans_Administration_Boundary.geojson',
+        'National_Forest.geojson',
+        'Neighborhood_Names.geojson',
+        'Overlay_Districts.geojson',
+        // 'Parcels.geojson', // 788.1 MB
+        'Park_And_Recreation_Boundaries.geojson',
+        'Park_And_Recreation_Locations.geojson',
+        'Place_Names.geojson',
+        'Post_Offices.geojson',
+        'Recycling_Facility.geojson',
+        'Streams_and_Lake_Boundaries.geojson',
+        'Trails.geojson',
+        'Transit_Bucshot_Routes.geojson',
+        'Transit_Routes.geojson',
+        'Transit_Stops.geojson',
+        'Zoning.geojson'
+      ];
+
+      const layerSpecs = datasetFiles.map((file) => {
+        return {
+          id: toLayerId(file),
+          file,
+          name: humanizeDatasetName(file),
+          url: `data/johnson-city/map/${file}`
+        };
+      });
+
+      const zoningLayerId = toLayerId('Zoning.geojson');
+      const fireDistrictLayerId = toLayerId('Fire_District.geojson');
+      const parkBoundaryLayerId = toLayerId('Park_And_Recreation_Boundaries.geojson');
+      const parkLocationLayerId = toLayerId('Park_And_Recreation_Locations.geojson');
+      const transitStopsLayerId = toLayerId('Transit_Stops.geojson');
+      let googlePhotorealisticTileset = null;
+      const loadedDataSources = new Map();
+      const pendingDataSourceLoads = new Map();
+
+      const setLayerPanelCollapsed = (collapsed) => {
+        if (!layerControlsEl || !layerToggleEl || !layerPanelEl) return;
+        layerControlsEl.classList.toggle('is-collapsed', collapsed);
+        layerControlsEl.classList.toggle('is-expanded', !collapsed);
+        layerToggleEl.setAttribute('aria-expanded', String(!collapsed));
+        layerPanelEl.hidden = collapsed;
+      };
+
+      if (layerToggleEl) {
+        layerToggleEl.addEventListener('click', () => {
+          const collapsed = layerControlsEl ? layerControlsEl.classList.contains('is-collapsed') : false;
+          setLayerPanelCollapsed(!collapsed);
+        });
+      }
+      setLayerPanelCollapsed(true);
+
+      const addLayerControl = (spec) => {
+        if (!layerControlListEl || !spec || !spec.id) return;
+        const item = document.createElement('li');
+        item.className = 'cesium-layer-control-item';
+        item.dataset.disabled = 'false';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `layer-toggle-${spec.id}`;
+        checkbox.checked = false;
+        checkbox.disabled = false;
+
+        const label = document.createElement('label');
+        label.setAttribute('for', checkbox.id);
+        label.textContent = spec.name;
+
+        checkbox.addEventListener('change', () => {
+          void toggleLayer(spec, checkbox, item, label);
+        });
+
+        item.append(checkbox, label);
+        layerControlListEl.appendChild(item);
+      };
+
+      const labelFieldCandidates = ['NAME', 'Stop_Name', 'Route_Name', 'FACILITYID', 'ZONEDESC', 'FEATURECODE', 'PLACETYPE', 'OWNER'];
+      const pinBuilder = new Cesium.PinBuilder();
+      const markerImageCache = new Map();
+
+      const sanitizeLabelValue = (value) => {
+        if (value === null || value === undefined) return '';
+        const text = String(value).trim();
+        if (!text || text.toLowerCase() === 'null' || text.toLowerCase() === 'undefined') return '';
+        return text;
+      };
+
+      const readEntityProperty = (entity, fieldName, julianDate) => {
+        if (!entity || !entity.properties || !fieldName) return '';
+        const property = entity.properties[fieldName];
+        if (!property) return '';
+        if (typeof property.getValue === 'function') {
+          return sanitizeLabelValue(property.getValue(julianDate));
+        }
+        return sanitizeLabelValue(property);
+      };
+
+      const pickBestLabelField = (dataSource, julianDate) => {
+        const entities = dataSource?.entities?.values || [];
+        const sampleSize = Math.min(260, entities.length);
+        const scores = new Map(labelFieldCandidates.map((field) => [field, 0]));
+
+        for (let i = 0; i < sampleSize; i += 1) {
+          const entity = entities[i];
+          if (!entity || !entity.properties) continue;
+          for (const fieldName of labelFieldCandidates) {
+            const text = readEntityProperty(entity, fieldName, julianDate);
+            if (text) {
+              scores.set(fieldName, (scores.get(fieldName) || 0) + 1);
+            }
+          }
+        }
+
+        let bestField = null;
+        let bestScore = 0;
+        for (const fieldName of labelFieldCandidates) {
+          const score = scores.get(fieldName) || 0;
+          if (score > bestScore) {
+            bestScore = score;
+            bestField = fieldName;
+          }
+        }
+        return bestScore > 0 ? bestField : null;
+      };
+
+      const markerGlyphFromLabel = (labelText) => {
+        const cleaned = sanitizeLabelValue(labelText).replace(/[^a-z0-9 ]/gi, ' ').trim();
+        if (!cleaned) return '';
+        if (/^\d+$/i.test(cleaned)) return cleaned.slice(0, 3);
+        const words = cleaned.split(/\s+/).filter(Boolean);
+        if (!words.length) return '';
+        if (words.length >= 2) {
+          return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase().slice(0, 2);
+        }
+        return words[0].slice(0, 2).toUpperCase();
+      };
+
+      const markerImageForGlyph = (glyph) => {
+        const normalized = sanitizeLabelValue(glyph).slice(0, 3) || '•';
+        if (markerImageCache.has(normalized)) {
+          return markerImageCache.get(normalized);
+        }
+        const canvas = pinBuilder.fromText(normalized, Cesium.Color.fromCssColorString('#2f6ea0'), 50);
+        const image = canvas.toDataURL();
+        markerImageCache.set(normalized, image);
+        return image;
+      };
+
+      const applyPointLabels = (dataSource) => {
+        const entities = dataSource?.entities?.values || [];
+        if (!entities.length || entities.length > 900) return;
+        const now = Cesium.JulianDate.now();
+        const labelField = pickBestLabelField(dataSource, now);
+        if (!labelField) return;
+
+        for (const entity of entities) {
+          if (!entity || !entity.position) continue;
+          const labelText = readEntityProperty(entity, labelField, now);
+          if (!labelText) continue;
+          const glyph = markerGlyphFromLabel(labelText);
+          const markerImage = markerImageForGlyph(glyph);
+          if (entity.billboard) {
+            entity.billboard.image = markerImage;
+            entity.billboard.verticalOrigin = Cesium.VerticalOrigin.BOTTOM;
+            entity.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
+            entity.billboard.disableDepthTestDistance = Number.POSITIVE_INFINITY;
+          } else {
+            entity.billboard = new Cesium.BillboardGraphics({
+              image: markerImage,
+              verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+              disableDepthTestDistance: Number.POSITIVE_INFINITY
+            });
+          }
+          entity.name = labelText;
+          entity.label = undefined;
+        }
+      };
+
+      const prepareLayerFor3DTilesBase = (dataSource) => {
+        const entities = dataSource?.entities?.values || [];
+        for (const entity of entities) {
+          if (entity?.polygon) {
+            entity.polygon.classificationType = Cesium.ClassificationType.BOTH;
+          }
+        }
+      };
+
+      const zonePalette = {
+        residentialLow: { fill: '#F8E287', outline: '#B3902D' },
+        residentialMedium: { fill: '#EFD470', outline: '#A6821C' },
+        residentialPlanned: { fill: '#E8DFA4', outline: '#9E9150' },
+        residentialOffice: { fill: '#F5C5A8', outline: '#B96A3B' },
+        commercialNeighborhood: { fill: '#E79AA0', outline: '#A9444C' },
+        commercialCore: { fill: '#D95A61', outline: '#842B31' },
+        mixedUse: { fill: '#F3AD63', outline: '#A25C17' },
+        industrial: { fill: '#B9A2E8', outline: '#6950A6' },
+        civicPublic: { fill: '#95B9E6', outline: '#3E6CA7' },
+        agricultureOpen: { fill: '#A8D68A', outline: '#4E8A3A' },
+        techDistrict: { fill: '#79C9C0', outline: '#2E7D74' },
+        utility: { fill: '#A5B0BC', outline: '#596575' },
+        fallback: { fill: '#D7DCE5', outline: '#667487' }
+      };
+
+      const zoningColorsForClass = (zoneClassRaw) => {
+        const zoneClass = sanitizeLabelValue(zoneClassRaw).toUpperCase();
+        if (!zoneClass) return zonePalette.fallback;
+
+        if (/^R-\d/.test(zoneClass)) {
+          const match = zoneClass.match(/^R-(\d)/);
+          const level = match ? Number(match[1]) : 0;
+          return level >= 4 ? zonePalette.residentialMedium : zonePalette.residentialLow;
+        }
+        if (/^RM-/.test(zoneClass)) return zonePalette.residentialMedium;
+        if (/^RP-/.test(zoneClass)) return zonePalette.residentialPlanned;
+        if (/^RO-/.test(zoneClass)) return zonePalette.residentialOffice;
+        if (/^B-[1-2]/.test(zoneClass)) return zonePalette.commercialNeighborhood;
+        if (/^B-[3-5]/.test(zoneClass) || /^MS-/.test(zoneClass)) return zonePalette.commercialCore;
+        if (/^MX/.test(zoneClass)) return zonePalette.mixedUse;
+        if (/^I-/.test(zoneClass)) return zonePalette.industrial;
+        if (zoneClass === 'PB') return zonePalette.civicPublic;
+        if (/^A-/.test(zoneClass)) return zonePalette.agricultureOpen;
+        if (zoneClass === 'RTP') return zonePalette.techDistrict;
+        if (zoneClass === 'WWD') return zonePalette.utility;
+        return zonePalette.fallback;
+      };
+
+      const styleZoningLayer = (dataSource) => {
+        const entities = dataSource?.entities?.values || [];
+        if (!entities.length) return;
+        const now = Cesium.JulianDate.now();
+
+        for (const entity of entities) {
+          if (!entity?.polygon) continue;
+          const zoneClass = readEntityProperty(entity, 'ZONECLASS', now);
+          const colors = zoningColorsForClass(zoneClass);
+          entity.polygon.material = Cesium.Color.fromCssColorString(colors.fill).withAlpha(0.42);
+          entity.polygon.outline = true;
+          entity.polygon.outlineColor = Cesium.Color.fromCssColorString(colors.outline).withAlpha(0.92);
+          entity.polygon.outlineWidth = 1.0;
+          entity.name = zoneClass ? `Zone ${zoneClass}` : 'Zoning Area';
+        }
+      };
+
+      const styleParkLayers = (dataSource, specId) => {
+        const entities = dataSource?.entities?.values || [];
+        if (!entities.length) return;
+        const parkFill = Cesium.Color.fromCssColorString('#6FBF73').withAlpha(0.46);
+        const parkOutline = Cesium.Color.fromCssColorString('#2E7D32').withAlpha(0.96);
+
+        for (const entity of entities) {
+          if (entity?.polygon) {
+            entity.polygon.material = parkFill;
+            entity.polygon.outline = true;
+            entity.polygon.outlineColor = parkOutline;
+            entity.polygon.outlineWidth = 1.2;
+          }
+          if (specId === parkLocationLayerId && entity?.position) {
+            if (entity.billboard) {
+              entity.billboard.image = pinBuilder.fromColor(Cesium.Color.fromCssColorString('#43A047'), 54).toDataURL();
+              entity.billboard.verticalOrigin = Cesium.VerticalOrigin.BOTTOM;
+              entity.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
+              entity.billboard.disableDepthTestDistance = Number.POSITIVE_INFINITY;
+            }
+          }
+        }
+      };
+
+      const styleFireDistrictLayer = (dataSource) => {
+        const entities = dataSource?.entities?.values || [];
+        if (!entities.length) return;
+        const fireFill = Cesium.Color.fromCssColorString('#D32F2F').withAlpha(0.3);
+        const fireOutline = Cesium.Color.fromCssColorString('#B71C1C').withAlpha(0.96);
+        const now = Cesium.JulianDate.now();
+
+        for (const entity of entities) {
+          if (entity?.polygon) {
+            entity.polygon.material = fireFill;
+            entity.polygon.outline = true;
+            entity.polygon.outlineColor = fireOutline;
+            entity.polygon.outlineWidth = 1.2;
+          }
+          const districtId = readEntityProperty(entity, 'DISTRICTID', now);
+          const districtName = readEntityProperty(entity, 'NAME', now);
+          if (districtId || districtName) {
+            entity.name = districtId ? `Fire District ${districtId}` : `Fire District ${districtName}`;
+          }
+        }
+      };
+
+      const styleTransitStopsLayer = (dataSource) => {
+        const entities = dataSource?.entities?.values || [];
+        if (!entities.length) return;
+        const now = Cesium.JulianDate.now();
+        const labelField = pickBestLabelField(dataSource, now);
+        const stopFill = Cesium.Color.fromCssColorString('#C62828');
+        const stopOutline = Cesium.Color.WHITE.withAlpha(0.95);
+
+        for (const entity of entities) {
+          if (!entity?.position) continue;
+          entity.billboard = undefined;
+          entity.point = new Cesium.PointGraphics({
+            pixelSize: 6,
+            color: stopFill,
+            outlineColor: stopOutline,
+            outlineWidth: 1.4,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY
+          });
+          const labelText = labelField ? readEntityProperty(entity, labelField, now) : '';
+          if (labelText) {
+            entity.name = labelText;
+          }
+          entity.label = undefined;
+        }
+      };
+
+      const loadLayerDataSource = async (spec) => {
+        if (loadedDataSources.has(spec.id)) {
+          return loadedDataSources.get(spec.id);
+        }
+        if (pendingDataSourceLoads.has(spec.id)) {
+          return pendingDataSourceLoads.get(spec.id);
+        }
+
+        const promise = Cesium.GeoJsonDataSource.load(spec.url, { clampToGround: true })
+          .then((dataSource) => {
+            dataSource.name = spec.name;
+            prepareLayerFor3DTilesBase(dataSource);
+            if (spec.id === zoningLayerId) {
+              styleZoningLayer(dataSource);
+            }
+            if (spec.id === fireDistrictLayerId) {
+              styleFireDistrictLayer(dataSource);
+            }
+            if (spec.id === parkBoundaryLayerId || spec.id === parkLocationLayerId) {
+              styleParkLayers(dataSource, spec.id);
+            }
+            if (spec.id === transitStopsLayerId) {
+              styleTransitStopsLayer(dataSource);
+            } else {
+              applyPointLabels(dataSource);
+            }
+            viewer.dataSources.add(dataSource);
+            loadedDataSources.set(spec.id, dataSource);
+            return dataSource;
+          })
+          .finally(() => {
+            pendingDataSourceLoads.delete(spec.id);
+          });
+
+        pendingDataSourceLoads.set(spec.id, promise);
+        return promise;
+      };
+
+      const applyBaseModeForZoning = () => {
+        const zoningDataSource = loadedDataSources.get(zoningLayerId);
+        const zoningEnabled = Boolean(zoningDataSource && zoningDataSource.show);
+        if (googlePhotorealisticTileset) {
+          googlePhotorealisticTileset.show = !zoningEnabled;
+        }
+        if (viewer.scene.globe) {
+          viewer.scene.globe.show = zoningEnabled;
+        }
+      };
+
+      const toggleLayer = async (spec, checkbox, item, label) => {
+        if (!checkbox.checked) {
+          const existing = loadedDataSources.get(spec.id);
+          if (existing) {
+            existing.show = false;
+          }
+          applyBaseModeForZoning();
+          return;
+        }
+
+        try {
+          setStatus(`Loading ${spec.name}...`, 'loading');
+          const dataSource = await loadLayerDataSource(spec);
+          dataSource.show = true;
+          applyBaseModeForZoning();
+          const featureCount = dataSource.entities?.values?.length ?? 0;
+          if (spec.id === zoningLayerId) {
+            setStatus(`${spec.name} enabled (${featureCount} features). Switched to flat map view.`, 'ok');
+          } else {
+            setStatus(`${spec.name} enabled (${featureCount} features).`, 'ok');
+          }
+        } catch (err) {
+          console.error(`Dataset load failed (${spec.name}):`, err);
+          checkbox.checked = false;
+          checkbox.disabled = true;
+          item.dataset.disabled = 'true';
+          label.textContent = `${spec.name} (failed)`;
+          applyBaseModeForZoning();
+          setStatus(`Failed to load ${spec.name}.`, 'error');
+        }
+      };
+
+      const loadGoogle3DTilesBase = async () => {
+        try {
+          if (typeof Cesium.createGooglePhotorealistic3DTileset !== 'function') {
+            return { ok: false, reason: 'Google 3D Tiles loader is unavailable in this Cesium build.' };
+          }
+
+          const tileset = await Cesium.createGooglePhotorealistic3DTileset({
+            onlyUsingWithGoogleGeocoder: true
+          });
+          viewer.scene.primitives.add(tileset);
+          googlePhotorealisticTileset = tileset;
+          if (viewer.scene.globe) {
+            viewer.scene.globe.show = false;
+          }
+          return { ok: true };
+        } catch (err) {
+          console.error('Google Photorealistic 3D Tiles load error:', err);
+          if (err && Number(err.statusCode) === 403) {
+            return { ok: false, reason: 'Google 3D Tiles denied (403) for this Cesium token.' };
+          }
+          return { ok: false, reason: 'Google 3D Tiles failed to load.' };
+        }
+      };
+
+      const initializeMap = async () => {
+        try {
+          setStatus('Loading Google 3D Tiles...', 'loading');
+          const googleBase = await loadGoogle3DTilesBase();
+          if (!googleBase.ok) {
+            setStatus(`${googleBase.reason || 'Google 3D Tiles unavailable.'} This map requires the Google 3D Tiles base asset.`, 'error');
+            return;
+          }
+
+          if (layerControlListEl) {
+            layerControlListEl.innerHTML = '';
+          }
+          for (const spec of layerSpecs) {
+            addLayerControl(spec);
+          }
+
+          setStatus('Google 3D Tiles loaded. Select map layers to load raw GeoJSON.', 'ok');
+        } catch (err) {
+          setStatus('Map initialization failed while preparing layers.', 'error');
+          console.error('Cesium initialization error:', err);
+        }
+      };
+
+      initializeMap();
+    })();
+  </script>
 </body>
 </html>

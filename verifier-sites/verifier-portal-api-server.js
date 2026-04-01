@@ -8,6 +8,7 @@ const verifierDid = process.env.VERIFIER_DID || 'did:example:verifier:generic';
 const signingSecret = process.env.SIGNING_SECRET || 'local-dev-secret';
 const mockAlwaysAccept = (process.env.MOCK_ALWAYS_ACCEPT || 'true').toLowerCase() === 'true';
 const sovereignInternalOrigin = process.env.SOVEREIGN_INTERNAL_ORIGIN || 'http://sovereign_gateway';
+const credentialExplorerInternalOrigin = String(process.env.CREDENTIAL_EXPLORER_INTERNAL_ORIGIN || 'http://credential_explorer:3000').trim().replace(/\/+$/, '');
 const demoWebId = process.env.DEMO_WEBID || 'http://holder_sovereign:3000/profile/card#me';
 const demoOrigin = (() => {
   try {
@@ -16,21 +17,6 @@ const demoOrigin = (() => {
     return 'http://localhost:8180';
   }
 })();
-const defaultDemoIdentityWebId = demoWebId.endsWith('/profile/card#me')
-  ? `${demoOrigin}/profile/card#8N4Q7Z2K`
-  : demoWebId;
-const stephenStafferWebId = `${demoOrigin}/profile/card#S7T4F9R2`;
-const demoIdentityOptions = [
-  { label: 'Alex Sovereign', webId: `${demoOrigin}/profile/card#8N4Q7Z2K` },
-  { label: 'Betty Medina', webId: `${demoOrigin}/profile/card#3H9X5M1R` },
-  { label: 'Charlie Krier', webId: `${demoOrigin}/profile/card#W2C8J6P4` },
-  { label: 'Debra Harbor', webId: `${demoOrigin}/profile/card#7T1B9LQ5` },
-  { label: 'Ed Erins', webId: `${demoOrigin}/profile/card#K4D3R8X2` },
-  { label: 'Stephen Staffer', webId: stephenStafferWebId }
-];
-if (!demoIdentityOptions.some((entry) => entry.webId === defaultDemoIdentityWebId)) {
-  demoIdentityOptions.unshift({ label: 'Default Demo Identity', webId: defaultDemoIdentityWebId });
-}
 
 const sessions = new Map();
 const escapeHtml = (value) =>
@@ -446,8 +432,21 @@ const mockClaimsByProfile = {
     registrationStatus: 'active',
     issuedDate: '2026-01-01',
     expiryDate: '2027-01-01',
-    businessType: 'Automotive Repair'
+    businessType: '621111'
   }
+};
+
+const naicsBusinessTypeLabels = Object.freeze({
+  '621111': 'Offices of Physicians (except Mental Health Specialists)',
+  '621512': 'Diagnostic Imaging Centers',
+  '622110': 'General Medical and Surgical Hospitals'
+});
+
+const formatNaicsBusinessType = (code) => {
+  const normalized = String(code || '').trim();
+  if (!normalized) return '';
+  const label = naicsBusinessTypeLabels[normalized];
+  return label ? `${normalized} (${label})` : normalized;
 };
 
 const submitRouteByProfile = {
@@ -966,7 +965,56 @@ const issueCredentialFromBody = async (body, session) => {
   };
 };
 
-const renderHomePage = () => `<!doctype html>
+const fetchSovereignSubjectIdentities = async () => {
+  if (!credentialExplorerInternalOrigin) {
+    return { ok: false, reason: 'credential explorer internal origin is not configured' };
+  }
+
+  const normalizeOptions = (options) => {
+    const list = Array.isArray(options) ? options : [];
+    const deduped = [];
+    const seen = new Set();
+    for (const entry of list) {
+      const webId = String(entry && entry.webId || '').trim();
+      if (!webId || seen.has(webId)) continue;
+      const label = String(entry && entry.label || '').trim() || webId;
+      deduped.push({ label, webId });
+      seen.add(webId);
+    }
+    return deduped;
+  };
+
+  try {
+    const response = await fetch(`${credentialExplorerInternalOrigin}/api/subject-identities`);
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        reason: payload && payload.error ? payload.error : `subject identity request failed (${response.status})`
+      };
+    }
+    const options = normalizeOptions(payload && payload.subjectIdentityOptions);
+    const defaultWebId = String(payload && payload.defaultDemoIdentityWebId || '').trim();
+    return {
+      ok: true,
+      source: 'subject-identities',
+      defaultWebId: defaultWebId || (options[0] && options[0].webId) || '',
+      options
+    };
+  } catch (err) {
+    return { ok: false, reason: err.message };
+  }
+};
+
+const renderHomePage = () => {
+  const businessRegistryTypeCode = verifierProfile === 'business_registry'
+    ? String(mockClaimsByProfile.business_registry?.businessType || '').trim()
+    : '';
+  const businessRegistryTypeDisplay = verifierProfile === 'business_registry'
+    ? formatNaicsBusinessType(businessRegistryTypeCode)
+    : '';
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -998,17 +1046,20 @@ const renderHomePage = () => `<!doctype html>
           ? '<p><strong>Requirement:</strong> Drivers License VC or Passport VC must already exist in personal identity and record storage.</p>'
           : ''
       }
+      ${
+        verifierProfile === 'business_registry' && businessRegistryTypeCode
+          ? `<p><strong>Business Type (NAICS):</strong> ${escapeHtml(businessRegistryTypeDisplay)}</p>
+             <p>Stored credential value is code-only: <code>${escapeHtml(businessRegistryTypeCode)}</code></p>`
+          : ''
+      }
     </section>
 
     <section class="panel">
       <h2>WebID Login</h2>
       <label for="identityPreset">Sovereign Identity</label>
       <select id="identityPreset">
-        ${demoIdentityOptions.map((entry) => `<option value="${escapeHtml(entry.webId)}"${entry.webId === defaultDemoIdentityWebId ? ' selected' : ''}>${escapeHtml(entry.label)}</option>`).join('')}
-        <option value="__custom__">Custom WebID</option>
+        <option value="">Loading sovereign identities...</option>
       </select>
-      <label for="webId">WebID</label>
-      <input id="webId" value="${escapeHtml(defaultDemoIdentityWebId)}">
       <button id="loginBtn">Login With WebID</button>
       <p id="loginStatus">Not logged in.</p>
     </section>
@@ -1041,9 +1092,8 @@ const renderHomePage = () => `<!doctype html>
     const isSelfPresence = ${verifierProfile === 'self_presence' ? 'true' : 'false'};
     let token = '';
     let mockLiveVideoBase64 = '';
-    const customIdentityPresetValue = '__custom__';
-    const namedIdentityPresets = ${JSON.stringify(demoIdentityOptions)};
-    const identityPresetByWebId = new Map(namedIdentityPresets.map((entry) => [String(entry.webId || '').trim(), entry]));
+    const identityPresetByWebId = new Map();
+    let identityOptionsLoaded = false;
 
     const toBase64 = (file) => new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1061,24 +1111,65 @@ const renderHomePage = () => `<!doctype html>
     const outputEl = document.getElementById('output');
     const mockCaptureBtn = document.getElementById('mockCaptureBtn');
     const identityPresetEl = document.getElementById('identityPreset');
-    const webIdEl = document.getElementById('webId');
+    const loginBtn = document.getElementById('loginBtn');
 
-    const syncIdentityPresetFromWebId = () => {
-      if (!identityPresetEl || !webIdEl) return;
-      const currentWebId = webIdEl.value.trim();
-      if (!currentWebId) {
-        identityPresetEl.value = customIdentityPresetValue;
-        return;
+    const selectedSovereignWebId = () => String(identityPresetEl && identityPresetEl.value || '').trim();
+
+    const renderSovereignIdentityOptions = (identities, preferredWebId) => {
+      if (!identityPresetEl) return;
+      const list = Array.isArray(identities) ? identities : [];
+      identityPresetByWebId.clear();
+      identityPresetEl.innerHTML = '';
+      const seen = new Set();
+      for (const entry of list) {
+        const webId = String(entry && entry.webId || '').trim();
+        if (!webId || seen.has(webId)) continue;
+        const label = String(entry && entry.label || '').trim() || webId;
+        seen.add(webId);
+        identityPresetByWebId.set(webId, { label, webId });
+        const option = document.createElement('option');
+        option.value = webId;
+        option.textContent = label;
+        identityPresetEl.appendChild(option);
       }
-      identityPresetEl.value = identityPresetByWebId.has(currentWebId) ? currentWebId : customIdentityPresetValue;
+      if (identityPresetEl.options.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No sovereign identities available';
+        identityPresetEl.appendChild(option);
+        identityPresetEl.value = '';
+      } else {
+        const requestedWebId = String(preferredWebId || '').trim();
+        const fallbackWebId = String(identityPresetEl.options[0].value || '').trim();
+        identityPresetEl.value = identityPresetByWebId.has(requestedWebId) ? requestedWebId : fallbackWebId;
+      }
+      if (loginBtn) {
+        const canLogin = identityOptionsLoaded && Boolean(selectedSovereignWebId());
+        loginBtn.disabled = !canLogin;
+      }
     };
 
-    const applyIdentityPresetToWebId = () => {
-      if (!identityPresetEl || !webIdEl) return;
-      const selectedWebId = String(identityPresetEl.value || '').trim();
-      if (!selectedWebId || selectedWebId === customIdentityPresetValue) return;
-      webIdEl.value = selectedWebId;
-      syncIdentityPresetFromWebId();
+    const loadSovereignIdentityOptions = async () => {
+      identityOptionsLoaded = false;
+      try {
+        const res = await fetch('/api/sovereign-identities');
+        const data = await res.json();
+        if (!res.ok) {
+          renderSovereignIdentityOptions([], '');
+          loginStatusEl.textContent = 'Unable to load sovereign identities.';
+          outputEl.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+        identityOptionsLoaded = true;
+        renderSovereignIdentityOptions(Array.isArray(data.identities) ? data.identities : [], data.defaultWebId || '');
+        if (!token) {
+          loginStatusEl.textContent = 'Select a sovereign identity.';
+        }
+      } catch (err) {
+        renderSovereignIdentityOptions([], '');
+        loginStatusEl.textContent = 'Unable to load sovereign identities.';
+        outputEl.textContent = JSON.stringify({ ok: false, error: String(err && err.message ? err.message : err) }, null, 2);
+      }
     };
 
     if (isSelfPresence && mockCaptureBtn) {
@@ -1088,18 +1179,22 @@ const renderHomePage = () => `<!doctype html>
       });
     }
     if (identityPresetEl) {
-      identityPresetEl.addEventListener('change', applyIdentityPresetToWebId);
+      identityPresetEl.addEventListener('change', () => {
+        if (!token) loginStatusEl.textContent = 'Select a sovereign identity.';
+        if (loginBtn) loginBtn.disabled = !(identityOptionsLoaded && Boolean(selectedSovereignWebId()));
+      });
     }
-    if (webIdEl) {
-      webIdEl.addEventListener('input', syncIdentityPresetFromWebId);
-      webIdEl.addEventListener('blur', syncIdentityPresetFromWebId);
-    }
-    syncIdentityPresetFromWebId();
+    if (loginBtn) loginBtn.disabled = true;
+    loadSovereignIdentityOptions();
 
     document.getElementById('loginBtn').addEventListener('click', async () => {
       loginStatusEl.textContent = 'Logging in...';
       try {
-        const webId = webIdEl.value.trim();
+        const webId = selectedSovereignWebId();
+        if (!webId) {
+          loginStatusEl.textContent = 'Select a sovereign identity first.';
+          return;
+        }
         const res = await fetch('/api/login-webid', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1178,6 +1273,7 @@ const renderHomePage = () => `<!doctype html>
   </script>
 </body>
 </html>`;
+};
 
 const server = http.createServer(async (req, res) => {
   const verifierSchemas = buildVerifierSchemas();
@@ -1197,6 +1293,25 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && req.url === '/health') {
     json(res, 200, { ok: true, verifierProfile, verifierName, verifierDid });
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/api/sovereign-identities') {
+    const result = await fetchSovereignSubjectIdentities();
+    if (!result.ok) {
+      json(res, 502, {
+        ok: false,
+        error: 'failed to load sovereign identities',
+        reason: result.reason || 'unknown'
+      });
+      return;
+    }
+    json(res, 200, {
+      ok: true,
+      source: result.source,
+      defaultWebId: result.defaultWebId || '',
+      identities: result.options
+    });
     return;
   }
 

@@ -8,120 +8,126 @@
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
   <link rel="stylesheet" href="/demo.css">
   <style>
-    .sovereign-row {
-      display: flex;
-      flex-wrap: nowrap;
-      gap: 12px;
-    }
-
-    .sovereign-row .panel {
-      flex: 1 1 0;
-      min-width: 0;
-      padding: 0;
-    }
-    .sovereign-row .panel-pod {
-      flex: 0 1 35%;
-    }
-    .sovereign-row .panel-credential-manager {
-      flex: 1 1 65%;
-    }
-
-    .sovereign-row .panel iframe {
-      width: 100%;
-      height: min(78vh, 980px);
-      margin: 0;
-      border: 0;
-      border-radius: 0;
-    }
-
-    .healthcare-row {
+    .service-stack {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
+      margin-top: 12px;
     }
 
-    .healthcare-row .panel {
-      min-width: 0;
+    .service-group {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
       padding: 10px;
-      gap: 8px;
-      border: 1px solid var(--line);
-    }
-
-    .healthcare-row .panel iframe {
-      width: 100%;
-      height: min(78vh, 980px);
-      margin: 0;
-      border: 1px solid var(--line);
-      border-radius: 0;
-    }
-
-    .crisis-row {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      gap: 10px;
     }
 
-    .crisis-row .panel {
-      min-width: 0;
-      padding: 10px;
-      gap: 8px;
-      border: 1px solid var(--line);
-    }
-
-    .crisis-row .panel iframe {
-      width: 100%;
-      height: min(78vh, 980px);
-      margin: 0;
-      border: 1px solid var(--line);
-      border-radius: 0;
-    }
-
-    .frame-title-select {
+    .service-group h2 {
       margin: 0;
       padding: 10px 12px;
       border: 1px solid var(--line);
       border-radius: 10px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #1a4d6e;
+      font-size: 0.95rem;
       background: #f7fbff;
     }
-    .frame-title-select select {
-      width: 100%;
-      border: 0;
-      background: transparent;
-      color: #1a4d6e;
-      font: 700 0.95rem "Trebuchet MS", "Segoe UI", sans-serif;
+
+    .service-group-note {
       margin: 0;
-      padding: 0;
+      color: var(--ink-soft);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.85rem;
+      padding: 0 2px;
     }
-    .frame-title-select select:focus-visible {
-      outline: none;
+
+    .service-row {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
     }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      border: 0;
+
+    .service-card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      grid-column: span var(--service-span, 4);
+      min-width: 0;
+    }
+
+    .service-card iframe {
+      width: 100%;
+      height: min(78vh, 980px);
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      background: #fff;
+      box-shadow: none;
+    }
+
+    .service-toolbar {
+      display: grid;
+      gap: 7px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #f7fbff;
+    }
+
+    .service-title-select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #1a4d6e;
+      background: #fff;
+    }
+
+    .toolbar-buttons {
+      margin-top: 6px;
+      grid-template-columns: 1fr;
+    }
+
+    .toolbar-buttons button {
+      appearance: none;
+      border: 1px solid #0c4f79;
+      border-radius: 999px;
+      background: var(--brand);
+      color: #fff;
+      font: 700 0.84rem "Trebuchet MS", "Segoe UI", sans-serif;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    #resetDemoDataBtn {
+      background: #005eb8;
+      border-color: #004a90;
+      color: #ffffff;
+    }
+
+    #resetDemoDataBtn:disabled {
+      background: #2b6f99;
+      border-color: #1f5d86;
+      color: #eaf3fb;
+      opacity: 1;
+      cursor: not-allowed;
     }
 
     @media (max-width: 980px) {
-      .sovereign-row {
-        flex-wrap: wrap;
-      }
-      .sovereign-row .panel-pod,
-      .sovereign-row .panel-credential-manager {
-        flex: 1 1 100%;
-      }
-      .healthcare-row {
-        grid-template-columns: 1fr;
-      }
-      .crisis-row {
-        grid-template-columns: 1fr;
+      .service-card {
+        grid-column: span 12;
       }
     }
-
   </style>
 </head>
 <body>
@@ -140,116 +146,313 @@
       </div>
     </div>
 
-    <p class="note">Resident service portals shown below as full-size embeds inside card containers.</p>
-    <p class="note">This front end is one view of the shared API core. Existing provider systems remain source-of-record; Sovereign adds encrypted cross-sharing overlays only.</p>
+    <p class="note">Resident service portals are organized as independent service cards so each iframe maps to a distinct ecosystem service boundary.</p>
+    <p class="note">Production-style model: each provider remains source-of-record while cross-provider exchanges happen through consented, auditable data-sharing flows.</p>
 
-    <section class="sovereign-row" aria-label="Sovereign's Data">
-      <article class="panel panel-pod">
-        <iframe title="Sovereign Solid Pod" src="http://localhost:8180/"></iframe>
-      </article>
-      <article class="panel panel-credential-manager">
-        <iframe title="Sovereign Credential Manager" src="http://localhost:8070/"></iframe>
-      </article>
-    </section>
+    <div class="controls toolbar-buttons" aria-label="Individual demo controls">
+      <button id="resetDemoDataBtn" type="button">Reset Demo Data</button>
+    </div>
 
-    <section class="grid one-up" aria-label="Embedded individual hospital service portals">
-      <article class="panel">
-        <h2>Hospital Services</h2>
-        <div class="healthcare-row">
-          <article class="panel">
-            <div class="frame-title-select">
-              <label class="sr-only" for="hospitalUrl">Hospital Services</label>
-              <select id="hospitalUrl" aria-label="Hospital Services">
-                <option value="http://localhost:8081/" selected>Nolichucky Family Clinic</option>
-                <option value="http://localhost:8084/">Riverstone Radiology Center</option>
-                <option value="http://localhost:8085/">Summitview Emergency Department</option>
-                <option value="about:blank">Blank</option>
-              </select>
-            </div>
-            <iframe id="hospitalFrame" title="Hospital Services Portal" src="http://localhost:8081/"></iframe>
-          </article>
-          <article class="panel">
-            <div class="frame-title-select">
-              <label class="sr-only" for="radiologyUrl">Radiology</label>
-              <select id="radiologyUrl" aria-label="Radiology">
-                <option value="http://localhost:8084/" selected>Riverstone Radiology Center</option>
-                <option value="http://localhost:8081/">Nolichucky Family Clinic</option>
-                <option value="http://localhost:8085/">Summitview Emergency Department</option>
-                <option value="about:blank">Blank</option>
-              </select>
-            </div>
-            <iframe id="radiologyFrame" title="Riverstone Radiology Center" src="http://localhost:8084/"></iframe>
-          </article>
-          <article class="panel">
-            <div class="frame-title-select">
-              <label class="sr-only" for="emergencyUrl">Emergency Department</label>
-              <select id="emergencyUrl" aria-label="Emergency Department">
-                <option value="http://localhost:8085/" selected>Summitview Emergency Department</option>
-                <option value="http://localhost:8081/">Nolichucky Family Clinic</option>
-                <option value="http://localhost:8084/">Riverstone Radiology Center</option>
-                <option value="about:blank">Blank</option>
-              </select>
-            </div>
-            <iframe id="emergencyFrame" title="Summitview Emergency Department" src="http://localhost:8085/"></iframe>
-          </article>
-        </div>
-      </article>
-    </section>
-
-    <section class="grid one-up" aria-label="Embedded individual crisis prevention service portals">
-      <article class="panel">
-        <h2>Crisis Prevention</h2>
-        <div class="crisis-row">
-          <article class="panel">
-            <iframe title="FairMannor House" src="http://localhost:8082/"></iframe>
-          </article>
-          <article class="panel">
-            <iframe title="Bridgeway Family Services" src="http://localhost:8087/"></iframe>
-          </article>
-          <article class="panel">
-            <iframe title="Salutation Army" src="http://localhost:8088/"></iframe>
-          </article>
-        </div>
-      </article>
-    </section>
-
-    <section class="grid one-up" aria-label="Embedded individual direct help service portals">
-      <article class="panel">
-        <h2>Direct Help</h2>
-        <div class="crisis-row">
-          <article class="panel">
-            <iframe title="SafeHarbor Shelter" src="http://localhost:8083/"></iframe>
-          </article>
-          <article class="panel">
-            <iframe title="Pioneer Legal and Benefits Navigation" src="http://localhost:8086/"></iframe>
-          </article>
-          <article class="panel">
-            <iframe title="Transport Services" src="http://localhost:8089/"></iframe>
-          </article>
-        </div>
-      </article>
-    </section>
+    <div id="serviceStack" class="service-stack" aria-label="Individual service ecosystem iframes"></div>
   </main>
 
   <script>
-    const applyHospitalFrameSelections = () => {
-      const pairs = [
-        ['hospitalUrl', 'hospitalFrame'],
-        ['radiologyUrl', 'radiologyFrame'],
-        ['emergencyUrl', 'emergencyFrame']
-      ];
-      for (const [selectId, frameId] of pairs) {
-        const selectEl = document.getElementById(selectId);
-        const frameEl = document.getElementById(frameId);
-        if (!selectEl || !frameEl) continue;
-        frameEl.src = selectEl.value || 'about:blank';
+    const endpointDirectory = {
+      sovereign_pod: { label: 'Sovereign Pod', url: 'http://localhost:8180/', type: 'resident-data-store' },
+      credential_manager: { label: 'Credential Manager', url: 'http://localhost:8070/', type: 'consent-and-credential-control' },
+      nolichucky_family_clinic: { label: 'Nolichucky Family Clinic', url: 'http://localhost:8081/', type: 'primary-care' },
+      fairmannor_house: { label: 'FairMannor House', url: 'http://localhost:8082/', type: 'homelessness-prevention' },
+      safeharbor_shelter: { label: 'SafeHarbor Shelter', url: 'http://localhost:8083/', type: 'emergency-shelter' },
+      riverstone_radiology_center: { label: 'Riverstone Radiology Center', url: 'http://localhost:8084/', type: 'imaging-services' },
+      summitview_emergency_department: { label: 'Summitview Emergency Department', url: 'http://localhost:8085/', type: 'acute-emergency-care' },
+      pioneer_legal_benefits_navigation: { label: 'Pioneer Legal and Benefits Navigation', url: 'http://localhost:8086/', type: 'legal-and-benefits-navigation' },
+      bridgeway_family_services: { label: 'Bridgeway Family Services', url: 'http://localhost:8087/', type: 'family-stabilization' },
+      salutation_army: { label: 'Salutation Army', url: 'http://localhost:8088/', type: 'community-assistance' },
+      transport_services: { label: 'Transport Services', url: 'http://localhost:8089/', type: 'service-transport' },
+      blank: { label: 'Blank', url: 'about:blank', type: 'none' }
+    };
+
+    const buildEndpointOptions = (endpointKeys, fallbackLabel) => {
+      if (!Array.isArray(endpointKeys) || endpointKeys.length === 0) {
+        return [{ label: fallbackLabel, url: 'about:blank' }];
+      }
+
+      const resolved = endpointKeys
+        .map((key) => endpointDirectory[key])
+        .filter(Boolean)
+        .map((entry) => ({ label: entry.label, url: entry.url, type: entry.type }));
+
+      return resolved.length > 0 ? resolved : [{ label: fallbackLabel, url: 'about:blank' }];
+    };
+
+    const serviceGroups = [
+      {
+        id: 'sovereign-data',
+        title: "Sovereign's Data",
+        note: 'Identity and credential core used across all downstream service workflows.',
+        services: [
+          {
+            id: 'solid-pod',
+            title: 'Sovereign Solid Pod',
+            type: 'resident-data-store',
+            span: 4,
+            endpointKeys: ['sovereign_pod', 'blank']
+          },
+          {
+            id: 'credential-manager',
+            title: 'Sovereign Credential Manager',
+            type: 'consent-and-credential-control',
+            span: 8,
+            endpointKeys: ['credential_manager', 'blank']
+          }
+        ]
+      },
+      {
+        id: 'hospital-services',
+        title: 'Hospital Services',
+        note: 'Clinical and acute care services connected through transportable records and referrals.',
+        services: [
+          {
+            id: 'hospital-clinic',
+            title: 'Nolichucky Family Clinic',
+            type: 'primary-care',
+            endpointKeys: [
+              'nolichucky_family_clinic',
+              'riverstone_radiology_center',
+              'summitview_emergency_department',
+              'blank'
+            ]
+          },
+          {
+            id: 'radiology-center',
+            title: 'Riverstone Radiology Center',
+            type: 'imaging-services',
+            endpointKeys: [
+              'riverstone_radiology_center',
+              'nolichucky_family_clinic',
+              'summitview_emergency_department',
+              'blank'
+            ]
+          },
+          {
+            id: 'emergency-department',
+            title: 'Summitview Emergency Department',
+            type: 'acute-emergency-care',
+            endpointKeys: [
+              'summitview_emergency_department',
+              'nolichucky_family_clinic',
+              'riverstone_radiology_center',
+              'blank'
+            ]
+          }
+        ]
+      },
+      {
+        id: 'crisis-prevention',
+        title: 'Crisis Prevention',
+        note: 'Early intervention lanes for prevention-focused intake, stabilization, and family continuity.',
+        services: [
+          {
+            id: 'fairmannor-house',
+            title: 'FairMannor House',
+            type: 'homelessness-prevention',
+            endpointKeys: ['fairmannor_house']
+          },
+          {
+            id: 'bridgeway-family-services',
+            title: 'Bridgeway Family Services',
+            type: 'family-stabilization',
+            endpointKeys: ['bridgeway_family_services']
+          },
+          {
+            id: 'salutation-army',
+            title: 'Salutation Army',
+            type: 'community-assistance',
+            endpointKeys: ['salutation_army']
+          }
+        ]
+      },
+      {
+        id: 'direct-help',
+        title: 'Direct Help',
+        note: 'Immediate-response services for shelter, legal-benefits triage, and transport continuity.',
+        services: [
+          {
+            id: 'safeharbor-shelter',
+            title: 'SafeHarbor Shelter',
+            type: 'emergency-shelter',
+            endpointKeys: ['safeharbor_shelter']
+          },
+          {
+            id: 'pioneer-legal-benefits-navigation',
+            title: 'Pioneer Legal and Benefits Navigation',
+            type: 'legal-and-benefits-navigation',
+            endpointKeys: ['pioneer_legal_benefits_navigation']
+          },
+          {
+            id: 'transport-services',
+            title: 'Transport Services',
+            type: 'service-transport',
+            endpointKeys: ['transport_services']
+          }
+        ]
+      }
+    ];
+
+    const frameRegistry = [];
+    const demoResetTargets = [
+      'http://localhost:8070/api/demo/reset-data',
+      'http://localhost:8081/api/demo/reset-data',
+      'http://localhost:8082/api/demo/reset-data',
+      'http://localhost:8083/api/demo/reset-data',
+      'http://localhost:8084/api/demo/reset-data',
+      'http://localhost:8085/api/demo/reset-data',
+      'http://localhost:8086/api/demo/reset-data',
+      'http://localhost:8087/api/demo/reset-data',
+      'http://localhost:8088/api/demo/reset-data',
+      'http://localhost:8089/api/demo/reset-data'
+    ];
+
+    const sanitizeId = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    const resolveSpan = (service, serviceCount) => {
+      if (Number.isInteger(service.span)) return service.span;
+      if (serviceCount <= 1) return 12;
+      if (serviceCount === 2) return 6;
+      return 4;
+    };
+
+    const applyFrameSource = (record, nextUrl) => {
+      const url = String(nextUrl || '').trim() || 'about:blank';
+      record.frame.src = url;
+      record.frame.dataset.activeSrc = url;
+    };
+
+    const createServiceCard = (group, service, serviceCount) => {
+      const card = document.createElement('article');
+      card.className = 'service-card';
+      card.style.setProperty('--service-span', String(resolveSpan(service, serviceCount)));
+      card.dataset.groupId = group.id;
+      card.dataset.serviceId = service.id;
+
+      const toolbar = document.createElement('div');
+      toolbar.className = 'service-toolbar';
+
+      const endpointOptions = buildEndpointOptions(service.endpointKeys, service.title);
+      const selectEl = document.createElement('select');
+      const selectId = `${sanitizeId(group.id)}-${sanitizeId(service.id)}-endpoint`;
+      selectEl.id = selectId;
+      selectEl.className = 'service-title-select';
+      selectEl.setAttribute('aria-label', `${service.title} service selector`);
+
+      endpointOptions.forEach((entry, index) => {
+        const option = document.createElement('option');
+        option.value = String(entry.url || '').trim() || 'about:blank';
+        const optionLabel = String(entry.label || entry.url || `Endpoint ${index + 1}`).trim();
+        const optionType = String(entry.type || service.type || 'unknown').trim();
+        option.textContent = optionType === 'none' ? optionLabel : `${optionLabel} (${optionType})`;
+        selectEl.appendChild(option);
+      });
+      toolbar.appendChild(selectEl);
+
+      const frame = document.createElement('iframe');
+      frame.id = `${sanitizeId(group.id)}-${sanitizeId(service.id)}-frame`;
+      frame.title = service.title;
+      frame.loading = 'lazy';
+
+      card.appendChild(toolbar);
+      card.appendChild(frame);
+
+      const record = {
+        id: service.id,
+        title: service.title,
+        frame,
+        selector: selectEl,
+        defaultUrl: endpointOptions[0].url || 'about:blank'
+      };
+
+      selectEl.addEventListener('change', () => {
+        applyFrameSource(record, selectEl.value);
+      });
+
+      applyFrameSource(record, record.defaultUrl);
+      frameRegistry.push(record);
+      return card;
+    };
+
+    const renderServiceGroups = () => {
+      const mount = document.getElementById('serviceStack');
+      if (!mount) return;
+      mount.innerHTML = '';
+      frameRegistry.length = 0;
+
+      serviceGroups.forEach((group) => {
+        const section = document.createElement('section');
+        section.className = 'service-group';
+        section.setAttribute('aria-label', group.title);
+
+        const heading = document.createElement('h2');
+        heading.textContent = group.title;
+        section.appendChild(heading);
+
+        if (group.note) {
+          const note = document.createElement('p');
+          note.className = 'service-group-note';
+          note.textContent = group.note;
+          section.appendChild(note);
+        }
+
+        const row = document.createElement('div');
+        row.className = 'service-row';
+        const services = Array.isArray(group.services) ? group.services : [];
+        services.forEach((service) => {
+          row.appendChild(createServiceCard(group, service, services.length));
+        });
+
+        section.appendChild(row);
+        mount.appendChild(section);
+      });
+    };
+
+    const resetAllFramesToDefaults = () => {
+      frameRegistry.forEach((record) => {
+        record.selector.value = record.defaultUrl;
+        applyFrameSource(record, record.defaultUrl);
+      });
+    };
+
+    const postNoCors = async (url) => {
+      try {
+        await fetch(url, { method: 'POST', mode: 'no-cors', cache: 'no-store' });
+        return true;
+      } catch {
+        return false;
       }
     };
 
-    ['hospitalUrl', 'radiologyUrl', 'emergencyUrl'].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('change', applyHospitalFrameSelections);
-    });
+    const handleResetDemoData = async () => {
+      const resetBtn = document.getElementById('resetDemoDataBtn');
+      if (resetBtn) {
+        resetBtn.disabled = true;
+        resetBtn.textContent = 'Resetting Demo Data...';
+      }
+
+      for (const endpoint of demoResetTargets) {
+        await postNoCors(endpoint);
+      }
+
+      resetAllFramesToDefaults();
+
+      if (resetBtn) {
+        resetBtn.disabled = false;
+        resetBtn.textContent = 'Reset Demo Data';
+      }
+    };
+
+    renderServiceGroups();
+
+    const resetBtn = document.getElementById('resetDemoDataBtn');
+    if (resetBtn) resetBtn.addEventListener('click', handleResetDemoData);
   </script>
 </body>
 </html>
