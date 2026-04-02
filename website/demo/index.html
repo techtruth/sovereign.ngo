@@ -6,7 +6,7 @@
   <title>Sovereign NGO | Demo Modes</title>
   <meta name="description" content="Choose a live demo mode for individual, provider, or combined flows.">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
-  <link rel="stylesheet" href="/demo.css">
+  <link rel="stylesheet" href="./demo.css">
 </head>
 <body>
   <main class="container">
@@ -17,28 +17,28 @@
       </div>
     </div>
 
-    <p class="note">Use route-based demo modes. You can point each frame at localhost services or hosted demo components.</p>
+    <p class="note">Use route-based demo modes. This demo can run fully container-less with shared browser state across all service frames.</p>
 
     <section class="landing-grid four-up" aria-label="Demo mode routes">
       <article class="landing-card">
         <h2>Individual</h2>
         <p>Holder and credential view for resident-facing demonstrations and consent walkthroughs.</p>
-        <a href="/individual/">Open /individual</a>
+        <a href="./individual/">Open /individual</a>
       </article>
       <article class="landing-card">
         <h2>Credential Manager</h2>
         <p>Direct view of Sovereign credential manager and pod records.</p>
-        <a href="/credential-manager/">Open /credential-manager</a>
+        <a href="./credential-manager/">Open /credential-manager</a>
       </article>
       <article class="landing-card">
         <h2>Provider</h2>
         <p>Issuer and verifier view for partner organizations and service-team operations.</p>
-        <a href="/provider/">Open /provider</a>
+        <a href="./provider/">Open /provider</a>
       </article>
       <article class="landing-card">
         <h2>Combined</h2>
         <p>All views together for end-to-end walkthroughs and multi-role presentation sessions.</p>
-        <a href="/combined/">Open /combined</a>
+        <a href="./combined/">Open /combined</a>
       </article>
     </section>
 
@@ -80,16 +80,16 @@
         <h2>One API Core, Many Front Ends</h2>
         <ul>
           <li>Each demo mode is an independent front end with its own layout and interaction flow.</li>
-          <li>All modes call the same backend contract so behavior stays consistent across UI variants.</li>
+          <li>All modes use the same in-browser state contract so behavior stays consistent across UI variants.</li>
           <li>Current layer in scope: Essential Services.</li>
         </ul>
       </article>
       <article class="landing-card">
         <h2>Demo Data Artifacts</h2>
         <ul>
-          <li>Region model: <a href="/data/region-essential-services.json">region-essential-services.json</a></li>
-          <li>Existing business data core: <a href="/data/dummy-datacore.json">dummy-datacore.json</a></li>
-          <li>Encrypted cross-share overlay sample: <a href="/data/encrypted-cross-share-overlay.sample.json">encrypted-cross-share-overlay.sample.json</a></li>
+          <li>Region model: <a href="./data/region-essential-services.json">region-essential-services.json</a></li>
+          <li>Existing business data core: <a href="./data/dummy-datacore.json">dummy-datacore.json</a></li>
+          <li>Encrypted cross-share overlay sample: <a href="./data/encrypted-cross-share-overlay.sample.json">encrypted-cross-share-overlay.sample.json</a></li>
         </ul>
       </article>
     </section>

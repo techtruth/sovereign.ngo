@@ -6,7 +6,7 @@
   <title>Sovereign NGO | Combined Demo</title>
   <meta name="description" content="Combined multi-role demo for holder, explorer, issuer, and verifier views.">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
-  <link rel="stylesheet" href="/demo.css">
+  <link rel="stylesheet" href="../demo.css">
 </head>
 <body>
   <main class="container">
@@ -14,9 +14,9 @@
       <div>
         <h1>Combined Demo View</h1>
         <nav class="mode-nav" aria-label="Demo modes">
-          <a href="/individual/">Individual</a>
-          <a href="/provider/">Provider</a>
-          <a class="active" href="/combined/">Combined</a>
+          <a href="../individual/">Individual</a>
+          <a href="../provider/">Provider</a>
+          <a class="active" href="../combined/">Combined</a>
         </nav>
       </div>
       <div>
@@ -24,25 +24,25 @@
       </div>
     </div>
 
-    <p class="note">Set iframe URLs below (local ports or hosted components), then refresh all frames.</p>
-    <p class="note">Combined mode demonstrates multiple front ends against one backend contract, with encrypted cross-share overlays layered on top of existing provider records.</p>
+    <p class="note">Set iframe URLs below, then refresh all frames.</p>
+    <p class="note">Combined mode demonstrates multiple front ends against one shared browser-state contract for container-less demo operation.</p>
 
     <section class="controls" aria-label="Combined frame controls">
       <label>
         Holder / Wallet
-        <input id="url1" value="http://localhost:8180/">
+        <input id="url1" value="../services/solid-pod/index.html">
       </label>
       <label>
         Credential Explorer
-        <input id="url2" value="http://localhost:8070/">
+        <input id="url2" value="../services/credential-manager/index.html">
       </label>
       <label>
         Issuer Portal
-        <input id="url3" value="http://localhost:8081/">
+        <input id="url3" value="../services/provider/index.html?provider=nolichucky_family_clinic">
       </label>
       <label>
         Verifier Portal
-        <input id="url4" value="http://localhost:8091/">
+        <input id="url4" value="../services/provider/index.html?provider=riverstone_radiology_center">
       </label>
       <button id="applyBtn" type="button">Refresh Frames</button>
     </section>
@@ -50,19 +50,19 @@
     <section class="grid four-up" aria-label="Embedded combined demos">
       <article class="panel">
         <h2>Holder / Wallet</h2>
-        <iframe id="frame1" title="Holder Wallet Demo" src="http://localhost:8180/"></iframe>
+        <iframe id="frame1" title="Holder Wallet Demo" src="../services/solid-pod/index.html"></iframe>
       </article>
       <article class="panel">
         <h2>Credential Explorer</h2>
-        <iframe id="frame2" title="Credential Explorer Demo" src="http://localhost:8070/"></iframe>
+        <iframe id="frame2" title="Credential Explorer Demo" src="../services/credential-manager/index.html"></iframe>
       </article>
       <article class="panel">
         <h2>Issuer Portal</h2>
-        <iframe id="frame3" title="Issuer Portal Demo" src="http://localhost:8081/"></iframe>
+        <iframe id="frame3" title="Issuer Portal Demo" src="../services/provider/index.html?provider=nolichucky_family_clinic"></iframe>
       </article>
       <article class="panel">
         <h2>Verifier Portal</h2>
-        <iframe id="frame4" title="Verifier Portal Demo" src="http://localhost:8091/"></iframe>
+        <iframe id="frame4" title="Verifier Portal Demo" src="../services/provider/index.html?provider=riverstone_radiology_center"></iframe>
       </article>
     </section>
   </main>

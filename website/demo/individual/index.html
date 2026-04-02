@@ -6,7 +6,7 @@
   <title>Sovereign NGO | Individual Services Demo</title>
   <meta name="description" content="Individual-facing demo for hospital, housing, and essential services portals.">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
-  <link rel="stylesheet" href="/demo.css">
+  <link rel="stylesheet" href="../demo.css">
   <style>
     .service-stack {
       display: grid;
@@ -136,9 +136,9 @@
       <div>
         <h1>Individual Services View</h1>
         <nav class="mode-nav" aria-label="Demo modes">
-          <a class="active" href="/individual/">Individual</a>
-          <a href="/provider/">Provider</a>
-          <a href="/combined/">Combined</a>
+          <a class="active" href="../individual/">Individual</a>
+          <a href="../provider/">Provider</a>
+          <a href="../combined/">Combined</a>
         </nav>
       </div>
       <div>
@@ -156,19 +156,20 @@
     <div id="serviceStack" class="service-stack" aria-label="Individual service ecosystem iframes"></div>
   </main>
 
+  <script src="../lib/demo-store.js"></script>
   <script>
     const endpointDirectory = {
-      sovereign_pod: { label: 'Sovereign Pod', url: 'http://localhost:8180/', type: 'resident-data-store' },
-      credential_manager: { label: 'Credential Manager', url: 'http://localhost:8070/', type: 'consent-and-credential-control' },
-      nolichucky_family_clinic: { label: 'Nolichucky Family Clinic', url: 'http://localhost:8081/', type: 'primary-care' },
-      fairmannor_house: { label: 'FairMannor House', url: 'http://localhost:8082/', type: 'homelessness-prevention' },
-      safeharbor_shelter: { label: 'SafeHarbor Shelter', url: 'http://localhost:8083/', type: 'emergency-shelter' },
-      riverstone_radiology_center: { label: 'Riverstone Radiology Center', url: 'http://localhost:8084/', type: 'imaging-services' },
-      summitview_emergency_department: { label: 'Summitview Emergency Department', url: 'http://localhost:8085/', type: 'acute-emergency-care' },
-      pioneer_legal_benefits_navigation: { label: 'Pioneer Legal and Benefits Navigation', url: 'http://localhost:8086/', type: 'legal-and-benefits-navigation' },
-      bridgeway_family_services: { label: 'Bridgeway Family Services', url: 'http://localhost:8087/', type: 'family-stabilization' },
-      salutation_army: { label: 'Salutation Army', url: 'http://localhost:8088/', type: 'community-assistance' },
-      transport_services: { label: 'Transport Services', url: 'http://localhost:8089/', type: 'service-transport' },
+      sovereign_pod: { label: 'Sovereign Pod', url: '../services/solid-pod/index.html', type: 'resident-data-store' },
+      credential_manager: { label: 'Credential Manager', url: '../services/credential-manager/index.html', type: 'consent-and-credential-control' },
+      nolichucky_family_clinic: { label: 'Nolichucky Family Clinic', url: '../services/provider/index.html?provider=nolichucky_family_clinic', type: 'primary-care' },
+      fairmannor_house: { label: 'FairMannor House', url: '../services/provider/index.html?provider=fairmannor_house', type: 'homelessness-prevention' },
+      safeharbor_shelter: { label: 'SafeHarbor Shelter', url: '../services/provider/index.html?provider=safeharbor_shelter', type: 'emergency-shelter' },
+      riverstone_radiology_center: { label: 'Riverstone Radiology Center', url: '../services/provider/index.html?provider=riverstone_radiology_center', type: 'imaging-services' },
+      summitview_emergency_department: { label: 'Summitview Emergency Department', url: '../services/provider/index.html?provider=summitview_emergency_department', type: 'acute-emergency-care' },
+      pioneer_legal_benefits_navigation: { label: 'Pioneer Legal and Benefits Navigation', url: '../services/provider/index.html?provider=pioneer_legal_benefits_navigation', type: 'legal-and-benefits-navigation' },
+      bridgeway_family_services: { label: 'Bridgeway Family Services', url: '../services/provider/index.html?provider=bridgeway_family_services', type: 'family-stabilization' },
+      salutation_army: { label: 'Salutation Army', url: '../services/provider/index.html?provider=salutation_army', type: 'community-assistance' },
+      transport_services: { label: 'Transport Services', url: '../services/provider/index.html?provider=transport_services', type: 'service-transport' },
       blank: { label: 'Blank', url: 'about:blank', type: 'none' }
     };
 
@@ -300,18 +301,7 @@
     ];
 
     const frameRegistry = [];
-    const demoResetTargets = [
-      'http://localhost:8070/api/demo/reset-data',
-      'http://localhost:8081/api/demo/reset-data',
-      'http://localhost:8082/api/demo/reset-data',
-      'http://localhost:8083/api/demo/reset-data',
-      'http://localhost:8084/api/demo/reset-data',
-      'http://localhost:8085/api/demo/reset-data',
-      'http://localhost:8086/api/demo/reset-data',
-      'http://localhost:8087/api/demo/reset-data',
-      'http://localhost:8088/api/demo/reset-data',
-      'http://localhost:8089/api/demo/reset-data'
-    ];
+    const demoStore = window.SovereignDemoStore;
 
     const sanitizeId = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -421,15 +411,6 @@
       });
     };
 
-    const postNoCors = async (url) => {
-      try {
-        await fetch(url, { method: 'POST', mode: 'no-cors', cache: 'no-store' });
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
     const handleResetDemoData = async () => {
       const resetBtn = document.getElementById('resetDemoDataBtn');
       if (resetBtn) {
@@ -437,8 +418,8 @@
         resetBtn.textContent = 'Resetting Demo Data...';
       }
 
-      for (const endpoint of demoResetTargets) {
-        await postNoCors(endpoint);
+      if (demoStore && typeof demoStore.resetDemoData === 'function') {
+        demoStore.resetDemoData();
       }
 
       resetAllFramesToDefaults();

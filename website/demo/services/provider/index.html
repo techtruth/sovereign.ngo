@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign Demo Service Portal</title>
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <style>
+    :root {
+      --bg: #f4f8fc;
+      --panel: #ffffff;
+      --line: #c8d8e7;
+      --ink: #1f2f3f;
+      --muted: #4c5f73;
+      --brand: #005eb8;
+      --accent: #0b4f86;
+      --ok: #1d7a48;
+      --warn: #8c6212;
+      --error: #94242b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top right, #deebf8, var(--bg) 55%);
+      color: var(--ink);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    .wrap {
+      width: min(1180px, 96vw);
+      margin: 0 auto;
+      padding: 12px 0 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .mast {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      color: #144768;
+    }
+
+    .sub {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .wide {
+      grid-column: 1 / -1;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 0.92rem;
+      color: #164969;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 9px;
+      background: #f7fbff;
+    }
+
+    label {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    select,
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    select,
+    input,
+    textarea {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 8px 9px;
+      width: 100%;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 66px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    button {
+      border: 1px solid #0b4f86;
+      border-radius: 999px;
+      background: var(--brand);
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      border-color: #5b7288;
+      background: #eef4f8;
+      color: #2d4358;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid #b8ccdd;
+      border-radius: 999px;
+      background: #f2f8fd;
+      color: #2d5676;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 9px;
+    }
+
+    .pill.ok {
+      border-color: #9ad0b3;
+      background: #e9f8ef;
+      color: var(--ok);
+    }
+
+    .pill.warn {
+      border-color: #dac28f;
+      background: #fff8e8;
+      color: var(--warn);
+    }
+
+    .pill.error {
+      border-color: #d9a1a7;
+      background: #fff0f2;
+      color: var(--error);
+    }
+
+    .mono {
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fbfe;
+      padding: 8px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 0.74rem;
+      color: #2e4357;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #41566b;
+      font-size: 0.84rem;
+      display: grid;
+      gap: 5px;
+    }
+
+    .referral-list li.is-closed {
+      color: #7e8892;
+      text-decoration: line-through;
+    }
+
+    .note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="mast">
+      <div>
+        <h1 id="portalTitle">Service Portal</h1>
+        <p class="sub" id="portalSubtitle">Browser-state demo for consented coordination.</p>
+      </div>
+      <div class="meta">
+        <div id="providerDid">Provider DID</div>
+        <div id="staffStatus">Staff Credential: checking...</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>1) Login</h2>
+        <label>
+          Sovereign Identity
+          <select id="identitySelect"></select>
+        </label>
+        <div class="row">
+          <button id="loginBtn" type="button">Login with WebID</button>
+          <button id="emergencyBtn" class="secondary" type="button" hidden>Emergency Override (New John Doe)</button>
+        </div>
+        <p class="note">Subject DID (from login):</p>
+        <p id="subjectDid" class="mono">Not logged in.</p>
+      </article>
+
+      <article class="panel">
+        <h2>2) Self-Service Actions</h2>
+        <label>
+          Self-Service Action
+          <select id="selfActionSelect"></select>
+        </label>
+        <button id="runSelfBtn" type="button" disabled>Run Self-Service Action</button>
+        <p id="selfActionResult" class="mono">No action yet.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Stephen Staffer (Staff Actions)</h2>
+        <label>
+          Staff Action
+          <select id="staffActionSelect"></select>
+        </label>
+        <label>
+          Third-Party Referrals Fulfillable by This Provider
+          <select id="referralSelect">
+            <option value="">No referrals loaded</option>
+          </select>
+        </label>
+        <button id="runStaffBtn" type="button" disabled>Run Staff Action</button>
+        <p id="staffActionResult" class="mono">No action yet.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Active Referrals and Fulfillment State</h2>
+        <ul id="referralList" class="referral-list"></ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Recent Records for Logged-In Subject at This Provider</h2>
+        <ul id="recordList"></ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Live Event Feed (Most Recent 12)</h2>
+        <pre id="eventFeed" class="mono">[]</pre>
+      </article>
+    </section>
+  </main>
+
+  <script src="../../lib/demo-store.js"></script>
+  <script>
+    (function () {
+      const store = window.SovereignDemoStore;
+      if (!store) {
+        document.body.innerHTML = '<main class="wrap"><p>Demo store failed to load.</p></main>';
+        return;
+      }
+
+      const defaults = {
+        provider: 'nolichucky_family_clinic'
+      };
+
+      const byId = (id) => document.getElementById(id);
+      const query = new URLSearchParams(window.location.search);
+      const providerId = query.get('provider') || defaults.provider;
+      const provider = store.providerById(providerId) || store.providerById(defaults.provider);
+      const staffWebId = store.staffWebId;
+
+      let currentSubjectWebId = '';
+
+      const configMap = {
+        nolichucky_family_clinic: {
+          selfActions: [
+            { id: 'check_in_walk_in', label: 'Check In (or Walk In)' },
+            { id: 'arrive_any', label: 'Arrive, with or without an appointment' },
+            { id: 'request_treatment', label: 'Request treatment' }
+          ],
+          staffActions: [
+            { id: 'record_clinical_visit', label: 'Record clinical visit' },
+            { id: 'issue_imaging_referral', label: 'Issue imaging referral (any qualified provider)' },
+            { id: 'record_follow_up_plan', label: 'Record follow-up plan' }
+          ]
+        },
+        riverstone_radiology_center: {
+          selfActions: [
+            { id: 'check_in_walk_in', label: 'Check In (or Walk In)' },
+            { id: 'arrive_any', label: 'Arrive, with or without an appointment' },
+            { id: 'request_xray', label: 'Request X-Ray' },
+            { id: 'request_ultrasound', label: 'Request Ultrasound' }
+          ],
+          staffActions: [
+            { id: 'fulfill_selected_referral', label: 'Fulfill selected referral' },
+            { id: 'record_imaging_results', label: 'Record imaging results' }
+          ]
+        },
+        summitview_emergency_department: {
+          selfActions: [
+            { id: 'check_in_walk_in', label: 'Check In (or Walk In)' },
+            { id: 'arrive_any', label: 'Arrive, with or without an appointment' },
+            { id: 'request_emergency_care', label: 'Request emergency care' }
+          ],
+          staffActions: [
+            { id: 'request_shared_record_access', label: 'Request shared record access' },
+            { id: 'record_emergency_treatment', label: 'Record emergency treatment summary' }
+          ],
+          allowEmergencyOverride: true
+        },
+        fairmannor_house: {
+          selfActions: [
+            { id: 'request_prevention_intake', label: 'Request homelessness prevention intake' }
+          ],
+          staffActions: [
+            { id: 'complete_service_intake', label: 'Complete service intake' },
+            { id: 'record_case_update', label: 'Record case update' }
+          ]
+        },
+        safeharbor_shelter: {
+          selfActions: [
+            { id: 'request_shelter_bed', label: 'Request emergency shelter support' }
+          ],
+          staffActions: [
+            { id: 'complete_service_intake', label: 'Complete shelter intake' },
+            { id: 'record_case_update', label: 'Record shelter case update' }
+          ]
+        },
+        bridgeway_family_services: {
+          selfActions: [
+            { id: 'request_family_support', label: 'Request family services support' }
+          ],
+          staffActions: [
+            { id: 'complete_service_intake', label: 'Complete family intake' },
+            { id: 'record_case_update', label: 'Record family support update' }
+          ]
+        },
+        salutation_army: {
+          selfActions: [
+            { id: 'request_community_assistance', label: 'Request community assistance' }
+          ],
+          staffActions: [
+            { id: 'complete_service_intake', label: 'Complete assistance intake' },
+            { id: 'record_case_update', label: 'Record assistance update' }
+          ]
+        },
+        pioneer_legal_benefits_navigation: {
+          selfActions: [
+            { id: 'request_legal_navigation', label: 'Request legal and benefits navigation' }
+          ],
+          staffActions: [
+            { id: 'complete_service_intake', label: 'Complete legal-benefits intake' },
+            { id: 'record_case_update', label: 'Record legal-benefits update' }
+          ]
+        },
+        transport_services: {
+          selfActions: [
+            { id: 'request_transport', label: 'Request transport support' }
+          ],
+          staffActions: [
+            { id: 'complete_service_intake', label: 'Complete transport intake' },
+            { id: 'record_case_update', label: 'Record transport update' }
+          ]
+        }
+      };
+
+      const config = configMap[provider.id] || {
+        selfActions: [{ id: 'request_help', label: 'Request service support' }],
+        staffActions: [{ id: 'record_case_update', label: 'Record service update' }],
+        allowEmergencyOverride: false
+      };
+
+      const setResult = (el, text) => {
+        el.textContent = String(text || '').trim() || 'No action yet.';
+      };
+
+      const renderHeader = () => {
+        byId('portalTitle').textContent = provider.label;
+        byId('portalSubtitle').textContent = `${provider.type} | Browser-state service portal`;
+        byId('providerDid').textContent = `Provider DID: ${provider.did}`;
+
+        const hasCredential = store
+          .listCredentials(staffWebId)
+          .some((entry) => entry.type === 'StaffAccessCredential' && entry.issuerProviderId === provider.id && entry.status === 'active');
+
+        const status = byId('staffStatus');
+        status.textContent = hasCredential
+          ? `Staff Credential: Active for Stephen Staffer`
+          : 'Staff Credential: Missing for Stephen Staffer';
+      };
+
+      const fillSelect = (selectEl, options, placeholder) => {
+        selectEl.innerHTML = '';
+        if (!Array.isArray(options) || options.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = placeholder || 'No options available';
+          selectEl.appendChild(option);
+          return;
+        }
+
+        options.forEach((entry) => {
+          const option = document.createElement('option');
+          option.value = entry.value;
+          option.textContent = entry.label;
+          option.disabled = Boolean(entry.disabled);
+          selectEl.appendChild(option);
+        });
+      };
+
+      const refreshIdentityOptions = () => {
+        const identities = store.listIdentities({ excludeStaff: true });
+        fillSelect(
+          byId('identitySelect'),
+          identities.map((entry) => ({ value: entry.webId, label: `${entry.displayName} (${entry.webId})` })),
+          'No identities available'
+        );
+        if (currentSubjectWebId) {
+          byId('identitySelect').value = currentSubjectWebId;
+        }
+      };
+
+      const refreshActionOptions = () => {
+        fillSelect(
+          byId('selfActionSelect'),
+          config.selfActions.map((entry) => ({ value: entry.id, label: entry.label })),
+          'No self-service actions available'
+        );
+
+        fillSelect(
+          byId('staffActionSelect'),
+          config.staffActions.map((entry) => ({ value: entry.id, label: entry.label })),
+          'No staff actions available'
+        );
+      };
+
+      const refreshReferralWidgets = () => {
+        const selectEl = byId('referralSelect');
+        const listEl = byId('referralList');
+        listEl.innerHTML = '';
+
+        if (!currentSubjectWebId) {
+          fillSelect(selectEl, [], 'Login required to load referrals');
+          const li = document.createElement('li');
+          li.textContent = 'Login required to view referrals.';
+          listEl.appendChild(li);
+          return;
+        }
+
+        const referrals = store.listReferrals({
+          subjectWebId: currentSubjectWebId,
+          providerId: provider.id,
+          includeClosed: true
+        });
+
+        if (!referrals.length) {
+          fillSelect(selectEl, [], 'No fulfillable referrals');
+          const li = document.createElement('li');
+          li.textContent = 'No referrals available for this provider and subject.';
+          listEl.appendChild(li);
+          return;
+        }
+
+        const options = referrals.map((entry) => {
+          const label = `${entry.summary} [${entry.status}]`;
+          return {
+            value: entry.id,
+            label,
+            disabled: entry.status !== 'open'
+          };
+        });
+
+        fillSelect(selectEl, options, 'No referrals loaded');
+
+        referrals.forEach((entry) => {
+          const li = document.createElement('li');
+          li.textContent = `${entry.summary} | target: ${entry.targetCapability} | status: ${entry.status}`;
+          if (entry.status !== 'open') {
+            li.className = 'is-closed';
+          }
+          listEl.appendChild(li);
+        });
+      };
+
+      const refreshRecordList = () => {
+        const listEl = byId('recordList');
+        listEl.innerHTML = '';
+
+        if (!currentSubjectWebId) {
+          const li = document.createElement('li');
+          li.textContent = 'Login required to view records.';
+          listEl.appendChild(li);
+          return;
+        }
+
+        const records = store.listRecords(currentSubjectWebId, { providerId: provider.id }).slice(0, 12);
+        if (!records.length) {
+          const li = document.createElement('li');
+          li.textContent = 'No records for this subject at this provider yet.';
+          listEl.appendChild(li);
+          return;
+        }
+
+        records.forEach((entry) => {
+          const li = document.createElement('li');
+          li.textContent = `${entry.createdAt} | ${entry.category} | ${entry.summary}`;
+          listEl.appendChild(li);
+        });
+      };
+
+      const refreshEventFeed = () => {
+        const events = store.listEvents({ providerId: provider.id, limit: 12 });
+        byId('eventFeed').textContent = JSON.stringify(events, null, 2);
+      };
+
+      const refreshLoginState = () => {
+        byId('subjectDid').textContent = currentSubjectWebId || 'Not logged in.';
+        const isLoggedIn = Boolean(currentSubjectWebId);
+        byId('runSelfBtn').disabled = !isLoggedIn;
+        byId('runStaffBtn').disabled = !isLoggedIn;
+      };
+
+      const createSelfServiceRecord = (actionLabel, actionId) => {
+        const record = store.addRecord({
+          subjectWebId: currentSubjectWebId,
+          providerId: provider.id,
+          category: 'self_service',
+          summary: actionLabel,
+          actorWebId: currentSubjectWebId,
+          details: {
+            actionId,
+            mode: 'self-service'
+          }
+        });
+
+        store.addEvent({
+          type: 'self-service-action',
+          providerId: provider.id,
+          subjectWebId: currentSubjectWebId,
+          actorWebId: currentSubjectWebId,
+          message: `${provider.label}: ${actionLabel}`,
+          payload: { actionId, recordId: record.id }
+        });
+
+        return record;
+      };
+
+      const runSelfServiceAction = () => {
+        if (!currentSubjectWebId) {
+          setResult(byId('selfActionResult'), 'Login required before running self-service actions.');
+          return;
+        }
+
+        const actionId = byId('selfActionSelect').value;
+        const action = config.selfActions.find((entry) => entry.id === actionId);
+        if (!action) {
+          setResult(byId('selfActionResult'), 'Select a self-service action first.');
+          return;
+        }
+
+        const record = createSelfServiceRecord(action.label, action.id);
+        setResult(byId('selfActionResult'), `Recorded self-service action: ${action.label}\nRecord ID: ${record.id}`);
+        refreshRecordList();
+        refreshReferralWidgets();
+        refreshEventFeed();
+      };
+
+      const runStaffAction = () => {
+        if (!currentSubjectWebId) {
+          setResult(byId('staffActionResult'), 'Login required before running staff actions.');
+          return;
+        }
+
+        const actionId = byId('staffActionSelect').value;
+        const action = config.staffActions.find((entry) => entry.id === actionId);
+        if (!action) {
+          setResult(byId('staffActionResult'), 'Select a staff action first.');
+          return;
+        }
+
+        if (actionId === 'issue_imaging_referral') {
+          const referral = store.addReferral({
+            subjectWebId: currentSubjectWebId,
+            fromProviderId: provider.id,
+            targetCapability: 'imaging',
+            summary: 'Imaging referral for X-ray or ultrasound fulfillment',
+            actorWebId: staffWebId,
+            details: {
+              referralPurpose: 'diagnostic-imaging',
+              fulfillableBy: 'any-qualified-imaging-provider'
+            }
+          });
+
+          const credential = store.issueCredential({
+            subjectWebId: currentSubjectWebId,
+            issuerProviderId: provider.id,
+            type: 'ImagingReferralCredential',
+            metadata: {
+              referralId: referral.id,
+              fulfillableBy: 'any-qualified-imaging-provider'
+            }
+          });
+
+          store.addEvent({
+            type: 'referral-issued',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
+            message: `${provider.label}: issued imaging referral ${referral.id}`,
+            payload: { referralId: referral.id, credentialId: credential.id }
+          });
+
+          setResult(
+            byId('staffActionResult'),
+            `Referral issued.\nReferral ID: ${referral.id}\nCredential ID: ${credential.id}`
+          );
+        } else if (actionId === 'fulfill_selected_referral') {
+          const referralId = byId('referralSelect').value;
+          if (!referralId) {
+            setResult(byId('staffActionResult'), 'Select an open referral to fulfill.');
+            return;
+          }
+
+          const fulfilled = store.fulfillReferral({
+            referralId,
+            providerId: provider.id,
+            actorWebId: staffWebId
+          });
+
+          if (fulfilled.error) {
+            setResult(byId('staffActionResult'), fulfilled.error);
+            return;
+          }
+
+          const record = store.addRecord({
+            subjectWebId: currentSubjectWebId,
+            providerId: provider.id,
+            category: 'imaging_result',
+            summary: 'Imaging referral fulfilled and results recorded',
+            actorWebId: staffWebId,
+            details: {
+              referralId,
+              fulfillmentProviderId: provider.id
+            }
+          });
+
+          const credential = store.issueCredential({
+            subjectWebId: currentSubjectWebId,
+            issuerProviderId: provider.id,
+            type: 'ImagingResultCredential',
+            metadata: {
+              referralId,
+              recordId: record.id
+            }
+          });
+
+          store.addEvent({
+            type: 'referral-fulfilled',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
+            message: `${provider.label}: fulfilled referral ${referralId}`,
+            payload: { referralId, recordId: record.id, credentialId: credential.id }
+          });
+
+          setResult(
+            byId('staffActionResult'),
+            `Referral fulfilled.\nReferral ID: ${referralId}\nRecord ID: ${record.id}\nCredential ID: ${credential.id}`
+          );
+        } else if (actionId === 'request_shared_record_access') {
+          const consents = store.listConsents(currentSubjectWebId, { includeRevoked: false });
+          const activeForProvider = consents.filter((entry) => entry.providerId === provider.id || entry.scope === 'all_records');
+
+          store.addEvent({
+            type: 'emergency-record-access-request',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
+            message: `${provider.label}: staff initiated emergency shared-record check`,
+            payload: {
+              activeConsentCount: activeForProvider.length,
+              consentIds: activeForProvider.map((entry) => entry.id)
+            },
+            severity: activeForProvider.length ? 'info' : 'warning'
+          });
+
+          setResult(
+            byId('staffActionResult'),
+            activeForProvider.length
+              ? `Shared record access check logged with ${activeForProvider.length} active consent record(s).`
+              : 'Shared record access check logged. No active consent found for this provider.'
+          );
+        } else {
+          const record = store.addRecord({
+            subjectWebId: currentSubjectWebId,
+            providerId: provider.id,
+            category: 'staff_operation',
+            summary: action.label,
+            actorWebId: staffWebId,
+            details: {
+              actionId,
+              mode: 'staff'
+            }
+          });
+
+          if (actionId === 'record_imaging_results') {
+            store.issueCredential({
+              subjectWebId: currentSubjectWebId,
+              issuerProviderId: provider.id,
+              type: 'ImagingResultCredential',
+              metadata: { recordId: record.id }
+            });
+          }
+
+          if (actionId === 'record_emergency_treatment') {
+            store.issueCredential({
+              subjectWebId: currentSubjectWebId,
+              issuerProviderId: provider.id,
+              type: 'EmergencyTreatmentCredential',
+              metadata: { recordId: record.id }
+            });
+          }
+
+          store.addEvent({
+            type: 'staff-action',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
+            message: `${provider.label}: ${action.label}`,
+            payload: { actionId, recordId: record.id }
+          });
+
+          setResult(byId('staffActionResult'), `Recorded staff action: ${action.label}\nRecord ID: ${record.id}`);
+        }
+
+        refreshReferralWidgets();
+        refreshRecordList();
+        refreshEventFeed();
+      };
+
+      const handleLogin = () => {
+        const selected = byId('identitySelect').value;
+        currentSubjectWebId = selected || '';
+
+        if (currentSubjectWebId) {
+          store.addEvent({
+            type: 'subject-login',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: currentSubjectWebId,
+            message: `${provider.label}: subject login`,
+            payload: {
+              providerType: provider.type
+            }
+          });
+        }
+
+        refreshLoginState();
+        refreshReferralWidgets();
+        refreshRecordList();
+        refreshEventFeed();
+      };
+
+      const handleEmergencyOverride = () => {
+        const identity = store.createJohnDoe({
+          foundNotes: `Generated at ${provider.label} emergency override pathway.`
+        });
+
+        refreshIdentityOptions();
+        byId('identitySelect').value = identity.webId;
+        currentSubjectWebId = identity.webId;
+
+        store.addEvent({
+          type: 'emergency-override-login',
+          providerId: provider.id,
+          subjectWebId: currentSubjectWebId,
+          actorWebId: staffWebId,
+          message: `${provider.label}: emergency override created ${identity.displayName}`,
+          severity: 'warning'
+        });
+
+        refreshLoginState();
+        refreshReferralWidgets();
+        refreshRecordList();
+        refreshEventFeed();
+      };
+
+      const boot = () => {
+        renderHeader();
+        refreshIdentityOptions();
+        refreshActionOptions();
+        refreshLoginState();
+        refreshReferralWidgets();
+        refreshRecordList();
+        refreshEventFeed();
+
+        const emergencyBtn = byId('emergencyBtn');
+        if (config.allowEmergencyOverride) {
+          emergencyBtn.hidden = false;
+          emergencyBtn.addEventListener('click', handleEmergencyOverride);
+        }
+
+        byId('loginBtn').addEventListener('click', handleLogin);
+        byId('runSelfBtn').addEventListener('click', runSelfServiceAction);
+        byId('runStaffBtn').addEventListener('click', runStaffAction);
+
+        store.subscribe(() => {
+          refreshIdentityOptions();
+          refreshReferralWidgets();
+          refreshRecordList();
+          refreshEventFeed();
+          renderHeader();
+        });
+      };
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

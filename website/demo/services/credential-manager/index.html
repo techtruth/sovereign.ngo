@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign Credential Manager Demo</title>
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <style>
+    :root {
+      --bg: #f2f7fc;
+      --panel: #ffffff;
+      --line: #c9d9e8;
+      --ink: #223246;
+      --muted: #4f6378;
+      --brand: #005eb8;
+      --accent: #0d4f84;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 0%, #e0ecf9, var(--bg) 58%);
+      color: var(--ink);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    .wrap {
+      width: min(1180px, 96vw);
+      margin: 0 auto;
+      padding: 12px 0 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .mast,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 10px;
+    }
+
+    .mast {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1rem, 2.4vw, 1.25rem);
+      color: #14486a;
+    }
+
+    .sub {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .wide {
+      grid-column: 1 / -1;
+    }
+
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 0.92rem;
+      color: #174d71;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 9px;
+      background: #f7fbff;
+    }
+
+    label {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    select,
+    button {
+      font: inherit;
+    }
+
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 8px 9px;
+    }
+
+    button {
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      background: var(--brand);
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #edf4fa;
+      color: #2f455a;
+      border-color: #5f7488;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .mono {
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fbfe;
+      padding: 8px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 0.74rem;
+      color: #2f4458;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #43576b;
+      font-size: 0.83rem;
+      display: grid;
+      gap: 5px;
+    }
+
+    .note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="mast">
+      <div>
+        <h1>Sovereign Credential Manager</h1>
+        <p class="sub">Grant and revoke inter-agency sharing from resident-controlled browser state.</p>
+      </div>
+      <div id="identitySummary" class="sub"></div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Identity and Session Context</h2>
+        <label>
+          Sovereign Identity
+          <select id="identitySelect"></select>
+        </label>
+        <p id="webIdDisplay" class="mono">No identity selected.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Sovereign Inter-Agency Sharing Consent</h2>
+        <label>
+          Selected Provider DID (where subject has records)
+          <select id="providerSelect"></select>
+        </label>
+        <label>
+          Permission Scope
+          <select id="scopeSelect"></select>
+        </label>
+        <div class="row">
+          <button id="grantBtn" type="button">Grant Sharing Consent</button>
+          <button id="revokeBtn" class="secondary" type="button">Revoke Sharing Consent</button>
+        </div>
+        <p id="consentResult" class="mono">No consent action yet.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Credentials for Selected Identity</h2>
+        <ul id="credentialList"></ul>
+      </article>
+
+      <article class="panel">
+        <h2>Pod Resources (Provider Records)</h2>
+        <ul id="resourceList"></ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Sharing Permissions for Selected Identity</h2>
+        <ul id="consentList"></ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Recent Identity Events</h2>
+        <pre id="eventFeed" class="mono">[]</pre>
+      </article>
+    </section>
+  </main>
+
+  <script src="../../lib/demo-store.js"></script>
+  <script>
+    (function () {
+      const store = window.SovereignDemoStore;
+      if (!store) {
+        document.body.innerHTML = '<main class="wrap"><p>Demo store unavailable.</p></main>';
+        return;
+      }
+
+      const byId = (id) => document.getElementById(id);
+      let currentWebId = '';
+
+      const fillSelect = (selectEl, rows, placeholder) => {
+        selectEl.innerHTML = '';
+        if (!rows.length) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = placeholder;
+          selectEl.appendChild(option);
+          return;
+        }
+
+        rows.forEach((entry) => {
+          const option = document.createElement('option');
+          option.value = entry.value;
+          option.textContent = entry.label;
+          option.disabled = Boolean(entry.disabled);
+          selectEl.appendChild(option);
+        });
+      };
+
+      const setList = (el, rows, empty) => {
+        el.innerHTML = '';
+        if (!rows.length) {
+          const li = document.createElement('li');
+          li.textContent = empty;
+          el.appendChild(li);
+          return;
+        }
+
+        rows.forEach((text) => {
+          const li = document.createElement('li');
+          li.textContent = String(text);
+          el.appendChild(li);
+        });
+      };
+
+      const setResult = (message) => {
+        byId('consentResult').textContent = message || 'No consent action yet.';
+      };
+
+      const refreshIdentitySelect = () => {
+        const identities = store.listIdentities();
+        fillSelect(
+          byId('identitySelect'),
+          identities.map((entry) => ({ value: entry.webId, label: `${entry.displayName} (${entry.webId})` })),
+          'No identities available'
+        );
+
+        if (!currentWebId && identities.length) {
+          currentWebId = identities[0].webId;
+        }
+
+        if (currentWebId) {
+          byId('identitySelect').value = currentWebId;
+        }
+      };
+
+      const refreshScopeSelect = () => {
+        const scopes = store.consentScopes || [];
+        fillSelect(
+          byId('scopeSelect'),
+          scopes.map((scope) => ({ value: scope, label: scope })),
+          'No scopes available'
+        );
+      };
+
+      const refreshProviderSelect = () => {
+        const providers = store.listProvidersWithRecordsForSubject(currentWebId);
+        fillSelect(
+          byId('providerSelect'),
+          providers.map((entry) => ({
+            value: entry.id,
+            label: `${entry.label} (${entry.did})`
+          })),
+          'No provider records found for selected identity'
+        );
+
+        const hasProviders = providers.length > 0;
+        byId('providerSelect').disabled = !hasProviders;
+        byId('grantBtn').disabled = !hasProviders;
+        byId('revokeBtn').disabled = !hasProviders;
+      };
+
+      const refreshView = () => {
+        refreshIdentitySelect();
+        refreshScopeSelect();
+        refreshProviderSelect();
+
+        const identities = store.listIdentities();
+        const identity = identities.find((entry) => entry.webId === currentWebId);
+        if (!identity) {
+          byId('identitySummary').textContent = 'No identity selected.';
+          byId('webIdDisplay').textContent = 'No identity selected.';
+          setList(byId('credentialList'), [], 'No credentials.');
+          setList(byId('resourceList'), [], 'No provider resources.');
+          setList(byId('consentList'), [], 'No sharing permissions.');
+          byId('eventFeed').textContent = '[]';
+          return;
+        }
+
+        byId('identitySummary').textContent = `${identity.displayName} | ${identity.webId}`;
+        byId('webIdDisplay').textContent = identity.webId;
+
+        const credentials = store.listCredentials(currentWebId);
+        const records = store.listRecords(currentWebId);
+        const consents = store.listConsents(currentWebId, { includeRevoked: true });
+        const events = store.listEvents({ subjectWebId: currentWebId, limit: 20 });
+
+        setList(
+          byId('credentialList'),
+          credentials.slice(0, 30).map((entry) => `${entry.createdAt} | ${entry.type} | issuer: ${entry.issuerProviderId || 'n/a'}`),
+          'No credentials for this identity.'
+        );
+
+        const recordsByProvider = records.reduce((acc, entry) => {
+          const key = entry.providerLabel || entry.providerId || 'Unknown provider';
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {});
+
+        setList(
+          byId('resourceList'),
+          Object.keys(recordsByProvider).sort().map((label) => `${label}: ${recordsByProvider[label]} record(s)`),
+          'No provider records for this identity.'
+        );
+
+        setList(
+          byId('consentList'),
+          consents.slice(0, 30).map((entry) => `${entry.status.toUpperCase()} | provider: ${entry.providerId} | scope: ${entry.scope}`),
+          'No sharing permissions for this identity.'
+        );
+
+        byId('eventFeed').textContent = JSON.stringify(events, null, 2);
+      };
+
+      const runGrant = () => {
+        if (!currentWebId) {
+          setResult('Select an identity first.');
+          return;
+        }
+
+        const providerId = byId('providerSelect').value;
+        const scope = byId('scopeSelect').value || 'all_records';
+
+        if (!providerId) {
+          setResult('No provider available for this identity.');
+          return;
+        }
+
+        const consent = store.grantConsent({
+          subjectWebId: currentWebId,
+          providerId,
+          scope,
+          grantedByWebId: currentWebId
+        });
+
+        store.addEvent({
+          type: 'consent-grant',
+          providerId,
+          subjectWebId: currentWebId,
+          actorWebId: currentWebId,
+          message: `Granted ${scope} consent to ${providerId}`,
+          payload: { consentId: consent.id }
+        });
+
+        setResult(`Consent granted. ID: ${consent.id}`);
+        refreshView();
+      };
+
+      const runRevoke = () => {
+        if (!currentWebId) {
+          setResult('Select an identity first.');
+          return;
+        }
+
+        const providerId = byId('providerSelect').value;
+        const scope = byId('scopeSelect').value || 'all_records';
+
+        if (!providerId) {
+          setResult('No provider available for this identity.');
+          return;
+        }
+
+        const revokedCount = store.revokeConsent({
+          subjectWebId: currentWebId,
+          providerId,
+          scope,
+          revokedByWebId: currentWebId
+        });
+
+        store.addEvent({
+          type: 'consent-revoke',
+          providerId,
+          subjectWebId: currentWebId,
+          actorWebId: currentWebId,
+          message: `Revoked ${scope} consent from ${providerId}`,
+          payload: { revokedCount }
+        });
+
+        setResult(revokedCount ? `Revoked ${revokedCount} consent record(s).` : 'No active consent matched this provider/scope.');
+        refreshView();
+      };
+
+      byId('identitySelect').addEventListener('change', () => {
+        currentWebId = byId('identitySelect').value;
+        refreshView();
+      });
+
+      byId('grantBtn').addEventListener('click', runGrant);
+      byId('revokeBtn').addEventListener('click', runRevoke);
+
+      store.subscribe(refreshView);
+      refreshView();
+    })();
+  </script>
+</body>
+</html>
