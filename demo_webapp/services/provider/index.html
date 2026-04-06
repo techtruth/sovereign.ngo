@@ -15,10 +15,6 @@
         <p class="sub" id="portalSubtitle">Service Portal</p>
         <p class="taxonomy-summary" id="taxonomySummary"></p>
       </div>
-      <div class="meta">
-        <div id="providerDid">Provider DID</div>
-        <div id="staffStatus">Staff Credential: checking...</div>
-      </div>
     </section>
 
     <section class="grid">
@@ -49,7 +45,7 @@
       </article>
 
       <article class="panel">
-        <h2>Stephen Staffer (Staff Actions)</h2>
+        <h2>Staphen Staffer (Staff Actions)</h2>
         <label>
           Staff Action
           <select id="staffActionSelect"></select>
@@ -142,9 +138,13 @@
       const providerId = query.get('provider') || defaults.provider;
       const provider = store.providerById(providerId) || store.providerById(defaults.provider);
       const staffWebId = store.staffWebId;
+      const VC_CONTEXT = 'https://www.w3.org/ns/credentials/v2';
+      const VC_DEMO_DOMAIN = 'demo.sovereign.ngo';
       const currentHost = String((window.location && window.location.host) || '').toLowerCase();
       const useContainerProviderApi = currentHost === 'localhost:8180' || currentHost === '127.0.0.1:8180';
       const providerApiBase = useContainerProviderApi ? `/provider-api/${encodeURIComponent(provider.id)}/api` : '';
+      const HOLDER_KEY_STORAGE_KEY = 'sovereign_demo_holder_signing_keys_v1';
+      const ISSUER_KEY_STORAGE_KEY = 'sovereign_demo_issuer_signing_keys_v1';
 
       let currentSubjectWebId = '';
       const tutorialHighlightIds = [
@@ -334,21 +334,379 @@
         el.textContent = String(text || '').trim() || 'No action yet.';
       };
 
-      const notifyProviderApi = async (path, payload) => {
+      const nextUrn = () => {
+        if (
+          typeof window !== 'undefined' &&
+          window.crypto &&
+          typeof window.crypto.randomUUID === 'function'
+        ) {
+          return `urn:uuid:${window.crypto.randomUUID()}`;
+        }
+        return `urn:uuid:${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      };
+
+      const utf8Bytes = (value) => new TextEncoder().encode(String(value || ''));
+
+      const base64UrlFromBytes = (bytes) => {
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += 1) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary)
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/g, '');
+      };
+
+      const sha256Hex = async (value) => {
+        const digest = await crypto.subtle.digest('SHA-256', utf8Bytes(String(value || '')));
+        const bytes = new Uint8Array(digest);
+        let hex = '';
+        for (let i = 0; i < bytes.length; i += 1) {
+          hex += bytes[i].toString(16).padStart(2, '0');
+        }
+        return hex;
+      };
+
+      const parseJson = (raw) => {
+        if (raw === null || raw === undefined || raw === '') return null;
+        if (typeof raw === 'object') return raw;
+        if (typeof raw !== 'string') return null;
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return null;
+        }
+      };
+
+      const readKeyCache = (storageKey) => {
+        try {
+          const parsed = parseJson(sessionStorage.getItem(storageKey));
+          if (!parsed || typeof parsed !== 'object') return {};
+          return parsed;
+        } catch {
+          return {};
+        }
+      };
+
+      const writeKeyCache = (storageKey, cache) => {
+        try {
+          sessionStorage.setItem(storageKey, JSON.stringify(cache && typeof cache === 'object' ? cache : {}));
+        } catch {
+          // no-op
+        }
+      };
+
+      const readHolderKeyCache = () => {
+        return readKeyCache(HOLDER_KEY_STORAGE_KEY);
+      };
+
+      const writeHolderKeyCache = (cache) => {
+        writeKeyCache(HOLDER_KEY_STORAGE_KEY, cache);
+      };
+
+      const readIssuerKeyCache = () => {
+        return readKeyCache(ISSUER_KEY_STORAGE_KEY);
+      };
+
+      const writeIssuerKeyCache = (cache) => {
+        writeKeyCache(ISSUER_KEY_STORAGE_KEY, cache);
+      };
+
+      const importPrivateJwk = async (privateJwk) => {
+        return crypto.subtle.importKey(
+          'jwk',
+          privateJwk,
+          { name: 'Ed25519' },
+          false,
+          ['sign']
+        );
+      };
+
+      const getHolderSigningMaterial = async (holderDid) => {
+        const normalizedHolderDid = String(holderDid || '').trim();
+        if (!normalizedHolderDid) {
+          throw new Error('Holder DID is required for vp_token signing.');
+        }
+        const cache = readHolderKeyCache();
+        const cached = cache[normalizedHolderDid];
+
+        if (cached && cached.privateJwk && cached.publicJwk && cached.kid) {
+          try {
+            const privateKey = await importPrivateJwk(cached.privateJwk);
+            return {
+              kid: String(cached.kid),
+              publicJwk: cached.publicJwk,
+              privateKey
+            };
+          } catch {
+            // no-op
+          }
+        }
+
+        const keyPair = await crypto.subtle.generateKey(
+          { name: 'Ed25519' },
+          true,
+          ['sign', 'verify']
+        );
+        const kid = `${normalizedHolderDid}#holder-key-1`;
+        const privateJwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
+        const publicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
+        privateJwk.alg = 'EdDSA';
+        privateJwk.key_ops = ['sign'];
+        privateJwk.kid = kid;
+        publicJwk.alg = 'EdDSA';
+        publicJwk.key_ops = ['verify'];
+        publicJwk.kid = kid;
+        cache[normalizedHolderDid] = {
+          kid,
+          privateJwk,
+          publicJwk,
+          createdAt: new Date().toISOString()
+        };
+        writeHolderKeyCache(cache);
+        return {
+          kid,
+          publicJwk,
+          privateKey: keyPair.privateKey
+        };
+      };
+
+      const signJwtEdDsa = async ({ payload, holderDid, typ }) => {
+        const material = await getHolderSigningMaterial(holderDid);
+        const header = {
+          alg: 'EdDSA',
+          typ: String(typ || 'JWT').trim() || 'JWT',
+          kid: material.kid,
+          jwk: material.publicJwk
+        };
+        const encodedHeader = base64UrlFromBytes(utf8Bytes(JSON.stringify(header)));
+        const encodedPayload = base64UrlFromBytes(utf8Bytes(JSON.stringify(payload && typeof payload === 'object' ? payload : {})));
+        const signingInput = `${encodedHeader}.${encodedPayload}`;
+        const signatureBuffer = await crypto.subtle.sign('Ed25519', material.privateKey, utf8Bytes(signingInput));
+        const signature = base64UrlFromBytes(new Uint8Array(signatureBuffer));
+        return `${signingInput}.${signature}`;
+      };
+
+      const getIssuerSigningMaterial = async (issuerDid) => {
+        const normalizedIssuerDid = String(issuerDid || '').trim();
+        if (!normalizedIssuerDid) {
+          throw new Error('VC issuer DID is required for proof signing.');
+        }
+        const cache = readIssuerKeyCache();
+        const cached = cache[normalizedIssuerDid];
+
+        if (cached && cached.privateJwk && cached.publicJwk && cached.kid) {
+          try {
+            const privateKey = await importPrivateJwk(cached.privateJwk);
+            return {
+              kid: String(cached.kid),
+              publicJwk: cached.publicJwk,
+              privateKey
+            };
+          } catch {
+            // no-op
+          }
+        }
+
+        const keyPair = await crypto.subtle.generateKey(
+          { name: 'Ed25519' },
+          true,
+          ['sign', 'verify']
+        );
+        const kid = `${normalizedIssuerDid}#issuer-key-1`;
+        const privateJwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
+        const publicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
+        privateJwk.alg = 'EdDSA';
+        privateJwk.key_ops = ['sign'];
+        privateJwk.kid = kid;
+        publicJwk.alg = 'EdDSA';
+        publicJwk.key_ops = ['verify'];
+        publicJwk.kid = kid;
+        cache[normalizedIssuerDid] = {
+          kid,
+          privateJwk,
+          publicJwk,
+          createdAt: new Date().toISOString()
+        };
+        writeIssuerKeyCache(cache);
+        return {
+          kid,
+          publicJwk,
+          privateKey: keyPair.privateKey
+        };
+      };
+
+      const credentialWithoutProof = (credentialVc) => {
+        const clone = parseJson(JSON.stringify(credentialVc && typeof credentialVc === 'object' ? credentialVc : {})) || {};
+        delete clone.proof;
+        return clone;
+      };
+
+      const signCredentialProofJwt = async (credentialVc) => {
+        const vc = credentialWithoutProof(credentialVc);
+        const issuerDid = String(vc && vc.issuer && vc.issuer.id ? vc.issuer.id : '').trim();
+        const subjectDid = String(vc && vc.credentialSubject && vc.credentialSubject.id ? vc.credentialSubject.id : '').trim();
+        const credentialId = String(vc && vc.id ? vc.id : '').trim();
+        if (!issuerDid || !subjectDid || !credentialId) {
+          throw new Error('VC proof signing requires credential id, issuer DID, and subject DID.');
+        }
+        if (issuerDid !== provider.did) {
+          throw new Error('This provider can only sign VC proofs for credentials it issued.');
+        }
+        const material = await getIssuerSigningMaterial(issuerDid);
+        const nowSec = Math.floor(Date.now() / 1000);
+        const vcHash = await sha256Hex(JSON.stringify(vc));
+        const statusListCredential = String(vc && vc.credentialStatus && vc.credentialStatus.statusListCredential ? vc.credentialStatus.statusListCredential : '').trim();
+        const statusListIndex = Number(vc && vc.credentialStatus ? vc.credentialStatus.statusListIndex : NaN);
+        const payload = {
+          iss: issuerDid,
+          sub: subjectDid,
+          aud: provider.did,
+          iat: nowSec,
+          nbf: nowSec,
+          exp: nowSec + 900,
+          jti: credentialId,
+          vc_hash: vcHash,
+          status_list_credential: statusListCredential,
+          status_list_index: Number.isFinite(statusListIndex) ? Math.floor(statusListIndex) : -1
+        };
+        const header = {
+          alg: 'EdDSA',
+          typ: 'vc+jwt',
+          kid: material.kid,
+          jwk: material.publicJwk
+        };
+        const encodedHeader = base64UrlFromBytes(utf8Bytes(JSON.stringify(header)));
+        const encodedPayload = base64UrlFromBytes(utf8Bytes(JSON.stringify(payload)));
+        const signingInput = `${encodedHeader}.${encodedPayload}`;
+        const signatureBuffer = await crypto.subtle.sign('Ed25519', material.privateKey, utf8Bytes(signingInput));
+        const signature = base64UrlFromBytes(new Uint8Array(signatureBuffer));
+        return `${signingInput}.${signature}`;
+      };
+
+      const withCredentialProof = async (credentialVc) => {
+        const vc = parseJson(JSON.stringify(credentialVc && typeof credentialVc === 'object' ? credentialVc : {})) || {};
+        if (!vc || typeof vc !== 'object' || !vc.id) return null;
+        const issuerDid = String(vc && vc.issuer && vc.issuer.id ? vc.issuer.id : '').trim();
+        if (issuerDid !== provider.did) {
+          const existingProofJwt = String(vc && vc.proof && vc.proof.jwt ? vc.proof.jwt : '').trim();
+          if (!existingProofJwt) {
+            throw new Error('Credential proof is missing for non-local issuer credential.');
+          }
+          return vc;
+        }
+        const unsignedVc = credentialWithoutProof(vc);
+        const jwt = await signCredentialProofJwt(unsignedVc);
+        unsignedVc.proof = {
+          type: 'JwtProof2020',
+          proofPurpose: 'assertionMethod',
+          created: new Date().toISOString(),
+          jwt
+        };
+        return unsignedVc;
+      };
+
+      const buildProviderPresentationEnvelope = async ({
+        exchangeType,
+        subjectWebId,
+        actorWebId,
+        actionId,
+        actionLabel,
+        credentialVc,
+        payload
+      }) => {
+        const verifiableCredential = [];
+        if (credentialVc && typeof credentialVc === 'object') {
+          const proofedCredential = await withCredentialProof(credentialVc);
+          if (proofedCredential) {
+            verifiableCredential.push(proofedCredential);
+          }
+        }
+
+        const holder = String(subjectWebId || actorWebId || '').trim();
+        if (!holder) {
+          throw new Error('Presentation holder is required.');
+        }
+
+        const challenge = nextUrn();
+        const vp = {
+          '@context': [VC_CONTEXT],
+          id: nextUrn(),
+          type: ['VerifiablePresentation'],
+          holder,
+          verifiableCredential
+        };
+        const nowSec = Math.floor(Date.now() / 1000);
+        const vpToken = await signJwtEdDsa({
+          holderDid: holder,
+          typ: 'vp+jwt',
+          payload: {
+            iss: holder,
+            sub: holder,
+            aud: provider.did,
+            iat: nowSec,
+            nbf: nowSec,
+            exp: nowSec + 300,
+            nonce: challenge,
+            vp
+          }
+        });
+
+        return {
+          exchangeType: String(exchangeType || '').trim() || 'service-event',
+          providerId: provider.id,
+          providerDid: provider.did,
+          providerType: provider.type,
+          submittedAt: new Date().toISOString(),
+          request: {
+            challenge,
+            domain: VC_DEMO_DOMAIN,
+            verifierDid: provider.did
+          },
+          vp_token: vpToken,
+          serviceContext: {
+            subjectWebId: String(subjectWebId || '').trim(),
+            actorWebId: String(actorWebId || '').trim(),
+            actionId: String(actionId || '').trim(),
+            actionLabel: String(actionLabel || '').trim(),
+            details: payload && typeof payload === 'object' ? payload : {}
+          }
+        };
+      };
+
+      const notifyProviderApi = async ({
+        exchangeType,
+        subjectWebId,
+        actorWebId,
+        actionId,
+        actionLabel,
+        credentialVc,
+        payload
+      }) => {
         if (!providerApiBase) return null;
         try {
-          const response = await fetch(`${providerApiBase}${path}`, {
+          const envelope = await buildProviderPresentationEnvelope({
+            exchangeType,
+            subjectWebId,
+            actorWebId,
+            actionId,
+            actionLabel,
+            credentialVc,
+            payload
+          });
+          const response = await fetch(`${providerApiBase}/presentations/submit`, {
             method: 'POST',
             headers: {
               'content-type': 'application/json'
             },
-            body: JSON.stringify(payload || {})
+            body: JSON.stringify(envelope)
           });
           const data = await response.json().catch(() => null);
           if (!response.ok) {
             console.warn('Provider API returned a non-success response.', {
               providerId: provider.id,
-              path,
+              path: '/presentations/submit',
               status: response.status,
               data
             });
@@ -357,7 +715,7 @@
         } catch (error) {
           console.warn('Provider API call failed.', {
             providerId: provider.id,
-            path,
+            path: '/presentations/submit',
             error
           });
           return null;
@@ -378,6 +736,11 @@
         const key = String(type || '').trim();
         return credentialTypeLabels[key] || key || 'Credential';
       };
+
+      const credentialTypesForEntry = (entry) => store.credentialTypes(entry);
+      const credentialHasTypeForEntry = (entry, type) => store.credentialHasType(entry, type);
+      const credentialIssuerProviderIdForEntry = (entry) => String(store.credentialIssuerProviderId(entry) || '').trim();
+      const credentialVcForEntry = (entry) => store.credentialAsW3cVc(entry);
 
       const requirementGroupCatalog = {
         government_id: { label: 'Government ID', anyOf: ['DriversLicenseCredential', 'PassportCredential'] },
@@ -413,8 +776,8 @@
         if (!subjectWebId) return new Set();
         const credentials = store.listCredentials(subjectWebId);
         const activeTypes = credentials
-          .filter((entry) => entry && entry.status === 'active' && entry.type)
-          .map((entry) => String(entry.type || '').trim())
+          .filter((entry) => entry && store.isCredentialActive(entry))
+          .flatMap((entry) => credentialTypesForEntry(entry))
           .filter(Boolean);
         return new Set(activeTypes);
       };
@@ -518,18 +881,8 @@
 
       const renderHeader = () => {
         byId('portalTitle').textContent = provider.label;
-        byId('portalSubtitle').textContent = 'Service Portal';
+        byId('portalSubtitle').textContent = `${provider.did} Service Portal`;
         byId('taxonomySummary').textContent = formatTaxonomySummary(provider.taxonomies);
-        byId('providerDid').textContent = `Provider DID: ${provider.did}`;
-
-        const hasCredential = store
-          .listCredentials(staffWebId)
-          .some((entry) => entry.type === 'StaffAccessCredential' && entry.issuerProviderId === provider.id && entry.status === 'active');
-
-        const status = byId('staffStatus');
-        status.textContent = hasCredential
-          ? 'Active Staff Credential: Staphen Staffer'
-          : 'Active Staff Credential: not found for Staphen Staffer';
       };
 
       const fillSelect = (selectEl, options, placeholder) => {
@@ -845,13 +1198,15 @@
 
         const record = createSelfServiceRecord(action.label, action.id);
         setResult(byId('selfActionResult'), `Recorded self-service action: ${action.label}\nRecord ID: ${record.id}`);
-        void notifyProviderApi('/actions/self', {
-          providerId: provider.id,
-          providerType: provider.type,
+        void notifyProviderApi({
+          exchangeType: 'self-action',
           subjectWebId: currentSubjectWebId,
+          actorWebId: currentSubjectWebId,
           actionId: action.id,
           actionLabel: action.label,
-          recordId: record.id
+          payload: {
+            recordId: record.id
+          }
         });
         refreshRecordList();
         refreshReferralWidgets();
@@ -892,6 +1247,12 @@
             subjectWebId: currentSubjectWebId,
             issuerProviderId: provider.id,
             type: definition.credentialType || 'ServiceReferralCredential',
+            claims: {
+              referralId: referral.id,
+              targetCapability: definition.targetCapability,
+              referralPurpose: definition.referralPurpose,
+              fulfillableBy: definition.fulfillableBy
+            },
             metadata: {
               referralId: referral.id,
               targetCapability: definition.targetCapability,
@@ -899,6 +1260,7 @@
               fulfillableBy: definition.fulfillableBy
             }
           });
+          const credentialVc = credentialVcForEntry(credential);
 
           store.addEvent({
             type: 'referral-issued',
@@ -909,7 +1271,8 @@
             payload: {
               referralId: referral.id,
               targetCapability: definition.targetCapability,
-              credentialId: credential.id
+              credentialId: credential.id,
+              credentialVc
             }
           });
 
@@ -917,16 +1280,20 @@
             byId('staffActionResult'),
             `Referral issued.\nReferral ID: ${referral.id}\nTarget Capability: ${definition.targetCapability}\nCredential ID: ${credential.id}`
           );
-          void notifyProviderApi('/referrals/issue', {
-            providerId: provider.id,
-            providerType: provider.type,
+          void notifyProviderApi({
+            exchangeType: 'referral-issue',
             subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
             actionId,
             actionLabel: action.label,
-            referralId: referral.id,
-            targetCapability: definition.targetCapability,
-            referralPurpose: definition.referralPurpose,
-            fulfillableBy: definition.fulfillableBy
+            credentialVc,
+            payload: {
+              referralId: referral.id,
+              targetCapability: definition.targetCapability,
+              referralPurpose: definition.referralPurpose,
+              fulfillableBy: definition.fulfillableBy,
+              credentialId: credential.id
+            }
           });
         } else if (actionId === 'fulfill_selected_referral') {
           const referralId = byId('referralSelect').value;
@@ -977,12 +1344,18 @@
             subjectWebId: currentSubjectWebId,
             issuerProviderId: provider.id,
             type: outcome.credentialType,
+            claims: {
+              referralId,
+              recordId: record.id,
+              targetCapability: selectedReferral.targetCapability
+            },
             metadata: {
               referralId,
               recordId: record.id,
               targetCapability: selectedReferral.targetCapability
             }
           });
+          const credentialVc = credentialVcForEntry(credential);
 
           store.addEvent({
             type: 'referral-fulfilled',
@@ -994,7 +1367,8 @@
               referralId,
               targetCapability: selectedReferral.targetCapability,
               recordId: record.id,
-              credentialId: credential.id
+              credentialId: credential.id,
+              credentialVc
             }
           });
 
@@ -1002,17 +1376,20 @@
             byId('staffActionResult'),
             `Referral fulfilled.\nReferral ID: ${referralId}\nTarget Capability: ${selectedReferral.targetCapability}\nRecord ID: ${record.id}\nCredential ID: ${credential.id}`
           );
-          void notifyProviderApi('/referrals/fulfill', {
-            providerId: provider.id,
-            providerType: provider.type,
+          void notifyProviderApi({
+            exchangeType: 'referral-fulfill',
             subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
             actionId,
             actionLabel: action.label,
-            referralId,
-            targetCapability: selectedReferral.targetCapability,
-            originProviderId: selectedReferral.fromProviderId,
-            recordId: record.id,
-            credentialId: credential.id
+            credentialVc,
+            payload: {
+              referralId,
+              targetCapability: selectedReferral.targetCapability,
+              originProviderId: selectedReferral.fromProviderId,
+              recordId: record.id,
+              credentialId: credential.id
+            }
           });
         } else if (directCredentialActionCatalog[actionId]) {
           const definition = directCredentialActionCatalog[actionId];
@@ -1033,11 +1410,16 @@
             subjectWebId: currentSubjectWebId,
             issuerProviderId: provider.id,
             type: definition.credentialType,
+            claims: {
+              recordId: record.id,
+              actionId
+            },
             metadata: {
               recordId: record.id,
               actionId
             }
           });
+          const credentialVc = credentialVcForEntry(credential);
 
           store.addEvent({
             type: 'credential-issued',
@@ -1045,21 +1427,29 @@
             subjectWebId: currentSubjectWebId,
             actorWebId: staffWebId,
             message: `${provider.label}: ${definition.summary}`,
-            payload: { actionId, recordId: record.id, credentialId: credential.id }
+            payload: {
+              actionId,
+              recordId: record.id,
+              credentialId: credential.id,
+              credentialVc
+            }
           });
 
           setResult(
             byId('staffActionResult'),
             `Credential issued.\nRecord ID: ${record.id}\nCredential ID: ${credential.id}`
           );
-          void notifyProviderApi('/actions/staff', {
-            providerId: provider.id,
-            providerType: provider.type,
+          void notifyProviderApi({
+            exchangeType: 'staff-action',
             subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
             actionId,
             actionLabel: action.label,
-            recordId: record.id,
-            credentialId: credential.id
+            credentialVc,
+            payload: {
+              recordId: record.id,
+              credentialId: credential.id
+            }
           });
         } else if (actionId === 'request_shared_record_access') {
           const consents = store.listConsents(currentSubjectWebId, { includeRevoked: false });
@@ -1084,14 +1474,16 @@
               ? `Shared record access check logged with ${activeForProvider.length} active consent record(s).`
               : 'Shared record access check logged. No active consent found for this provider.'
           );
-          void notifyProviderApi('/actions/staff', {
-            providerId: provider.id,
-            providerType: provider.type,
+          void notifyProviderApi({
+            exchangeType: 'staff-action',
             subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
             actionId,
             actionLabel: action.label,
-            activeConsentCount: activeForProvider.length,
-            consentIds: activeForProvider.map((entry) => entry.id)
+            payload: {
+              activeConsentCount: activeForProvider.length,
+              consentIds: activeForProvider.map((entry) => entry.id)
+            }
           });
         } else {
           const record = store.addRecord({
@@ -1111,6 +1503,7 @@
               subjectWebId: currentSubjectWebId,
               issuerProviderId: provider.id,
               type: 'ImagingResultCredential',
+              claims: { recordId: record.id },
               metadata: { recordId: record.id }
             });
           }
@@ -1120,6 +1513,7 @@
               subjectWebId: currentSubjectWebId,
               issuerProviderId: provider.id,
               type: 'EmergencyTreatmentCredential',
+              claims: { recordId: record.id },
               metadata: { recordId: record.id }
             });
           }
@@ -1134,13 +1528,15 @@
           });
 
           setResult(byId('staffActionResult'), `Recorded staff action: ${action.label}\nRecord ID: ${record.id}`);
-          void notifyProviderApi('/actions/staff', {
-            providerId: provider.id,
-            providerType: provider.type,
+          void notifyProviderApi({
+            exchangeType: 'staff-action',
             subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
             actionId,
             actionLabel: action.label,
-            recordId: record.id
+            payload: {
+              recordId: record.id
+            }
           });
         }
 
@@ -1180,6 +1576,7 @@
 
         const targetLabel = targetProviderId ? providerLabelFromId(targetProviderId) : 'Any provider you authorize later';
         const consentText = issued.accessPass.consentMode === 'long_term' ? 'long-term reusable pass' : 'one-time pass';
+        const issuedCredentialVc = issued.credential ? credentialVcForEntry(issued.credential) : null;
         store.addEvent({
           type: 'record-access-pass-issued',
           providerId: provider.id,
@@ -1191,7 +1588,8 @@
             sourceRecordId: issued.accessPass.sourceRecordId,
             targetProviderId: targetProviderId || '',
             consentMode: issued.accessPass.consentMode,
-            credentialId: issued.credential ? issued.credential.id : ''
+            credentialId: issued.credential ? issued.credential.id : '',
+            credentialVc: issuedCredentialVc
           }
         });
 
@@ -1200,16 +1598,20 @@
           `Record access pass issued.\nPass ID: ${issued.accessPass.id}\nSource Record ID: ${issued.accessPass.sourceRecordId}\nTarget Provider: ${targetLabel}\nConsent: ${consentText}\nCredential ID: ${issued.credential ? issued.credential.id : 'n/a'}`
         );
 
-        void notifyProviderApi('/actions/self', {
-          providerId: provider.id,
-          providerType: provider.type,
+        void notifyProviderApi({
+          exchangeType: 'record-access-pass-issue',
           subjectWebId: currentSubjectWebId,
+          actorWebId: currentSubjectWebId,
           actionId: 'issue_record_access_pass',
           actionLabel: 'Issue Record Access Pass',
-          accessPassId: issued.accessPass.id,
-          sourceRecordId: issued.accessPass.sourceRecordId,
-          targetProviderId: targetProviderId || '',
-          consentMode: issued.accessPass.consentMode
+          credentialVc: issuedCredentialVc,
+          payload: {
+            accessPassId: issued.accessPass.id,
+            sourceRecordId: issued.accessPass.sourceRecordId,
+            targetProviderId: targetProviderId || '',
+            consentMode: issued.accessPass.consentMode,
+            credentialId: issued.credential ? issued.credential.id : ''
+          }
         });
 
         refreshRecordAccessWidgets();
@@ -1260,16 +1662,18 @@
           `Access pass saved to provider pod.\nPass ID: ${saved.savedLink.accessPassId}\nSource Provider: ${providerLabelFromId(saved.savedLink.sourceProviderId)}\nSource Record ID: ${saved.savedLink.sourceRecordId}\nHandle: ${saved.savedLink.accessHandle}`
         );
 
-        void notifyProviderApi('/actions/staff', {
-          providerId: provider.id,
-          providerType: provider.type,
+        void notifyProviderApi({
+          exchangeType: 'record-access-pass-save',
           subjectWebId: currentSubjectWebId,
+          actorWebId: staffWebId,
           actionId: 'save_record_access_pass',
           actionLabel: 'Save Record Access Pass to Provider Pod',
-          accessPassId: saved.savedLink.accessPassId,
-          sourceProviderId: saved.savedLink.sourceProviderId,
-          sourceRecordId: saved.savedLink.sourceRecordId,
-          accessHandle: saved.savedLink.accessHandle
+          payload: {
+            accessPassId: saved.savedLink.accessPassId,
+            sourceProviderId: saved.savedLink.sourceProviderId,
+            sourceRecordId: saved.savedLink.sourceRecordId,
+            accessHandle: saved.savedLink.accessHandle
+          }
         });
 
         refreshRecordAccessWidgets();
@@ -1291,12 +1695,15 @@
               providerType: provider.type
             }
           });
-          void notifyProviderApi('/session/login', {
-            providerId: provider.id,
-            providerType: provider.type,
+          void notifyProviderApi({
+            exchangeType: 'session-login',
             subjectWebId: currentSubjectWebId,
             actorWebId: currentSubjectWebId,
-            mode: 'login'
+            actionId: 'session_login',
+            actionLabel: 'Session Login',
+            payload: {
+              mode: 'login'
+            }
           });
         }
 
@@ -1324,13 +1731,16 @@
           message: `${provider.label}: emergency override created ${identity.displayName}`,
           severity: 'warning'
         });
-        void notifyProviderApi('/session/login', {
-          providerId: provider.id,
-          providerType: provider.type,
+        void notifyProviderApi({
+          exchangeType: 'session-login',
           subjectWebId: currentSubjectWebId,
           actorWebId: staffWebId,
-          mode: 'emergency_override',
-          displayName: identity.displayName
+          actionId: 'session_emergency_override',
+          actionLabel: 'Session Emergency Override',
+          payload: {
+            mode: 'emergency_override',
+            displayName: identity.displayName
+          }
         });
 
         refreshLoginState();

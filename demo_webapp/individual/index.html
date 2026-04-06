@@ -16,6 +16,7 @@
         <div class="title-row">
           <h1>Individual Services View</h1>
           <button id="resetDemoDataBtn" class="demo-action-btn" type="button">Reset Demo Data</button>
+          <button id="resetTutorialBtn" class="demo-action-btn" type="button">Reset Tutorial</button>
           <button id="downloadAuditLogBtn" class="demo-action-btn" type="button">Download Non-Identifiable Audit Log</button>
         </div>
       </div>
@@ -29,16 +30,6 @@
         <h2>Demo Walkthrough</h2>
         <p>Pick a chain to start a guided tutorial. Click the highlighted controls in each card to move forward.</p>
         <div id="walkthroughButtons" class="walkthrough-buttons"></div>
-        <section id="walkthroughPanel" class="walkthrough-panel" hidden>
-          <h3 id="walkthroughTitle"></h3>
-          <p id="walkthroughDescription"></p>
-          <p id="walkthroughProgress" class="walkthrough-progress"></p>
-          <p id="walkthroughInstruction" class="walkthrough-instruction"></p>
-          <ol id="walkthroughSteps" class="walkthrough-steps"></ol>
-          <div class="walkthrough-controls">
-            <button id="walkthroughRestartBtn" class="demo-action-btn walkthrough-btn secondary" type="button">Restart Tutorial</button>
-          </div>
-        </section>
       </aside>
 
       <section class="demo-guide" aria-label="How to use the individual demo">
@@ -47,7 +38,7 @@
         <p>Each card is a different organization. The person controls what gets shared, and each organization stays responsible for its own records.</p>
         <p>The walkthrough set is grounded in common city pressure points: housing bottlenecks, high referral volume, continuing outreach demand, and document-readiness gaps.</p>
         <ol>
-          <li>Start with <strong>Sovereign's Data</strong>. This is the person's home base for records, permissions, and trusted credentials.</li>
+          <li>Start with <strong>Sovereign's Data</strong>. This is the person's home base for records, permissions, and trusted credentials. The data can live in a managed service or be taken with the person and self-hosted so they stay fully in charge. Open <strong>Sovereign Solid Pod</strong> to see direct record storage, or open <strong>Sovereign Credential Manager</strong> to see the credential and consent view in a more structured format.</li>
           <li>Use <strong>Identity and Proof Document VC Issuers</strong> to convert common documents (state ID, passport, birth certificate, utility bill, proof of residency, social security) into trusted digital credentials.</li>
           <li>Browse by business type: open a 2-digit sector, then open a 3-digit group to see organizations in that area.</li>
           <li>Run actions inside a card. Some actions create a handoff to another organization (a referral). Then go to the receiving organization and use <strong>Fulfill selected referral</strong> to complete the next step.</li>
@@ -105,29 +96,35 @@
       return;
     }
 
-    const buildEndpointOptions = (endpointKeys, fallbackLabel) => {
+    const buildEndpointOptions = (endpointKeys, serviceTitle) => {
       if (!Array.isArray(endpointKeys) || endpointKeys.length === 0) {
-        return [{ label: fallbackLabel, url: 'about:blank' }];
+        throw new Error(`No endpoint keys configured for service: ${serviceTitle}`);
       }
 
-      const resolved = endpointKeys
-        .map((key) => endpointDirectory[key])
-        .filter(Boolean)
-        .map((entry) => ({
+      const resolved = endpointKeys.map((key) => {
+        const entry = endpointDirectory[key];
+        if (!entry || typeof entry !== 'object') {
+          throw new Error(`Endpoint directory key not found: ${key}`);
+        }
+        return {
           label: entry.label,
           url: entry.url,
           type: entry.type,
           taxonomies: entry.taxonomies || null
-        }));
+        };
+      });
 
-      return resolved.length > 0 ? resolved : [{ label: fallbackLabel, url: 'about:blank' }];
+      if (resolved.length === 0) {
+        throw new Error(`No endpoint options resolved for service: ${serviceTitle}`);
+      }
+      return resolved;
     };
 
     const fixedGroups = [
       {
         id: 'sovereign-data',
         title: "Sovereign's Data",
-        note: 'Identity and credential core used across all downstream service workflows.',
+        note: 'This is the person-owned data layer. Records and credentials can stay in a managed service or move with the person for self-hosting. Open Sovereign Solid Pod for direct data storage, or Sovereign Credential Manager for a structured credential and consent view.',
         span: 8,
         collapsible: false,
         services: [
@@ -182,6 +179,22 @@
 
     const frameRegistry = [];
     const demoStore = window.SovereignDemoStore;
+    const requiredDemoStoreMethods = [
+      'getState',
+      'resetDemoData',
+      'subscribe',
+      'listEvents',
+      'credentialPrimaryType',
+      'credentialIssuerProviderId',
+      'credentialSubjectWebId',
+      'credentialIssuedAt',
+      'credentialAsW3cVc'
+    ];
+    const hasRequiredDemoStore = demoStore && requiredDemoStoreMethods.every((method) => typeof demoStore[method] === 'function');
+    if (!hasRequiredDemoStore) {
+      document.body.innerHTML = '<main class="container wide"><p>Demo store failed strict initialization checks.</p></main>';
+      return;
+    }
 
     const sanitizeId = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -190,16 +203,6 @@
       if (serviceCount <= 1) return 12;
       if (serviceCount === 2) return 6;
       return 4;
-    };
-
-    const formatTaxonomyText = (taxonomies) => {
-      if (!taxonomies || typeof taxonomies !== 'object') return '';
-      const parts = [
-        taxonomies.naics ? `NAICS: ${taxonomies.naics}` : '',
-        taxonomies.airs211 ? `211/AIRS: ${taxonomies.airs211}` : '',
-        taxonomies.hudHmis ? `HUD HMIS: ${taxonomies.hudHmis}` : ''
-      ].filter(Boolean);
-      return parts.join('\n');
     };
 
     const applyFrameSource = (record, nextUrl) => {
@@ -227,9 +230,6 @@
 
       const toolbar = document.createElement('div');
       toolbar.className = 'service-toolbar';
-      const taxonomyEl = document.createElement('p');
-      taxonomyEl.className = 'service-taxonomy';
-      taxonomyEl.hidden = true;
 
       const endpointOptions = buildEndpointOptions(service.endpointKeys, service.title);
       let selectEl = null;
@@ -262,19 +262,7 @@
       frame.title = service.title;
       frame.loading = 'lazy';
 
-      const setTaxonomyByUrl = (url) => {
-        const normalizedUrl = String(url || '').trim() || 'about:blank';
-        const selected = endpointOptions.find((entry) => {
-          const entryUrl = String(entry.url || '').trim() || 'about:blank';
-          return entryUrl === normalizedUrl;
-        }) || endpointOptions[0];
-        const taxonomyText = formatTaxonomyText(selected && selected.taxonomies);
-        taxonomyEl.textContent = taxonomyText;
-        taxonomyEl.hidden = !taxonomyText;
-      };
-
       card.appendChild(toolbar);
-      card.appendChild(taxonomyEl);
       card.appendChild(frame);
 
       const record = {
@@ -294,12 +282,10 @@
       if (selectEl) {
         selectEl.addEventListener('change', () => {
           applyFrameSource(record, selectEl.value);
-          setTaxonomyByUrl(selectEl.value);
         });
       }
 
       applyFrameSource(record, record.defaultUrl);
-      setTaxonomyByUrl(record.defaultUrl);
       frameRegistry.push(record);
       return card;
     };
@@ -489,26 +475,53 @@
       return counts;
     };
 
-    const buildNonIdentifiableAuditLog = () => {
-      const fallbackState = {
-        meta: {},
-        providers: [],
-        events: [],
-        records: [],
-        referrals: [],
-        consents: [],
-        credentials: []
+    const credentialPrimaryTypeForEntry = (entry) => String(demoStore.credentialPrimaryType(entry) || '').trim();
+    const credentialIssuerProviderIdForEntry = (entry) => String(demoStore.credentialIssuerProviderId(entry) || '').trim();
+    const credentialSubjectWebIdForEntry = (entry) => String(demoStore.credentialSubjectWebId(entry) || '').trim();
+    const credentialIssuedAtForEntry = (entry) => String(demoStore.credentialIssuedAt(entry) || '').trim();
+    const credentialVcForEntry = (entry) => demoStore.credentialAsW3cVc(entry);
+    const credentialAuditSummaryForEntry = (entry) => {
+      const vc = credentialVcForEntry(entry);
+      if (!vc || typeof vc !== 'object') {
+        return {
+          available: false
+        };
+      }
+      const types = Array.isArray(vc.type)
+        ? vc.type.filter((value) => String(value || '').trim() && String(value || '').trim() !== 'VerifiableCredential')
+        : [];
+      const status = vc.credentialStatus && typeof vc.credentialStatus === 'object'
+        ? vc.credentialStatus
+        : {};
+      return {
+        available: true,
+        contextCount: Array.isArray(vc['@context']) ? vc['@context'].length : 0,
+        vcTypes: types,
+        hasProofJwt: Boolean(vc.proof && typeof vc.proof === 'object' && String(vc.proof.jwt || '').trim()),
+        statusPurpose: String(status.statusPurpose || ''),
+        statusListIndex: String(status.statusListIndex || ''),
+        hasStatusListPointer: Boolean(String(status.statusListCredential || '').trim())
       };
-      const state = demoStore && typeof demoStore.getState === 'function'
-        ? (demoStore.getState() || fallbackState)
-        : fallbackState;
+    };
 
-      const providers = Array.isArray(state.providers) ? state.providers : [];
-      const eventsRaw = Array.isArray(state.events) ? state.events : [];
-      const recordsRaw = Array.isArray(state.records) ? state.records : [];
-      const referralsRaw = Array.isArray(state.referrals) ? state.referrals : [];
-      const consentsRaw = Array.isArray(state.consents) ? state.consents : [];
-      const credentialsRaw = Array.isArray(state.credentials) ? state.credentials : [];
+    const buildNonIdentifiableAuditLog = () => {
+      const state = demoStore.getState();
+      if (!state || typeof state !== 'object') {
+        throw new Error('Demo state is unavailable for audit export.');
+      }
+      if (!Array.isArray(state.providers) || !Array.isArray(state.events) || !Array.isArray(state.records)) {
+        throw new Error('Demo state is missing required collections for audit export.');
+      }
+      if (!Array.isArray(state.referrals) || !Array.isArray(state.consents) || !Array.isArray(state.credentials)) {
+        throw new Error('Demo state credential or referral collections are invalid.');
+      }
+
+      const providers = state.providers;
+      const eventsRaw = state.events;
+      const recordsRaw = state.records;
+      const referralsRaw = state.referrals;
+      const consentsRaw = state.consents;
+      const credentialsRaw = state.credentials;
 
       const aliasForIdentity = createIdentityAliaser();
 
@@ -521,8 +534,7 @@
           severity: entry.severity || 'info',
           providerId: entry.providerId || '',
           subjectRef: aliasForIdentity(entry.subjectWebId),
-          actorRef: aliasForIdentity(entry.actorWebId),
-          context: sanitizeContextValue(entry.payload || {}, 'payload')
+          actorRef: aliasForIdentity(entry.actorWebId)
         }));
 
       const records = recordsRaw
@@ -532,10 +544,8 @@
           timestamp: entry.createdAt || '',
           providerId: entry.providerId || '',
           category: entry.category || 'general',
-          summary: String(entry.summary || '').trim() || 'Service action recorded.',
           subjectRef: aliasForIdentity(entry.subjectWebId),
-          actorRef: aliasForIdentity(entry.actorWebId),
-          details: sanitizeContextValue(entry.details || {}, 'details')
+          actorRef: aliasForIdentity(entry.actorWebId)
         }));
 
       const referrals = referralsRaw
@@ -550,8 +560,7 @@
           issuedByRef: aliasForIdentity(entry.issuedByWebId),
           subjectRef: aliasForIdentity(entry.subjectWebId),
           fulfilledByProviderId: entry.fulfilledByProviderId || '',
-          fulfilledAt: entry.fulfilledAt || '',
-          details: sanitizeContextValue(entry.details || {}, 'details')
+          fulfilledAt: entry.fulfilledAt || ''
         }));
 
       const consents = consentsRaw
@@ -571,15 +580,15 @@
 
       const credentials = credentialsRaw
         .slice()
-        .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
+        .sort((a, b) => String(credentialIssuedAtForEntry(a)).localeCompare(String(credentialIssuedAtForEntry(b))))
         .map((entry) => ({
           credentialId: entry.id || '',
-          type: entry.type || '',
-          issuerProviderId: entry.issuerProviderId || '',
-          subjectRef: aliasForIdentity(entry.subjectWebId),
+          type: credentialPrimaryTypeForEntry(entry),
+          issuerProviderId: credentialIssuerProviderIdForEntry(entry),
+          subjectRef: aliasForIdentity(credentialSubjectWebIdForEntry(entry)),
           status: entry.status || '',
-          issuedAt: entry.createdAt || '',
-          metadata: sanitizeContextValue(entry.metadata || {}, 'metadata')
+          issuedAt: credentialIssuedAtForEntry(entry),
+          vcSummary: credentialAuditSummaryForEntry(entry)
         }));
 
       const providerIds = Array.from(new Set(providers.map((entry) => entry.id).filter(Boolean)));
@@ -656,9 +665,7 @@
         resetBtn.textContent = 'Resetting Demo Data...';
       }
 
-      if (demoStore && typeof demoStore.resetDemoData === 'function') {
-        demoStore.resetDemoData();
-      }
+      demoStore.resetDemoData();
 
       resetAllFramesToDefaults();
       tutorialController.handleDemoDataReset();
@@ -669,20 +676,30 @@
       }
     };
 
+    const handleResetTutorial = () => {
+      const resetTutorialBtn = document.getElementById('resetTutorialBtn');
+      if (resetTutorialBtn) {
+        resetTutorialBtn.disabled = true;
+        resetTutorialBtn.textContent = 'Resetting Tutorial...';
+      }
+
+      tutorialController.dismissTutorialCompletionAndReset();
+
+      if (resetTutorialBtn) {
+        resetTutorialBtn.disabled = false;
+        resetTutorialBtn.textContent = 'Reset Tutorial';
+      }
+    };
+
     renderServiceGroups();
     tutorialController.initialize();
 
     const resetBtn = document.getElementById('resetDemoDataBtn');
     if (resetBtn) resetBtn.addEventListener('click', handleResetDemoData);
+    const resetTutorialBtn = document.getElementById('resetTutorialBtn');
+    if (resetTutorialBtn) resetTutorialBtn.addEventListener('click', handleResetTutorial);
     const auditBtn = document.getElementById('downloadAuditLogBtn');
     if (auditBtn) auditBtn.addEventListener('click', handleDownloadAuditLog);
-
-    const walkthroughRestartBtn = document.getElementById('walkthroughRestartBtn');
-    if (walkthroughRestartBtn) {
-      walkthroughRestartBtn.addEventListener('click', () => {
-        tutorialController.restartActiveTutorial();
-      });
-    }
 
     const tutorialCompletionModal = document.getElementById('tutorialCompletionModal');
     const tutorialCompletionCloseBtn = document.getElementById('tutorialCompletionCloseBtn');
@@ -705,16 +722,81 @@
       }
     });
 
-    if (demoStore && typeof demoStore.subscribe === 'function' && typeof demoStore.listEvents === 'function') {
-      demoStore.subscribe(() => {
-        tutorialController.handleStoreUpdate();
-      });
-    }
+    demoStore.subscribe(() => {
+      tutorialController.handleStoreUpdate();
+    });
+
+    const resolveFrameRecordBySourceWindow = (sourceWindow) => {
+      if (!sourceWindow) return null;
+      for (let index = 0; index < frameRegistry.length; index += 1) {
+        const entry = frameRegistry[index];
+        if (!entry || !entry.frame) continue;
+        if (entry.frame.contentWindow === sourceWindow) {
+          return entry;
+        }
+      }
+      return null;
+    };
+
+    const providerIdFromEndpointUrl = (rawUrl) => {
+      const href = String(rawUrl || '').trim();
+      if (!href || href === 'about:blank') return '';
+      try {
+        const parsed = new URL(href, window.location.href);
+        const pathname = String(parsed.pathname || '').toLowerCase();
+        if (pathname.endsWith('/services/provider/index.html')) {
+          return String(parsed.searchParams.get('provider') || '').trim();
+        }
+        if (pathname.endsWith('/services/verifier/index.html')) {
+          const profile = String(parsed.searchParams.get('profile') || '').trim();
+          return profile ? `verifier_${profile}` : '';
+        }
+      } catch {
+        return '';
+      }
+      return '';
+    };
+
+    const expectedProviderIdForRecord = (record) => {
+      if (!record || !record.frame) return '';
+      const activeSrc = String(
+        (record.frame.dataset && record.frame.dataset.activeSrc)
+        || record.frame.getAttribute('src')
+        || ''
+      ).trim();
+      const fromActive = providerIdFromEndpointUrl(activeSrc);
+      if (fromActive) return fromActive;
+      if (record.selector && typeof record.selector.value === 'string') {
+        const fromSelector = providerIdFromEndpointUrl(record.selector.value);
+        if (fromSelector) return fromSelector;
+      }
+      return providerIdFromEndpointUrl(record.defaultUrl);
+    };
 
     window.addEventListener('message', (event) => {
+      if (!event) return;
       const data = event && event.data ? event.data : null;
-      if (!data || data.channel !== tutorialController.channel) return;
-      tutorialController.handleProviderStateMessage(data);
+      if (!data || typeof data !== 'object' || Array.isArray(data)) return;
+      if (data.channel !== tutorialController.channel) return;
+      if (data.type !== 'provider-state' && data.type !== 'tutorial-event') return;
+
+      const sourceRecord = resolveFrameRecordBySourceWindow(event.source);
+      if (!sourceRecord) return;
+      const expectedProviderId = expectedProviderIdForRecord(sourceRecord);
+
+      if (data.type === 'provider-state') {
+        if (!expectedProviderId) return;
+        if (!data.providerId) return;
+        if (String(data.providerId).trim() !== expectedProviderId) return;
+        tutorialController.handleProviderStateMessage(data);
+        return;
+      }
+      if (data.type === 'tutorial-event' && data.event && typeof data.event === 'object') {
+        if (!expectedProviderId) return;
+        const eventProviderId = String((data.event && data.event.providerId) || '').trim();
+        if (expectedProviderId && eventProviderId && eventProviderId !== expectedProviderId) return;
+        tutorialController.handleExternalTutorialEvent(data.event);
+      }
     });
     })();
   </script>

@@ -81,6 +81,10 @@
       const byId = (id) => document.getElementById(id);
       let currentWebId = '';
 
+      const credentialPrimaryTypeForEntry = (entry) => String(store.credentialPrimaryType(entry) || '').trim() || 'Credential';
+      const credentialIssuerProviderIdForEntry = (entry) => String(store.credentialIssuerProviderId(entry) || '').trim();
+      const credentialIssuedAtForEntry = (entry) => String(store.credentialIssuedAt(entry) || '').trim();
+
       const fillSelect = (selectEl, rows, placeholder) => {
         selectEl.innerHTML = '';
         if (!rows.length) {
@@ -190,7 +194,9 @@
 
         setList(
           byId('credentialList'),
-          credentials.slice(0, 30).map((entry) => `${entry.createdAt} | ${entry.type} | issuer: ${entry.issuerProviderId || 'n/a'}`),
+          credentials.slice(0, 30).map((entry) => (
+            `${credentialIssuedAtForEntry(entry)} | ${credentialPrimaryTypeForEntry(entry)} | issuer: ${credentialIssuerProviderIdForEntry(entry) || 'n/a'}`
+          )),
           'No credentials for this identity.'
         );
 

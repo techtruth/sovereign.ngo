@@ -14,6 +14,19 @@ const highlightStyleKeys = [
 ];
 const TUTORIAL_CHANNEL = 'sovereign_tutorial';
 
+const resolveParentTargetOrigin = () => {
+  const referrer = String((typeof document !== 'undefined' && document.referrer) || '').trim();
+  if (!referrer) return '*';
+  try {
+    const parsed = new URL(referrer, window.location.href);
+    const protocol = String(parsed.protocol || '').toLowerCase();
+    if (protocol === 'http:' || protocol === 'https:') return parsed.origin;
+  } catch {
+    // ignore parse errors and fall back to wildcard for local file mode
+  }
+  return '*';
+};
+
 const clearTutorialInlineStyle = (el) => {
   if (!el || !el.style) return;
   highlightStyleKeys.forEach((key) => {
@@ -35,6 +48,7 @@ const createTutorialBridge = (options) => {
   const onClearControl = typeof config.onClearControl === 'function' ? config.onClearControl : null;
   const onApplyControl = typeof config.onApplyControl === 'function' ? config.onApplyControl : null;
   const statePayload = typeof config.statePayload === 'function' ? config.statePayload : null;
+  const parentTargetOrigin = resolveParentTargetOrigin();
 
   const clearHighlight = () => {
     if (!byId) return;
@@ -76,15 +90,19 @@ const createTutorialBridge = (options) => {
     if (!payload || typeof payload !== 'object') return;
 
     try {
-      window.parent.postMessage({ channel: TUTORIAL_CHANNEL, ...payload }, '*');
+      window.parent.postMessage({ channel: TUTORIAL_CHANNEL, ...payload }, parentTargetOrigin);
     } catch {
       // no-op
     }
   };
 
   const onMessage = (event) => {
+    if (!event) return;
+    if (event.source !== window.parent) return;
     const data = event && event.data ? event.data : null;
-    if (!data || data.channel !== TUTORIAL_CHANNEL) return;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return;
+    if (data.channel !== TUTORIAL_CHANNEL) return;
+    if (data.type !== 'clear-highlight' && data.type !== 'highlight-control') return;
     if (data.type === 'clear-highlight') {
       clearHighlight();
       return;

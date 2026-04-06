@@ -1,28 +1,22 @@
 const REALM = 'Sovereign Demo';
-const DEFAULT_USERNAME = 'demo';
-const DEFAULT_PASSWORD = 'sovereign';
 
-function unauthorizedResponse() {
-  return new Response('Authentication required.', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': `Basic realm="${REALM}", charset="UTF-8"`,
-      'Cache-Control': 'no-store'
-    }
-  });
+function text(value) {
+  if (value === null || value === undefined) return '';
+  return String(value).trim();
 }
 
 function parseBasicAuthorization(headerValue) {
-  if (!headerValue || !headerValue.startsWith('Basic ')) {
+  const normalized = text(headerValue);
+  if (!normalized.startsWith('Basic ')) {
     return null;
   }
 
-  const encoded = headerValue.slice(6).trim();
+  const encoded = normalized.slice(6).trim();
   if (!encoded) {
     return null;
   }
 
-  let decoded;
+  let decoded = '';
   try {
     decoded = atob(encoded);
   } catch {
@@ -52,26 +46,50 @@ function timingSafeEqual(left, right) {
   return mismatch === 0;
 }
 
-function shouldProtect(request) {
-  const pathname = new URL(request.url).pathname.toLowerCase();
-  return pathname === '/' || pathname === '/index.html';
+function basicAuthChallenge() {
+  return new Response('Authentication required.', {
+    status: 401,
+    headers: {
+      'WWW-Authenticate': `Basic realm="${REALM}", charset="UTF-8"`,
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
+function misconfiguredResponse() {
+  return new Response('Basic auth is not configured.', {
+    status: 500,
+    headers: {
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
+function shouldProtectPath(pathname) {
+  const normalized = text(pathname).toLowerCase();
+  return normalized === '/' || normalized === '/index.html';
 }
 
 export async function onRequest(context) {
-  if (!shouldProtect(context.request)) {
+  const url = new URL(context.request.url);
+  if (!shouldProtectPath(url.pathname)) {
     return context.next();
   }
 
-  const expectedUsername = context.env.BASIC_AUTH_USER || DEFAULT_USERNAME;
-  const expectedPassword = context.env.BASIC_AUTH_PASS || DEFAULT_PASSWORD;
-  const parsed = parseBasicAuthorization(context.request.headers.get('Authorization'));
+  const expectedUsername = text(context.env.BASIC_AUTH_USER);
+  const expectedPassword = text(context.env.BASIC_AUTH_PASS);
+  if (!expectedUsername || !expectedPassword) {
+    return misconfiguredResponse();
+  }
+
+  const parsed = parseBasicAuthorization(context.request.headers.get('authorization'));
   const valid =
     parsed &&
     timingSafeEqual(parsed.username, expectedUsername) &&
     timingSafeEqual(parsed.password, expectedPassword);
 
   if (!valid) {
-    return unauthorizedResponse();
+    return basicAuthChallenge();
   }
 
   const response = await context.next();

@@ -153,12 +153,6 @@
         "handoff-initiation",
         "transfer-acceptance"
       ]
-    },
-    "combined": {
-      "route": "/combined/",
-      "focus": [
-        "end-to-end-transaction-walkthrough"
-      ]
     }
   }
 }

@@ -12,15 +12,21 @@
 
   const createLocalStorageBackend = (options) => {
     const config = options && typeof options === 'object' ? options : {};
-    const storageKey = String(config.storageKey || 'sovereign_demo_state_v2');
-    const eventKey = String(config.eventKey || 'sovereign_demo_event_v2');
-    const channelName = String(config.channelName || 'sovereign_demo_channel_v2');
+    const storageKey = String(config.storageKey || 'sovereign_demo_state');
+    const eventKey = String(config.eventKey || 'sovereign_demo_event');
+    const channelName = String(config.channelName || 'sovereign_demo_channel');
     const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(channelName) : null;
 
-    const readState = () => parseJson(localStorage.getItem(storageKey));
+    const readState = () => {
+      const sessionRaw = sessionStorage.getItem(storageKey);
+      if (sessionRaw) {
+        return parseJson(sessionRaw);
+      }
+      return null;
+    };
 
     const writeState = (state) => {
-      localStorage.setItem(storageKey, JSON.stringify(state));
+      sessionStorage.setItem(storageKey, JSON.stringify(state));
     };
 
     const notify = (payload) => {

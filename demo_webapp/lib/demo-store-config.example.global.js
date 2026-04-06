@@ -12,7 +12,7 @@
 // window.SovereignDemoStoreConfig = {
 //   backend: {
 //     mode: 'solid-pod',
-//     podBaseUrl: 'http://localhost:8180/',
+//     podBaseUrl: 'https://localhost:8180/',
 //     resourcePath: '/sovereign/demo/state.json',
 //     // bearerToken: 'optional-token',
 //     // fetchInit: { credentials: 'include' }

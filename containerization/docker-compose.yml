@@ -8,12 +8,18 @@ x-provider-api: &provider_api
     context: ..
     dockerfile: containerization/Dockerfile.provider-api
   image: sovereign-provider-api:latest
+  volumes:
+    - ./certs/dev-localhost.crt:/etc/sovereign/tls/internal.crt:ro
+    - ./certs/dev-localhost.key:/etc/sovereign/tls/internal.key:ro
 
 x-provider-pod: &provider_pod
   build:
     context: ..
     dockerfile: containerization/Dockerfile.solid-pod
   image: sovereign-provider-pod:latest
+  volumes:
+    - ./certs/dev-localhost.crt:/etc/sovereign/tls/internal.crt:ro
+    - ./certs/dev-localhost.key:/etc/sovereign/tls/internal.key:ro
   tmpfs:
     - /data
 
@@ -25,7 +31,10 @@ services:
     image: sovereign-holder-sovereign:latest
     container_name: sovereign-holder-sovereign
     environment:
-      CSS_BASE_URL: http://localhost:8180/
+      CSS_BASE_URL: https://localhost:8180/
+    volumes:
+      - ./certs/dev-localhost.crt:/etc/sovereign/tls/internal.crt:ro
+      - ./certs/dev-localhost.key:/etc/sovereign/tls/internal.key:ro
     tmpfs:
       - /data
 
@@ -177,10 +186,12 @@ services:
       - provider_pod_highland_workforce_training_institute
     volumes:
       - ./sovereign-gateway.nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs/dev-localhost.crt:/etc/nginx/certs/dev-localhost.crt:ro
+      - ./certs/dev-localhost.key:/etc/nginx/certs/dev-localhost.key:ro
       - ../website:/srv/website:ro
       - ../demo_webapp:/srv/demo_webapp:ro
     ports:
-      - "8180:80"
+      - "8180:443"
 
   provider_web_nolichucky_family_clinic:
     <<: *provider_web
@@ -197,13 +208,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:nolichucky_family_clinic'
       PROVIDER_LABEL: 'Nolichucky Family Clinic (621111 - Offices of Physicians)'
       PROVIDER_TYPE: 'primary-care'
-      PROVIDER_POD_URL: 'http://provider_pod_nolichucky_family_clinic:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_nolichucky_family_clinic:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_nolichucky_family_clinic:
     <<: *provider_pod
     container_name: sovereign-provider-pod-nolichucky-family-clinic
     environment:
-      CSS_BASE_URL: 'http://provider_pod_nolichucky_family_clinic:3000/'
+      CSS_BASE_URL: 'https://provider_pod_nolichucky_family_clinic:3000/'
 
   provider_web_riverbend_dental_clinic:
     <<: *provider_web
@@ -220,13 +232,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:riverbend_dental_clinic'
       PROVIDER_LABEL: 'Riverbend Dental Clinic (621210 - Offices of Dentists)'
       PROVIDER_TYPE: 'dental-care-services'
-      PROVIDER_POD_URL: 'http://provider_pod_riverbend_dental_clinic:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_riverbend_dental_clinic:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_riverbend_dental_clinic:
     <<: *provider_pod
     container_name: sovereign-provider-pod-riverbend-dental-clinic
     environment:
-      CSS_BASE_URL: 'http://provider_pod_riverbend_dental_clinic:3000/'
+      CSS_BASE_URL: 'https://provider_pod_riverbend_dental_clinic:3000/'
 
   provider_web_riverstone_radiology_center:
     <<: *provider_web
@@ -243,13 +256,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:riverstone_radiology_center'
       PROVIDER_LABEL: 'Riverstone Radiology Center (621512 - Diagnostic Imaging Centers)'
       PROVIDER_TYPE: 'imaging-services'
-      PROVIDER_POD_URL: 'http://provider_pod_riverstone_radiology_center:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_riverstone_radiology_center:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_riverstone_radiology_center:
     <<: *provider_pod
     container_name: sovereign-provider-pod-riverstone-radiology-center
     environment:
-      CSS_BASE_URL: 'http://provider_pod_riverstone_radiology_center:3000/'
+      CSS_BASE_URL: 'https://provider_pod_riverstone_radiology_center:3000/'
 
   provider_web_summitview_emergency_department:
     <<: *provider_web
@@ -266,13 +280,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:summitview_emergency_department'
       PROVIDER_LABEL: 'Summitview Emergency Department (622110 - General Medical and Surgical Hospitals)'
       PROVIDER_TYPE: 'acute-emergency-care'
-      PROVIDER_POD_URL: 'http://provider_pod_summitview_emergency_department:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_summitview_emergency_department:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_summitview_emergency_department:
     <<: *provider_pod
     container_name: sovereign-provider-pod-summitview-emergency-department
     environment:
-      CSS_BASE_URL: 'http://provider_pod_summitview_emergency_department:3000/'
+      CSS_BASE_URL: 'https://provider_pod_summitview_emergency_department:3000/'
 
   provider_web_fairmannor_house:
     <<: *provider_web
@@ -289,13 +304,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:fairmannor_house'
       PROVIDER_LABEL: 'FairMannor House (624229 - Other Community Housing Services)'
       PROVIDER_TYPE: 'homelessness-prevention'
-      PROVIDER_POD_URL: 'http://provider_pod_fairmannor_house:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_fairmannor_house:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_fairmannor_house:
     <<: *provider_pod
     container_name: sovereign-provider-pod-fairmannor-house
     environment:
-      CSS_BASE_URL: 'http://provider_pod_fairmannor_house:3000/'
+      CSS_BASE_URL: 'https://provider_pod_fairmannor_house:3000/'
 
   provider_web_safeharbor_shelter:
     <<: *provider_web
@@ -312,13 +328,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:safeharbor_shelter'
       PROVIDER_LABEL: 'SafeHarbor Shelter (624221 - Temporary Shelters)'
       PROVIDER_TYPE: 'emergency-shelter'
-      PROVIDER_POD_URL: 'http://provider_pod_safeharbor_shelter:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_safeharbor_shelter:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_safeharbor_shelter:
     <<: *provider_pod
     container_name: sovereign-provider-pod-safeharbor-shelter
     environment:
-      CSS_BASE_URL: 'http://provider_pod_safeharbor_shelter:3000/'
+      CSS_BASE_URL: 'https://provider_pod_safeharbor_shelter:3000/'
 
   provider_web_community_food_pantry:
     <<: *provider_web
@@ -335,13 +352,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:community_food_pantry'
       PROVIDER_LABEL: 'Community Food Pantry (624210 - Community Food Services)'
       PROVIDER_TYPE: 'food-assistance'
-      PROVIDER_POD_URL: 'http://provider_pod_community_food_pantry:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_community_food_pantry:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_community_food_pantry:
     <<: *provider_pod
     container_name: sovereign-provider-pod-community-food-pantry
     environment:
-      CSS_BASE_URL: 'http://provider_pod_community_food_pantry:3000/'
+      CSS_BASE_URL: 'https://provider_pod_community_food_pantry:3000/'
 
   provider_web_bridgeway_family_services:
     <<: *provider_web
@@ -358,13 +376,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:bridgeway_family_services'
       PROVIDER_LABEL: 'Bridgeway Family Services (624190 - Other Individual and Family Services)'
       PROVIDER_TYPE: 'family-stabilization'
-      PROVIDER_POD_URL: 'http://provider_pod_bridgeway_family_services:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_bridgeway_family_services:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_bridgeway_family_services:
     <<: *provider_pod
     container_name: sovereign-provider-pod-bridgeway-family-services
     environment:
-      CSS_BASE_URL: 'http://provider_pod_bridgeway_family_services:3000/'
+      CSS_BASE_URL: 'https://provider_pod_bridgeway_family_services:3000/'
 
   provider_web_family_mediation_center:
     <<: *provider_web
@@ -381,13 +400,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:family_mediation_center'
       PROVIDER_LABEL: 'Family Mediation Center (624190 - Other Individual and Family Services)'
       PROVIDER_TYPE: 'family-mediation'
-      PROVIDER_POD_URL: 'http://provider_pod_family_mediation_center:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_family_mediation_center:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_family_mediation_center:
     <<: *provider_pod
     container_name: sovereign-provider-pod-family-mediation-center
     environment:
-      CSS_BASE_URL: 'http://provider_pod_family_mediation_center:3000/'
+      CSS_BASE_URL: 'https://provider_pod_family_mediation_center:3000/'
 
   provider_web_salutation_army:
     <<: *provider_web
@@ -404,13 +424,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:salutation_army'
       PROVIDER_LABEL: 'Salutation Army (624190 - Other Individual and Family Services)'
       PROVIDER_TYPE: 'community-assistance'
-      PROVIDER_POD_URL: 'http://provider_pod_salutation_army:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_salutation_army:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_salutation_army:
     <<: *provider_pod
     container_name: sovereign-provider-pod-salutation-army
     environment:
-      CSS_BASE_URL: 'http://provider_pod_salutation_army:3000/'
+      CSS_BASE_URL: 'https://provider_pod_salutation_army:3000/'
 
   provider_web_pioneer_legal_benefits_navigation:
     <<: *provider_web
@@ -427,13 +448,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:pioneer_legal_benefits_navigation'
       PROVIDER_LABEL: 'Pioneer Legal and Benefits Navigation (541110 - Offices of Lawyers)'
       PROVIDER_TYPE: 'legal-and-benefits-navigation'
-      PROVIDER_POD_URL: 'http://provider_pod_pioneer_legal_benefits_navigation:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_pioneer_legal_benefits_navigation:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_pioneer_legal_benefits_navigation:
     <<: *provider_pod
     container_name: sovereign-provider-pod-pioneer-legal-benefits-navigation
     environment:
-      CSS_BASE_URL: 'http://provider_pod_pioneer_legal_benefits_navigation:3000/'
+      CSS_BASE_URL: 'https://provider_pod_pioneer_legal_benefits_navigation:3000/'
 
   provider_web_tenant_rights_advocacy_network:
     <<: *provider_web
@@ -450,13 +472,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:tenant_rights_advocacy_network'
       PROVIDER_LABEL: 'Tenant Rights Advocacy Network (813319 - Other Social Advocacy Organizations)'
       PROVIDER_TYPE: 'legal-advocacy'
-      PROVIDER_POD_URL: 'http://provider_pod_tenant_rights_advocacy_network:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_tenant_rights_advocacy_network:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_tenant_rights_advocacy_network:
     <<: *provider_pod
     container_name: sovereign-provider-pod-tenant-rights-advocacy-network
     environment:
-      CSS_BASE_URL: 'http://provider_pod_tenant_rights_advocacy_network:3000/'
+      CSS_BASE_URL: 'https://provider_pod_tenant_rights_advocacy_network:3000/'
 
   provider_web_community_legal_family_support:
     <<: *provider_web
@@ -473,13 +496,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:community_legal_family_support'
       PROVIDER_LABEL: 'Community Legal and Family Support Services (624190 - Other Individual and Family Services)'
       PROVIDER_TYPE: 'legal-family-support'
-      PROVIDER_POD_URL: 'http://provider_pod_community_legal_family_support:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_community_legal_family_support:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_community_legal_family_support:
     <<: *provider_pod
     container_name: sovereign-provider-pod-community-legal-family-support
     environment:
-      CSS_BASE_URL: 'http://provider_pod_community_legal_family_support:3000/'
+      CSS_BASE_URL: 'https://provider_pod_community_legal_family_support:3000/'
 
   provider_web_financial_wellness_center:
     <<: *provider_web
@@ -496,13 +520,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:financial_wellness_center'
       PROVIDER_LABEL: 'Financial Wellness Center (523930 - Investment Advice)'
       PROVIDER_TYPE: 'money-management'
-      PROVIDER_POD_URL: 'http://provider_pod_financial_wellness_center:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_financial_wellness_center:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_financial_wellness_center:
     <<: *provider_pod
     container_name: sovereign-provider-pod-financial-wellness-center
     environment:
-      CSS_BASE_URL: 'http://provider_pod_financial_wellness_center:3000/'
+      CSS_BASE_URL: 'https://provider_pod_financial_wellness_center:3000/'
 
   provider_web_community_tax_services:
     <<: *provider_web
@@ -519,13 +544,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:community_tax_services'
       PROVIDER_LABEL: 'Community Tax Services (541213 - Tax Preparation Services)'
       PROVIDER_TYPE: 'tax-services'
-      PROVIDER_POD_URL: 'http://provider_pod_community_tax_services:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_community_tax_services:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_community_tax_services:
     <<: *provider_pod
     container_name: sovereign-provider-pod-community-tax-services
     environment:
-      CSS_BASE_URL: 'http://provider_pod_community_tax_services:3000/'
+      CSS_BASE_URL: 'https://provider_pod_community_tax_services:3000/'
 
   provider_web_consumer_regulation_support:
     <<: *provider_web
@@ -542,13 +568,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:consumer_regulation_support'
       PROVIDER_LABEL: 'Consumer Regulation Support Office (813319 - Other Social Advocacy Organizations)'
       PROVIDER_TYPE: 'consumer-regulation'
-      PROVIDER_POD_URL: 'http://provider_pod_consumer_regulation_support:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_consumer_regulation_support:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_consumer_regulation_support:
     <<: *provider_pod
     container_name: sovereign-provider-pod-consumer-regulation-support
     environment:
-      CSS_BASE_URL: 'http://provider_pod_consumer_regulation_support:3000/'
+      CSS_BASE_URL: 'https://provider_pod_consumer_regulation_support:3000/'
 
   provider_web_commonwealth_credit_union:
     <<: *provider_web
@@ -565,13 +592,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:commonwealth_credit_union'
       PROVIDER_LABEL: 'Commonwealth Credit Union (522130 - Credit Unions)'
       PROVIDER_TYPE: 'credit-union-services'
-      PROVIDER_POD_URL: 'http://provider_pod_commonwealth_credit_union:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_commonwealth_credit_union:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_commonwealth_credit_union:
     <<: *provider_pod
     container_name: sovereign-provider-pod-commonwealth-credit-union
     environment:
-      CSS_BASE_URL: 'http://provider_pod_commonwealth_credit_union:3000/'
+      CSS_BASE_URL: 'https://provider_pod_commonwealth_credit_union:3000/'
 
   provider_web_neighborhood_insurance_brokers:
     <<: *provider_web
@@ -588,13 +616,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:neighborhood_insurance_brokers'
       PROVIDER_LABEL: 'Neighborhood Insurance Brokers (524210 - Insurance Agencies and Brokerages)'
       PROVIDER_TYPE: 'insurance-brokerage'
-      PROVIDER_POD_URL: 'http://provider_pod_neighborhood_insurance_brokers:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_neighborhood_insurance_brokers:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_neighborhood_insurance_brokers:
     <<: *provider_pod
     container_name: sovereign-provider-pod-neighborhood-insurance-brokers
     environment:
-      CSS_BASE_URL: 'http://provider_pod_neighborhood_insurance_brokers:3000/'
+      CSS_BASE_URL: 'https://provider_pod_neighborhood_insurance_brokers:3000/'
 
   provider_web_valley_notary_office:
     <<: *provider_web
@@ -611,13 +640,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:valley_notary_office'
       PROVIDER_LABEL: 'Valley Notary Office (541120 - Offices of Notaries)'
       PROVIDER_TYPE: 'notary-services'
-      PROVIDER_POD_URL: 'http://provider_pod_valley_notary_office:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_valley_notary_office:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_valley_notary_office:
     <<: *provider_pod
     container_name: sovereign-provider-pod-valley-notary-office
     environment:
-      CSS_BASE_URL: 'http://provider_pod_valley_notary_office:3000/'
+      CSS_BASE_URL: 'https://provider_pod_valley_notary_office:3000/'
 
   provider_web_community_legal_aid_collective:
     <<: *provider_web
@@ -634,13 +664,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:community_legal_aid_collective'
       PROVIDER_LABEL: 'Community Legal Aid Collective (541199 - All Other Legal Services)'
       PROVIDER_TYPE: 'legal-aid-services'
-      PROVIDER_POD_URL: 'http://provider_pod_community_legal_aid_collective:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_community_legal_aid_collective:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_community_legal_aid_collective:
     <<: *provider_pod
     container_name: sovereign-provider-pod-community-legal-aid-collective
     environment:
-      CSS_BASE_URL: 'http://provider_pod_community_legal_aid_collective:3000/'
+      CSS_BASE_URL: 'https://provider_pod_community_legal_aid_collective:3000/'
 
   provider_web_ascent_employment_placement_agency:
     <<: *provider_web
@@ -657,13 +688,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:ascent_employment_placement_agency'
       PROVIDER_LABEL: 'Ascent Employment Placement Agency (561311 - Employment Placement Agencies)'
       PROVIDER_TYPE: 'employment-placement'
-      PROVIDER_POD_URL: 'http://provider_pod_ascent_employment_placement_agency:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_ascent_employment_placement_agency:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_ascent_employment_placement_agency:
     <<: *provider_pod
     container_name: sovereign-provider-pod-ascent-employment-placement-agency
     environment:
-      CSS_BASE_URL: 'http://provider_pod_ascent_employment_placement_agency:3000/'
+      CSS_BASE_URL: 'https://provider_pod_ascent_employment_placement_agency:3000/'
 
   provider_web_rapid_response_temporary_help:
     <<: *provider_web
@@ -680,13 +712,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:rapid_response_temporary_help'
       PROVIDER_LABEL: 'Rapid Response Temporary Help (561320 - Temporary Help Services)'
       PROVIDER_TYPE: 'temporary-help-services'
-      PROVIDER_POD_URL: 'http://provider_pod_rapid_response_temporary_help:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_rapid_response_temporary_help:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_rapid_response_temporary_help:
     <<: *provider_pod
     container_name: sovereign-provider-pod-rapid-response-temporary-help
     environment:
-      CSS_BASE_URL: 'http://provider_pod_rapid_response_temporary_help:3000/'
+      CSS_BASE_URL: 'https://provider_pod_rapid_response_temporary_help:3000/'
 
   provider_web_cedar_document_preparation_center:
     <<: *provider_web
@@ -703,13 +736,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:cedar_document_preparation_center'
       PROVIDER_LABEL: 'Cedar Document Preparation Center (561410 - Document Preparation Services)'
       PROVIDER_TYPE: 'document-preparation-services'
-      PROVIDER_POD_URL: 'http://provider_pod_cedar_document_preparation_center:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_cedar_document_preparation_center:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_cedar_document_preparation_center:
     <<: *provider_pod
     container_name: sovereign-provider-pod-cedar-document-preparation-center
     environment:
-      CSS_BASE_URL: 'http://provider_pod_cedar_document_preparation_center:3000/'
+      CSS_BASE_URL: 'https://provider_pod_cedar_document_preparation_center:3000/'
 
   provider_web_brightpath_educational_support_center:
     <<: *provider_web
@@ -726,13 +760,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:brightpath_educational_support_center'
       PROVIDER_LABEL: 'BrightPath Educational Support Center (611710 - Educational Support Services)'
       PROVIDER_TYPE: 'educational-support-services'
-      PROVIDER_POD_URL: 'http://provider_pod_brightpath_educational_support_center:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_brightpath_educational_support_center:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_brightpath_educational_support_center:
     <<: *provider_pod
     container_name: sovereign-provider-pod-brightpath-educational-support-center
     environment:
-      CSS_BASE_URL: 'http://provider_pod_brightpath_educational_support_center:3000/'
+      CSS_BASE_URL: 'https://provider_pod_brightpath_educational_support_center:3000/'
 
   provider_web_ridgeview_behavioral_health_center:
     <<: *provider_web
@@ -749,13 +784,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:ridgeview_behavioral_health_center'
       PROVIDER_LABEL: 'Ridgeview Behavioral Health Center (621420 - Outpatient Mental Health and Substance Abuse Centers)'
       PROVIDER_TYPE: 'outpatient-behavioral-health'
-      PROVIDER_POD_URL: 'http://provider_pod_ridgeview_behavioral_health_center:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_ridgeview_behavioral_health_center:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_ridgeview_behavioral_health_center:
     <<: *provider_pod
     container_name: sovereign-provider-pod-ridgeview-behavioral-health-center
     environment:
-      CSS_BASE_URL: 'http://provider_pod_ridgeview_behavioral_health_center:3000/'
+      CSS_BASE_URL: 'https://provider_pod_ridgeview_behavioral_health_center:3000/'
 
   provider_web_bluepeak_medical_laboratory:
     <<: *provider_web
@@ -772,13 +808,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:bluepeak_medical_laboratory'
       PROVIDER_LABEL: 'BluePeak Medical Laboratory (621511 - Medical Laboratories)'
       PROVIDER_TYPE: 'medical-laboratory-services'
-      PROVIDER_POD_URL: 'http://provider_pod_bluepeak_medical_laboratory:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_bluepeak_medical_laboratory:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_bluepeak_medical_laboratory:
     <<: *provider_pod
     container_name: sovereign-provider-pod-bluepeak-medical-laboratory
     environment:
-      CSS_BASE_URL: 'http://provider_pod_bluepeak_medical_laboratory:3000/'
+      CSS_BASE_URL: 'https://provider_pod_bluepeak_medical_laboratory:3000/'
 
   provider_web_caringhands_home_health:
     <<: *provider_web
@@ -795,13 +832,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:caringhands_home_health'
       PROVIDER_LABEL: 'CaringHands Home Health (621610 - Home Health Care Services)'
       PROVIDER_TYPE: 'home-health-care'
-      PROVIDER_POD_URL: 'http://provider_pod_caringhands_home_health:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_caringhands_home_health:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_caringhands_home_health:
     <<: *provider_pod
     container_name: sovereign-provider-pod-caringhands-home-health
     environment:
-      CSS_BASE_URL: 'http://provider_pod_caringhands_home_health:3000/'
+      CSS_BASE_URL: 'https://provider_pod_caringhands_home_health:3000/'
 
   provider_web_tri_county_ambulance:
     <<: *provider_web
@@ -818,13 +856,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:tri_county_ambulance'
       PROVIDER_LABEL: 'Tri-County Ambulance (621911 - Ambulance Services)'
       PROVIDER_TYPE: 'ambulance-services'
-      PROVIDER_POD_URL: 'http://provider_pod_tri_county_ambulance:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_tri_county_ambulance:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_tri_county_ambulance:
     <<: *provider_pod
     container_name: sovereign-provider-pod-tri-county-ambulance
     environment:
-      CSS_BASE_URL: 'http://provider_pod_tri_county_ambulance:3000/'
+      CSS_BASE_URL: 'https://provider_pod_tri_county_ambulance:3000/'
 
   provider_web_foothills_disability_support_services:
     <<: *provider_web
@@ -841,13 +880,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:foothills_disability_support_services'
       PROVIDER_LABEL: 'Foothills Disability Support Services (624120 - Services for the Elderly and Persons with Disabilities)'
       PROVIDER_TYPE: 'disability-support-services'
-      PROVIDER_POD_URL: 'http://provider_pod_foothills_disability_support_services:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_foothills_disability_support_services:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_foothills_disability_support_services:
     <<: *provider_pod
     container_name: sovereign-provider-pod-foothills-disability-support-services
     environment:
-      CSS_BASE_URL: 'http://provider_pod_foothills_disability_support_services:3000/'
+      CSS_BASE_URL: 'https://provider_pod_foothills_disability_support_services:3000/'
 
   provider_web_pathway_vocational_rehabilitation:
     <<: *provider_web
@@ -864,13 +904,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:pathway_vocational_rehabilitation'
       PROVIDER_LABEL: 'Pathway Vocational Rehabilitation (624310 - Vocational Rehabilitation Services)'
       PROVIDER_TYPE: 'vocational-rehabilitation'
-      PROVIDER_POD_URL: 'http://provider_pod_pathway_vocational_rehabilitation:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_pathway_vocational_rehabilitation:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_pathway_vocational_rehabilitation:
     <<: *provider_pod
     container_name: sovereign-provider-pod-pathway-vocational-rehabilitation
     environment:
-      CSS_BASE_URL: 'http://provider_pod_pathway_vocational_rehabilitation:3000/'
+      CSS_BASE_URL: 'https://provider_pod_pathway_vocational_rehabilitation:3000/'
 
   provider_web_dignity_human_rights_organization:
     <<: *provider_web
@@ -887,13 +928,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:dignity_human_rights_organization'
       PROVIDER_LABEL: 'Dignity Human Rights Organization (813311 - Human Rights Organizations)'
       PROVIDER_TYPE: 'human-rights-advocacy'
-      PROVIDER_POD_URL: 'http://provider_pod_dignity_human_rights_organization:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_dignity_human_rights_organization:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_dignity_human_rights_organization:
     <<: *provider_pod
     container_name: sovereign-provider-pod-dignity-human-rights-organization
     environment:
-      CSS_BASE_URL: 'http://provider_pod_dignity_human_rights_organization:3000/'
+      CSS_BASE_URL: 'https://provider_pod_dignity_human_rights_organization:3000/'
 
   provider_web_appalachian_electric_distribution:
     <<: *provider_web
@@ -910,13 +952,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:appalachian_electric_distribution'
       PROVIDER_LABEL: 'Appalachian Electric Distribution (221122 - Electric Power Distribution)'
       PROVIDER_TYPE: 'electric-utility-services'
-      PROVIDER_POD_URL: 'http://provider_pod_appalachian_electric_distribution:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_appalachian_electric_distribution:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_appalachian_electric_distribution:
     <<: *provider_pod
     container_name: sovereign-provider-pod-appalachian-electric-distribution
     environment:
-      CSS_BASE_URL: 'http://provider_pod_appalachian_electric_distribution:3000/'
+      CSS_BASE_URL: 'https://provider_pod_appalachian_electric_distribution:3000/'
 
   provider_web_holston_wireless_carrier:
     <<: *provider_web
@@ -933,13 +976,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:holston_wireless_carrier'
       PROVIDER_LABEL: 'Holston Wireless Carrier (517312 - Wireless Telecommunications Carriers (except Satellite))'
       PROVIDER_TYPE: 'wireless-telecommunications-services'
-      PROVIDER_POD_URL: 'http://provider_pod_holston_wireless_carrier:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_holston_wireless_carrier:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_holston_wireless_carrier:
     <<: *provider_pod
     container_name: sovereign-provider-pod-holston-wireless-carrier
     environment:
-      CSS_BASE_URL: 'http://provider_pod_holston_wireless_carrier:3000/'
+      CSS_BASE_URL: 'https://provider_pod_holston_wireless_carrier:3000/'
 
   provider_web_blue_river_natural_gas_utility:
     <<: *provider_web
@@ -956,13 +1000,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:blue_river_natural_gas_utility'
       PROVIDER_LABEL: 'Blue River Natural Gas Utility (221210 - Natural Gas Distribution)'
       PROVIDER_TYPE: 'natural-gas-utility-services'
-      PROVIDER_POD_URL: 'http://provider_pod_blue_river_natural_gas_utility:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_blue_river_natural_gas_utility:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_blue_river_natural_gas_utility:
     <<: *provider_pod
     container_name: sovereign-provider-pod-blue-river-natural-gas-utility
     environment:
-      CSS_BASE_URL: 'http://provider_pod_blue_river_natural_gas_utility:3000/'
+      CSS_BASE_URL: 'https://provider_pod_blue_river_natural_gas_utility:3000/'
 
   provider_web_volunteer_electrical_contractors:
     <<: *provider_web
@@ -979,13 +1024,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:volunteer_electrical_contractors'
       PROVIDER_LABEL: 'Volunteer Electrical Contractors (238210 - Electrical Contractors and Other Wiring Installation Contractors)'
       PROVIDER_TYPE: 'electrical-contractor-services'
-      PROVIDER_POD_URL: 'http://provider_pod_volunteer_electrical_contractors:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_volunteer_electrical_contractors:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_volunteer_electrical_contractors:
     <<: *provider_pod
     container_name: sovereign-provider-pod-volunteer-electrical-contractors
     environment:
-      CSS_BASE_URL: 'http://provider_pod_volunteer_electrical_contractors:3000/'
+      CSS_BASE_URL: 'https://provider_pod_volunteer_electrical_contractors:3000/'
 
   provider_web_foothills_plumbing_hvac_contractors:
     <<: *provider_web
@@ -1002,13 +1048,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:foothills_plumbing_hvac_contractors'
       PROVIDER_LABEL: 'Foothills Plumbing, Heating, and Air Contractors (238220 - Plumbing, Heating, and Air-Conditioning Contractors)'
       PROVIDER_TYPE: 'plumbing-hvac-contractor-services'
-      PROVIDER_POD_URL: 'http://provider_pod_foothills_plumbing_hvac_contractors:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_foothills_plumbing_hvac_contractors:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_foothills_plumbing_hvac_contractors:
     <<: *provider_pod
     container_name: sovereign-provider-pod-foothills-plumbing-hvac-contractors
     environment:
-      CSS_BASE_URL: 'http://provider_pod_foothills_plumbing_hvac_contractors:3000/'
+      CSS_BASE_URL: 'https://provider_pod_foothills_plumbing_hvac_contractors:3000/'
 
   provider_web_clearwater_public_water_utility:
     <<: *provider_web
@@ -1025,13 +1072,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:clearwater_public_water_utility'
       PROVIDER_LABEL: 'Clearwater Public Water Utility (221310 - Water Supply and Irrigation Systems)'
       PROVIDER_TYPE: 'water-utility-services'
-      PROVIDER_POD_URL: 'http://provider_pod_clearwater_public_water_utility:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_clearwater_public_water_utility:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_clearwater_public_water_utility:
     <<: *provider_pod
     container_name: sovereign-provider-pod-clearwater-public-water-utility
     environment:
-      CSS_BASE_URL: 'http://provider_pod_clearwater_public_water_utility:3000/'
+      CSS_BASE_URL: 'https://provider_pod_clearwater_public_water_utility:3000/'
 
   provider_web_mainstreet_community_pharmacy:
     <<: *provider_web
@@ -1048,13 +1096,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:mainstreet_community_pharmacy'
       PROVIDER_LABEL: 'MainStreet Community Pharmacy (446110 - Pharmacies and Drug Stores)'
       PROVIDER_TYPE: 'pharmacy-services'
-      PROVIDER_POD_URL: 'http://provider_pod_mainstreet_community_pharmacy:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_mainstreet_community_pharmacy:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_mainstreet_community_pharmacy:
     <<: *provider_pod
     container_name: sovereign-provider-pod-mainstreet-community-pharmacy
     environment:
-      CSS_BASE_URL: 'http://provider_pod_mainstreet_community_pharmacy:3000/'
+      CSS_BASE_URL: 'https://provider_pod_mainstreet_community_pharmacy:3000/'
 
   provider_web_homestead_residential_leasing:
     <<: *provider_web
@@ -1071,13 +1120,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:homestead_residential_leasing'
       PROVIDER_LABEL: 'Homestead Residential Leasing (531110 - Lessors of Residential Buildings and Dwellings)'
       PROVIDER_TYPE: 'residential-leasing-services'
-      PROVIDER_POD_URL: 'http://provider_pod_homestead_residential_leasing:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_homestead_residential_leasing:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_homestead_residential_leasing:
     <<: *provider_pod
     container_name: sovereign-provider-pod-homestead-residential-leasing
     environment:
-      CSS_BASE_URL: 'http://provider_pod_homestead_residential_leasing:3000/'
+      CSS_BASE_URL: 'https://provider_pod_homestead_residential_leasing:3000/'
 
   provider_web_cornerstone_property_management:
     <<: *provider_web
@@ -1094,13 +1144,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:cornerstone_property_management'
       PROVIDER_LABEL: 'Cornerstone Property Management (531311 - Residential Property Managers)'
       PROVIDER_TYPE: 'property-management-services'
-      PROVIDER_POD_URL: 'http://provider_pod_cornerstone_property_management:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_cornerstone_property_management:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_cornerstone_property_management:
     <<: *provider_pod
     container_name: sovereign-provider-pod-cornerstone-property-management
     environment:
-      CSS_BASE_URL: 'http://provider_pod_cornerstone_property_management:3000/'
+      CSS_BASE_URL: 'https://provider_pod_cornerstone_property_management:3000/'
 
   provider_web_summit_health_insurance_carrier:
     <<: *provider_web
@@ -1117,13 +1168,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:summit_health_insurance_carrier'
       PROVIDER_LABEL: 'Summit Health Insurance Carrier (524114 - Direct Health and Medical Insurance Carriers)'
       PROVIDER_TYPE: 'health-insurance-carrier-services'
-      PROVIDER_POD_URL: 'http://provider_pod_summit_health_insurance_carrier:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_summit_health_insurance_carrier:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_summit_health_insurance_carrier:
     <<: *provider_pod
     container_name: sovereign-provider-pod-summit-health-insurance-carrier
     environment:
-      CSS_BASE_URL: 'http://provider_pod_summit_health_insurance_carrier:3000/'
+      CSS_BASE_URL: 'https://provider_pod_summit_health_insurance_carrier:3000/'
 
   provider_web_atlas_claims_administration:
     <<: *provider_web
@@ -1140,13 +1192,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:atlas_claims_administration'
       PROVIDER_LABEL: 'Atlas Claims Administration (524292 - Third Party Administration of Insurance and Pension Funds)'
       PROVIDER_TYPE: 'claims-administration-services'
-      PROVIDER_POD_URL: 'http://provider_pod_atlas_claims_administration:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_atlas_claims_administration:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_atlas_claims_administration:
     <<: *provider_pod
     container_name: sovereign-provider-pod-atlas-claims-administration
     environment:
-      CSS_BASE_URL: 'http://provider_pod_atlas_claims_administration:3000/'
+      CSS_BASE_URL: 'https://provider_pod_atlas_claims_administration:3000/'
 
   provider_web_sunrise_child_day_center:
     <<: *provider_web
@@ -1163,13 +1216,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:sunrise_child_day_center'
       PROVIDER_LABEL: 'Sunrise Child Day Center (624410 - Child Day Care Services)'
       PROVIDER_TYPE: 'child-day-care-services'
-      PROVIDER_POD_URL: 'http://provider_pod_sunrise_child_day_center:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_sunrise_child_day_center:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_sunrise_child_day_center:
     <<: *provider_pod
     container_name: sovereign-provider-pod-sunrise-child-day-center
     environment:
-      CSS_BASE_URL: 'http://provider_pod_sunrise_child_day_center:3000/'
+      CSS_BASE_URL: 'https://provider_pod_sunrise_child_day_center:3000/'
 
   provider_web_youthpath_child_services:
     <<: *provider_web
@@ -1186,13 +1240,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:youthpath_child_services'
       PROVIDER_LABEL: 'YouthPath Child and Youth Services (624110 - Child and Youth Services)'
       PROVIDER_TYPE: 'child-youth-services'
-      PROVIDER_POD_URL: 'http://provider_pod_youthpath_child_services:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_youthpath_child_services:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_youthpath_child_services:
     <<: *provider_pod
     container_name: sovereign-provider-pod-youthpath-child-services
     environment:
-      CSS_BASE_URL: 'http://provider_pod_youthpath_child_services:3000/'
+      CSS_BASE_URL: 'https://provider_pod_youthpath_child_services:3000/'
 
   provider_web_beacon_emergency_relief_services:
     <<: *provider_web
@@ -1209,13 +1264,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:beacon_emergency_relief_services'
       PROVIDER_LABEL: 'Beacon Emergency Relief Services (624230 - Emergency and Other Relief Services)'
       PROVIDER_TYPE: 'emergency-relief-services'
-      PROVIDER_POD_URL: 'http://provider_pod_beacon_emergency_relief_services:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_beacon_emergency_relief_services:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_beacon_emergency_relief_services:
     <<: *provider_pod
     container_name: sovereign-provider-pod-beacon-emergency-relief-services
     environment:
-      CSS_BASE_URL: 'http://provider_pod_beacon_emergency_relief_services:3000/'
+      CSS_BASE_URL: 'https://provider_pod_beacon_emergency_relief_services:3000/'
 
   provider_web_horizon_residential_recovery_center:
     <<: *provider_web
@@ -1232,13 +1288,14 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:horizon_residential_recovery_center'
       PROVIDER_LABEL: 'Horizon Residential Recovery Center (623220 - Residential Mental Health and Substance Abuse Facilities)'
       PROVIDER_TYPE: 'residential-recovery-services'
-      PROVIDER_POD_URL: 'http://provider_pod_horizon_residential_recovery_center:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_horizon_residential_recovery_center:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_horizon_residential_recovery_center:
     <<: *provider_pod
     container_name: sovereign-provider-pod-horizon-residential-recovery-center
     environment:
-      CSS_BASE_URL: 'http://provider_pod_horizon_residential_recovery_center:3000/'
+      CSS_BASE_URL: 'https://provider_pod_horizon_residential_recovery_center:3000/'
 
   provider_web_highland_workforce_training_institute:
     <<: *provider_web
@@ -1255,11 +1312,11 @@ services:
       PROVIDER_DID: 'did:web:demo.sovereign.ngo:provider:highland_workforce_training_institute'
       PROVIDER_LABEL: 'Highland Workforce Training Institute (611430 - Professional and Management Development Training)'
       PROVIDER_TYPE: 'workforce-training-services'
-      PROVIDER_POD_URL: 'http://provider_pod_highland_workforce_training_institute:3000/'
+      PROVIDER_POD_URL: 'https://provider_pod_highland_workforce_training_institute:3000/'
+      PROVIDER_API_SHARED_SECRET: 'sovereign-demo-provider-api-token'
 
   provider_pod_highland_workforce_training_institute:
     <<: *provider_pod
     container_name: sovereign-provider-pod-highland-workforce-training-institute
     environment:
-      CSS_BASE_URL: 'http://provider_pod_highland_workforce_training_institute:3000/'
-
+      CSS_BASE_URL: 'https://provider_pod_highland_workforce_training_institute:3000/'

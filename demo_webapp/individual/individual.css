@@ -501,6 +501,16 @@
       border-color: #1f5d86;
     }
 
+    #resetTutorialBtn {
+      border: 1px solid #8a5500;
+      background: #b86f00;
+    }
+
+    #resetTutorialBtn:disabled {
+      background: #9a742f;
+      border-color: #7c5d23;
+    }
+
     #downloadAuditLogBtn {
       border: 1px solid #2a6b3d;
       background: #2f7a47;

@@ -2,7 +2,7 @@
   const profileConfigs = {
         drivers_license: {
           label: "Driver's License / State ID VC Issuer",
-          verifierDid: 'did:example:verifier:drivers-license',
+          verifierDid: 'did:web:demo.sovereign.ngo:verifier:drivers-license',
           credentialType: 'DriversLicenseCredential',
           submitRoute: '/submit/drivers-license',
           buildClaims: (identity) => ({
@@ -16,7 +16,7 @@
         },
         passport: {
           label: 'Passport / Passport Card VC Issuer',
-          verifierDid: 'did:example:verifier:passport',
+          verifierDid: 'did:web:demo.sovereign.ngo:verifier:passport',
           credentialType: 'PassportCredential',
           submitRoute: '/submit/passport',
           buildClaims: (identity) => ({
@@ -31,7 +31,7 @@
         },
         birth_certificate: {
           label: 'Birth Certificate VC Issuer',
-          verifierDid: 'did:example:verifier:birth-certificate',
+          verifierDid: 'did:web:demo.sovereign.ngo:verifier:birth-certificate',
           credentialType: 'BirthCertificateCredential',
           submitRoute: '/submit/birth-certificate',
           buildClaims: (identity) => ({
@@ -45,7 +45,7 @@
         },
         utility_bill: {
           label: 'Utility Bill VC Issuer',
-          verifierDid: 'did:example:verifier:utility-bill',
+          verifierDid: 'did:web:demo.sovereign.ngo:verifier:utility-bill',
           credentialType: 'UtilityBillCredential',
           submitRoute: '/submit/utility-bill',
           buildClaims: (identity) => ({
@@ -59,7 +59,7 @@
         },
         proof_of_residency: {
           label: 'Proof of Residency VC Issuer',
-          verifierDid: 'did:example:verifier:proof-of-residency',
+          verifierDid: 'did:web:demo.sovereign.ngo:verifier:proof-of-residency',
           credentialType: 'ProofOfResidencyCredential',
           submitRoute: '/submit/proof-of-residency',
           buildClaims: (identity) => ({
@@ -73,7 +73,7 @@
         },
         social_security: {
           label: 'Social Security VC Issuer',
-          verifierDid: 'did:example:verifier:social-security',
+          verifierDid: 'did:web:demo.sovereign.ngo:verifier:social-security',
           credentialType: 'SocialSecurityCredential',
           submitRoute: '/submit/social-security',
           buildClaims: (identity) => ({

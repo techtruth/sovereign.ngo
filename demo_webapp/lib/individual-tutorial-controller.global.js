@@ -27,6 +27,24 @@ const tutorialChannel = TUTORIAL_CHANNEL;
 const providerPortalState = new Map();
 let tutorialCompletionShownFor = '';
 
+const getFrameMessageTargetOrigin = (record) => {
+  if (!record || !record.frame) return '*';
+  const raw = String(
+    (record.frame.dataset && record.frame.dataset.activeSrc)
+    || record.frame.getAttribute('src')
+    || ''
+  ).trim();
+  if (!raw || raw === 'about:blank') return '*';
+  try {
+    const parsed = new URL(raw, window.location.href);
+    const protocol = String(parsed.protocol || '').toLowerCase();
+    if (protocol === 'http:' || protocol === 'https:') return parsed.origin;
+  } catch {
+    // keep wildcard for local file mode or unparseable URLs
+  }
+  return '*';
+};
+
 const getEndpointUrl = (endpointKey) => {
   const entry = endpointDirectory[endpointKey];
   return entry ? String(entry.url || '').trim() : '';
@@ -111,7 +129,8 @@ const getStepProviderId = (step) => {
 const postTutorialFrameCommand = (record, payload) => {
   if (!record || !record.frame || !record.frame.contentWindow || !payload || typeof payload !== 'object') return;
   try {
-    record.frame.contentWindow.postMessage({ channel: tutorialChannel, ...payload }, '*');
+    const targetOrigin = getFrameMessageTargetOrigin(record);
+    record.frame.contentWindow.postMessage({ channel: tutorialChannel, ...payload }, targetOrigin);
   } catch {
     // no-op
   }
@@ -287,9 +306,6 @@ const updateTutorialActionGuidance = (step, record) => {
   const doc = getFrameDocument(record);
   const stepProviderId = getStepProviderId(step);
   const runtimeState = stepProviderId ? providerPortalState.get(stepProviderId) : null;
-  if (!doc && !runtimeState) {
-    return 'Loading card...';
-  }
 
   const controlValue = (id, stateKey) => {
     const fromDoc = doc && doc.getElementById(id);
@@ -520,8 +536,7 @@ const renderWalkthroughPanel = () => {
   const progressEl = document.getElementById('walkthroughProgress');
   const instructionEl = document.getElementById('walkthroughInstruction');
   const stepsEl = document.getElementById('walkthroughSteps');
-  const restartBtn = document.getElementById('walkthroughRestartBtn');
-  if (!panel || !titleEl || !descriptionEl || !progressEl || !instructionEl || !stepsEl || !restartBtn) return;
+  if (!panel || !titleEl || !descriptionEl || !progressEl || !instructionEl || !stepsEl) return;
 
   const tutorial = getTutorialById(activeTutorialId);
   if (!tutorial) {
@@ -542,12 +557,12 @@ const renderWalkthroughPanel = () => {
     ? `Step ${steps.length} of ${steps.length} (Complete)`
     : `Step ${steps.length ? safeIndex + 1 : 0} of ${steps.length}`;
 
-  const fallbackInstruction = currentStep && currentStep.instruction
+  const defaultInstruction = currentStep && currentStep.instruction
     ? currentStep.instruction
     : 'Choose a tutorial chain to begin.';
   instructionEl.textContent = activeTutorialComplete
     ? 'Tutorial complete. Close the completion message to reset tutorial.'
-    : (activeTutorialInstruction || fallbackInstruction);
+    : (activeTutorialInstruction || defaultInstruction);
 
   stepsEl.innerHTML = '';
   steps.forEach((step, index) => {
@@ -557,8 +572,6 @@ const renderWalkthroughPanel = () => {
     if (!activeTutorialComplete && index === safeIndex) li.classList.add('is-active');
     stepsEl.appendChild(li);
   });
-
-  restartBtn.disabled = steps.length === 0;
 };
 
 const runTutorialStep = (nextIndex, options) => {
@@ -584,7 +597,7 @@ const advanceTutorialFromEvent = (event) => {
 
   if (activeTutorialStepIndex >= tutorial.steps.length - 1) {
     activeTutorialComplete = true;
-    activeTutorialInstruction = 'Tutorial complete. Use Restart Tutorial to run this chain again.';
+    activeTutorialInstruction = 'Tutorial complete. Close the completion message to reset tutorial.';
     clearTutorialButtonHighlights();
     renderWalkthroughPanel();
     openTutorialCompletionModal(tutorial);
@@ -651,6 +664,17 @@ const handleTutorialStoreUpdate = () => {
     renderWalkthroughPanel();
   };
 
+  const handleExternalTutorialEvent = (event) => {
+    if (!event || typeof event !== 'object') return;
+    if (!activeTutorialId) return;
+    const advanced = advanceTutorialFromEvent(event);
+    if (advanced) return;
+    const currentStep = getActiveTutorialStep();
+    if (!currentStep) return;
+    focusTutorialStep(currentStep, { scroll: false });
+    renderWalkthroughPanel();
+  };
+
   const handleDemoDataReset = () => {
     primeTutorialSeenEvents();
     tutorialCompletionShownFor = '';
@@ -668,15 +692,6 @@ const handleTutorialStoreUpdate = () => {
     renderWalkthroughPanel();
   };
 
-  const restartActiveTutorial = () => {
-    const tutorial = getTutorialById(activeTutorialId);
-    if (!tutorial || !Array.isArray(tutorial.steps) || tutorial.steps.length === 0) return;
-    tutorialCompletionShownFor = '';
-    closeTutorialCompletionModal();
-    primeTutorialSeenEvents();
-    runTutorialStep(0, { forceReload: true });
-  };
-
   const initialize = () => {
     renderWalkthroughButtons();
     renderWalkthroughPanel();
@@ -689,8 +704,8 @@ const handleTutorialStoreUpdate = () => {
     handleFrameLoad,
     handleStoreUpdate,
     handleProviderStateMessage,
+    handleExternalTutorialEvent,
     handleDemoDataReset,
-    restartActiveTutorial,
     dismissTutorialCompletionAndReset
   };
 };

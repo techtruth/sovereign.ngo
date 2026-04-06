@@ -109,6 +109,12 @@
       let currentSubjectWebId = '';
       let identityByWebId = new Map();
 
+      const credentialHasTypeForEntry = (entry, type) => store.credentialHasType(entry, type);
+      const credentialIssuerProviderIdForEntry = (entry) => String(store.credentialIssuerProviderId(entry) || '').trim();
+      const credentialIssuedAtForEntry = (entry) => String(store.credentialIssuedAt(entry) || '').trim();
+      const credentialPrimaryTypeForEntry = (entry) => String(store.credentialPrimaryType(entry) || '').trim();
+      const credentialVcForEntry = (entry) => store.credentialAsW3cVc(entry);
+
       const tutorialBridge = createTutorialBridge({
         byId,
         highlightIds: tutorialHighlightIds,
@@ -183,7 +189,10 @@
 
         const credentials = store
           .listCredentials(currentSubjectWebId)
-          .filter((entry) => entry.type === profile.credentialType || entry.issuerProviderId === issuerProviderId)
+          .filter((entry) => (
+            credentialHasTypeForEntry(entry, profile.credentialType) ||
+            credentialIssuerProviderIdForEntry(entry) === issuerProviderId
+          ))
           .slice(0, 12);
 
         if (!credentials.length) {
@@ -195,7 +204,7 @@
 
         credentials.forEach((entry) => {
           const li = document.createElement('li');
-          li.textContent = `${entry.createdAt} | ${entry.type} | ${entry.id}`;
+          li.textContent = `${credentialIssuedAtForEntry(entry)} | ${credentialPrimaryTypeForEntry(entry)} | ${entry.id}`;
           listEl.appendChild(li);
         });
       };
@@ -259,13 +268,6 @@
         refreshEventFeed();
       };
 
-      const nextCredentialId = () => {
-        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-          return `urn:uuid:${window.crypto.randomUUID()}`;
-        }
-        return `urn:uuid:fallback-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-      };
-
       const runVerification = () => {
         if (!currentSubjectWebId) {
           byId('verifyResult').textContent = 'Login required before verifying documents.';
@@ -284,11 +286,22 @@
 
         let storedCredential = null;
         let credentialPayload = null;
+        const candidateCredential = store.buildVerifiableCredential({
+          credentialType: profile.credentialType,
+          issuerDid: profile.verifierDid,
+          issuerName: profile.label,
+          subjectWebId: currentSubjectWebId,
+          subjectName: identity.displayName,
+          claims,
+          issuedAt: asIso()
+        });
         if (consentToStore) {
           storedCredential = store.issueCredential({
             subjectWebId: currentSubjectWebId,
             issuerProviderId,
+            issuerProviderDid: profile.verifierDid,
             type: profile.credentialType,
+            claims,
             metadata: {
               verifierProfile: activeProfileKey,
               verifierDid: profile.verifierDid,
@@ -298,17 +311,7 @@
             }
           });
         } else {
-          credentialPayload = {
-            '@context': ['https://www.w3.org/ns/credentials/v2'],
-            id: nextCredentialId(),
-            type: ['VerifiableCredential', profile.credentialType],
-            issuer: { id: profile.verifierDid, name: profile.label },
-            issuanceDate: asIso(),
-            credentialSubject: {
-              id: currentSubjectWebId,
-              ...claims
-            }
-          };
+          credentialPayload = candidateCredential;
         }
 
         const credentialId = storedCredential ? storedCredential.id : credentialPayload.id;
@@ -335,11 +338,7 @@
           extractedData: claims,
           consentToStore,
           credential: storedCredential
-            ? {
-                id: storedCredential.id,
-                type: ['VerifiableCredential', storedCredential.type],
-                metadata: storedCredential.metadata
-              }
+            ? credentialVcForEntry(storedCredential)
             : credentialPayload,
           walletStore: consentToStore
             ? { ok: true, storedCredentialId: storedCredential.id }
