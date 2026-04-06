@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign NGO | Individual Services Demo</title>
+  <meta name="description" content="Individual-facing demo for hospital, housing, and essential services portals.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="../demo.css">
+  <link rel="stylesheet" href="./individual.css">
+</head>
+<body>
+  <main class="container wide">
+    <div class="topbar">
+      <div>
+        <div class="title-row">
+          <h1>Individual Services View</h1>
+          <button id="resetDemoDataBtn" class="demo-action-btn" type="button">Reset Demo Data</button>
+          <button id="downloadAuditLogBtn" class="demo-action-btn" type="button">Download Non-Identifiable Audit Log</button>
+        </div>
+      </div>
+      <div>
+        <a href="https://sovereign.ngo/">Nonprofit Website</a>
+      </div>
+    </div>
+
+    <div class="demo-guide-layout" aria-label="Individual demo orientation and walkthroughs">
+      <aside class="demo-walkthrough" aria-label="Demo walkthrough chains">
+        <h2>Demo Walkthrough</h2>
+        <p>Pick a chain to start a guided tutorial. Click the highlighted controls in each card to move forward.</p>
+        <div id="walkthroughButtons" class="walkthrough-buttons"></div>
+        <section id="walkthroughPanel" class="walkthrough-panel" hidden>
+          <h3 id="walkthroughTitle"></h3>
+          <p id="walkthroughDescription"></p>
+          <p id="walkthroughProgress" class="walkthrough-progress"></p>
+          <p id="walkthroughInstruction" class="walkthrough-instruction"></p>
+          <ol id="walkthroughSteps" class="walkthrough-steps"></ol>
+          <div class="walkthrough-controls">
+            <button id="walkthroughRestartBtn" class="demo-action-btn walkthrough-btn secondary" type="button">Restart Tutorial</button>
+          </div>
+        </section>
+      </aside>
+
+      <section class="demo-guide" aria-label="How to use the individual demo">
+        <h2>What This Demo Is Showing</h2>
+        <p>This demo shows how one person can move through real-world services across health care, housing, utilities, pharmacy, insurance, legal support, education, employment, and family services.</p>
+        <p>Each card is a different organization. The person controls what gets shared, and each organization stays responsible for its own records.</p>
+        <p>The walkthrough set is grounded in common city pressure points: housing bottlenecks, high referral volume, continuing outreach demand, and document-readiness gaps.</p>
+        <ol>
+          <li>Start with <strong>Sovereign's Data</strong>. This is the person's home base for records, permissions, and trusted credentials.</li>
+          <li>Use <strong>Identity and Proof Document VC Issuers</strong> to convert common documents (state ID, passport, birth certificate, utility bill, proof of residency, social security) into trusted digital credentials.</li>
+          <li>Browse by business type: open a 2-digit sector, then open a 3-digit group to see organizations in that area.</li>
+          <li>Run actions inside a card. Some actions create a handoff to another organization (a referral). Then go to the receiving organization and use <strong>Fulfill selected referral</strong> to complete the next step.</li>
+          <li>Each self-service action shows a clear credential requirement check before it runs. Examples: health intake usually needs government ID, utilities and housing usually need ID plus residency proof, and insurance/claims usually need ID plus social security. Safety-first actions still start even when documents are missing.</li>
+          <li>Use <strong>Download Non-Identifiable Audit Log</strong> to export an accountability log with masked person references and no source-document data.</li>
+          <li>Use <strong>Reset Demo Data</strong> any time to clear everything and start a fresh scenario.</li>
+        </ol>
+        <p>The point is simple: coordinated care without one giant database. Sharing is permission-based, and accountability stays with each organization.</p>
+      </section>
+    </div>
+
+    <section id="tutorialCompletionModal" class="tutorial-modal" aria-live="polite" hidden>
+      <div class="tutorial-modal-scrim"></div>
+      <article class="tutorial-modal-card" role="dialog" aria-modal="true" aria-labelledby="tutorialCompletionTitle">
+        <h3 id="tutorialCompletionTitle">You have just done a full tutorial chain!</h3>
+        <p id="tutorialCompletionSummary"></p>
+        <ul id="tutorialCompletionBenefits" class="tutorial-modal-benefits"></ul>
+        <div class="tutorial-modal-actions">
+          <button id="tutorialCompletionCloseBtn" class="demo-action-btn walkthrough-btn secondary" type="button">Close</button>
+        </div>
+      </article>
+    </section>
+
+    <div id="serviceStack" class="service-stack" aria-label="Individual service ecosystem cards"></div>
+  </main>
+
+  <script src="../lib/tutorial-bridge.global.js"></script>
+  <script src="../lib/individual-tutorial-data.global.js"></script>
+  <script src="../lib/individual-tutorial-controller.global.js"></script>
+  <script src="../data/provider-catalog.global.js"></script>
+  <script src="../data/endpoint-directory.global.js"></script>
+  <script src="../data/naics-sectors.global.js"></script>
+  <script src="../lib/demo-store-config.global.js"></script>
+  <script src="../lib/demo-store-backends.global.js"></script>
+  <script src="../lib/demo-store.js"></script>
+  <script>
+    (function () {
+    const tutorialBridgeApi = window.SovereignTutorialBridge;
+    const tutorialDataApi = window.SovereignIndividualTutorialData;
+    const tutorialControllerApi = window.SovereignIndividualTutorialController;
+    if (!tutorialBridgeApi || !tutorialDataApi || !tutorialControllerApi) {
+      document.body.innerHTML = '<main class="container wide"><p>Tutorial modules failed to load.</p></main>';
+      return;
+    }
+    const TUTORIAL_CHANNEL = tutorialBridgeApi.TUTORIAL_CHANNEL || 'sovereign_tutorial';
+    const tutorialChains = Array.isArray(tutorialDataApi.tutorialChains) ? tutorialDataApi.tutorialChains : [];
+    const tutorialCompletionNarrativeById = tutorialDataApi.tutorialCompletionNarrativeById && typeof tutorialDataApi.tutorialCompletionNarrativeById === 'object'
+      ? tutorialDataApi.tutorialCompletionNarrativeById
+      : {};
+    const createIndividualTutorialController = tutorialControllerApi.createIndividualTutorialController;
+
+    const endpointDirectory = window.SovereignEndpointDirectory;
+    if (!endpointDirectory || typeof endpointDirectory !== 'object' || Array.isArray(endpointDirectory)) {
+      document.body.innerHTML = '<main class="container wide"><p>Endpoint directory failed to load.</p></main>';
+      return;
+    }
+
+    const buildEndpointOptions = (endpointKeys, fallbackLabel) => {
+      if (!Array.isArray(endpointKeys) || endpointKeys.length === 0) {
+        return [{ label: fallbackLabel, url: 'about:blank' }];
+      }
+
+      const resolved = endpointKeys
+        .map((key) => endpointDirectory[key])
+        .filter(Boolean)
+        .map((entry) => ({
+          label: entry.label,
+          url: entry.url,
+          type: entry.type,
+          taxonomies: entry.taxonomies || null
+        }));
+
+      return resolved.length > 0 ? resolved : [{ label: fallbackLabel, url: 'about:blank' }];
+    };
+
+    const fixedGroups = [
+      {
+        id: 'sovereign-data',
+        title: "Sovereign's Data",
+        note: 'Identity and credential core used across all downstream service workflows.',
+        span: 8,
+        collapsible: false,
+        services: [
+          {
+            id: 'solid-pod',
+            title: 'Sovereign Solid Pod',
+            type: 'resident-data-store',
+            span: 6,
+            endpointKeys: ['sovereign_pod'],
+            lockEndpoint: true
+          },
+          {
+            id: 'credential-manager',
+            title: 'Sovereign Credential Manager',
+            type: 'consent-and-credential-control',
+            span: 6,
+            endpointKeys: ['credential_manager'],
+            lockEndpoint: true
+          }
+        ]
+      },
+      {
+        id: 'identity-vc-issuers',
+        title: 'Identity and Proof Document VC Issuers',
+        note: "Issue trusted credentials from source-document verification flows (driver's license/state ID, passport/passport card, birth certificate, utility bill, proof of residency, social security).",
+        span: 4,
+        collapsible: false,
+        services: [
+          {
+            id: 'identity-vc-issuer',
+            title: 'Identity and Proof Document VC Issuer',
+            type: 'identity-vc-issuer',
+            span: 12,
+            endpointKeys: [
+              'verifier_drivers_license',
+              'verifier_passport',
+              'verifier_birth_certificate',
+              'verifier_utility_bill',
+              'verifier_proof_of_residency',
+              'verifier_social_security'
+            ]
+          }
+        ]
+      }
+    ];
+
+    const naicsSectors = window.SovereignNaicsSectors;
+    if (!Array.isArray(naicsSectors)) {
+      document.body.innerHTML = '<main class="container wide"><p>NAICS sectors failed to load.</p></main>';
+      return;
+    }
+
+    const frameRegistry = [];
+    const demoStore = window.SovereignDemoStore;
+
+    const sanitizeId = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    const resolveSpan = (service, serviceCount) => {
+      if (Number.isInteger(service.span)) return service.span;
+      if (serviceCount <= 1) return 12;
+      if (serviceCount === 2) return 6;
+      return 4;
+    };
+
+    const formatTaxonomyText = (taxonomies) => {
+      if (!taxonomies || typeof taxonomies !== 'object') return '';
+      const parts = [
+        taxonomies.naics ? `NAICS: ${taxonomies.naics}` : '',
+        taxonomies.airs211 ? `211/AIRS: ${taxonomies.airs211}` : '',
+        taxonomies.hudHmis ? `HUD HMIS: ${taxonomies.hudHmis}` : ''
+      ].filter(Boolean);
+      return parts.join('\n');
+    };
+
+    const applyFrameSource = (record, nextUrl) => {
+      const url = String(nextUrl || '').trim() || 'about:blank';
+      record.frame.src = url;
+      record.frame.dataset.activeSrc = url;
+    };
+
+    const tutorialController = createIndividualTutorialController({
+      tutorialChains,
+      tutorialCompletionNarrativeById,
+      tutorialChannel: TUTORIAL_CHANNEL,
+      endpointDirectory,
+      frameRegistry,
+      demoStore,
+      applyFrameSource
+    });
+
+    const createServiceCard = (group, service, serviceCount) => {
+      const card = document.createElement('article');
+      card.className = 'service-card';
+      card.style.setProperty('--service-span', String(resolveSpan(service, serviceCount)));
+      card.dataset.groupId = group.id;
+      card.dataset.serviceId = service.id;
+
+      const toolbar = document.createElement('div');
+      toolbar.className = 'service-toolbar';
+      const taxonomyEl = document.createElement('p');
+      taxonomyEl.className = 'service-taxonomy';
+      taxonomyEl.hidden = true;
+
+      const endpointOptions = buildEndpointOptions(service.endpointKeys, service.title);
+      let selectEl = null;
+      if (service.lockEndpoint) {
+        const fixedTitle = document.createElement('div');
+        fixedTitle.className = 'service-title-fixed';
+        const fixedOption = endpointOptions[0] || { label: service.title, type: service.type };
+        const optionLabel = String(fixedOption.label || fixedOption.url || service.title).trim();
+        fixedTitle.textContent = optionLabel;
+        toolbar.appendChild(fixedTitle);
+      } else {
+        selectEl = document.createElement('select');
+        const selectId = `${sanitizeId(group.id)}-${sanitizeId(service.id)}-endpoint`;
+        selectEl.id = selectId;
+        selectEl.className = 'service-title-select';
+        selectEl.setAttribute('aria-label', `${service.title} service selector`);
+
+        endpointOptions.forEach((entry, index) => {
+          const option = document.createElement('option');
+          option.value = String(entry.url || '').trim() || 'about:blank';
+          const optionLabel = String(entry.label || entry.url || `Endpoint ${index + 1}`).trim();
+          option.textContent = optionLabel;
+          selectEl.appendChild(option);
+        });
+        toolbar.appendChild(selectEl);
+      }
+
+      const frame = document.createElement('iframe');
+      frame.id = `${sanitizeId(group.id)}-${sanitizeId(service.id)}-frame`;
+      frame.title = service.title;
+      frame.loading = 'lazy';
+
+      const setTaxonomyByUrl = (url) => {
+        const normalizedUrl = String(url || '').trim() || 'about:blank';
+        const selected = endpointOptions.find((entry) => {
+          const entryUrl = String(entry.url || '').trim() || 'about:blank';
+          return entryUrl === normalizedUrl;
+        }) || endpointOptions[0];
+        const taxonomyText = formatTaxonomyText(selected && selected.taxonomies);
+        taxonomyEl.textContent = taxonomyText;
+        taxonomyEl.hidden = !taxonomyText;
+      };
+
+      card.appendChild(toolbar);
+      card.appendChild(taxonomyEl);
+      card.appendChild(frame);
+
+      const record = {
+        id: service.id,
+        title: service.title,
+        card,
+        frame,
+        selector: selectEl,
+        endpointOptions,
+        defaultUrl: endpointOptions[0].url || 'about:blank'
+      };
+
+      frame.addEventListener('load', () => {
+        tutorialController.handleFrameLoad(record);
+      });
+
+      if (selectEl) {
+        selectEl.addEventListener('change', () => {
+          applyFrameSource(record, selectEl.value);
+          setTaxonomyByUrl(selectEl.value);
+        });
+      }
+
+      applyFrameSource(record, record.defaultUrl);
+      setTaxonomyByUrl(record.defaultUrl);
+      frameRegistry.push(record);
+      return card;
+    };
+
+    const appendServices = (container, groupRef, services, emptyText) => {
+      if (services.length > 0) {
+        const row = document.createElement('div');
+        row.className = 'service-row';
+        services.forEach((service) => {
+          row.appendChild(createServiceCard(groupRef, service, services.length));
+        });
+        container.appendChild(row);
+        return;
+      }
+
+      const emptyState = document.createElement('p');
+      emptyState.className = 'service-group-note service-group-empty';
+      emptyState.textContent = emptyText;
+      container.appendChild(emptyState);
+    };
+
+    const renderFlatGroup = (group, mount) => {
+      const isCollapsible = group.collapsible !== false;
+      const section = document.createElement(isCollapsible ? 'details' : 'section');
+      section.className = 'service-group';
+      if (!isCollapsible) section.classList.add('service-group-fixed');
+      section.dataset.groupId = group.id;
+      section.style.setProperty('--group-span', String(Number.isInteger(group.span) ? group.span : 12));
+
+      const heading = document.createElement(isCollapsible ? 'summary' : 'h2');
+      heading.className = isCollapsible
+        ? 'service-group-toggle'
+        : 'service-group-toggle service-group-title-static';
+      heading.textContent = group.title;
+      section.appendChild(heading);
+
+      const body = document.createElement('div');
+      body.className = 'service-group-body';
+
+      if (group.note) {
+        const note = document.createElement('p');
+        note.className = 'service-group-note';
+        note.textContent = group.note;
+        body.appendChild(note);
+      }
+
+      const services = Array.isArray(group.services) ? group.services : [];
+      appendServices(body, group, services, 'No demo cards configured yet for this section.');
+      section.appendChild(body);
+      mount.appendChild(section);
+    };
+
+    const renderSectorGroup = (sector, mount) => {
+      const section = document.createElement('details');
+      section.className = 'service-group';
+      section.dataset.groupId = sector.id;
+
+      const heading = document.createElement('summary');
+      heading.className = 'service-group-toggle';
+      heading.textContent = sector.title;
+      section.appendChild(heading);
+
+      const body = document.createElement('div');
+      body.className = 'service-group-body';
+
+      if (sector.note) {
+        const note = document.createElement('p');
+        note.className = 'service-group-note';
+        note.textContent = sector.note;
+        body.appendChild(note);
+      }
+
+      const subsectorStack = document.createElement('div');
+      subsectorStack.className = 'subsector-stack';
+
+      const subsectors = Array.isArray(sector.subsectors) ? sector.subsectors : [];
+      if (subsectors.length > 0) {
+        subsectors.forEach((subsector) => {
+          const subsectorSection = document.createElement('details');
+          subsectorSection.className = 'subsector-group';
+          subsectorSection.dataset.subsectorId = subsector.id;
+
+          const subsectorHeading = document.createElement('summary');
+          subsectorHeading.className = 'subsector-toggle';
+          subsectorHeading.textContent = subsector.title;
+          subsectorSection.appendChild(subsectorHeading);
+
+          const subsectorBody = document.createElement('div');
+          subsectorBody.className = 'subsector-body';
+
+          if (subsector.note) {
+            const note = document.createElement('p');
+            note.className = 'service-group-note';
+            note.textContent = subsector.note;
+            subsectorBody.appendChild(note);
+          }
+
+          const services = Array.isArray(subsector.services) ? subsector.services : [];
+          appendServices(subsectorBody, subsector, services, 'No demo cards configured yet for this subsector.');
+          subsectorSection.appendChild(subsectorBody);
+          subsectorStack.appendChild(subsectorSection);
+        });
+      } else {
+        const emptyState = document.createElement('p');
+        emptyState.className = 'service-group-note service-group-empty';
+        emptyState.textContent = 'No subsectors configured for this NAICS sector yet.';
+        subsectorStack.appendChild(emptyState);
+      }
+
+      body.appendChild(subsectorStack);
+      section.appendChild(body);
+      mount.appendChild(section);
+    };
+
+    const renderServiceGroups = () => {
+      const mount = document.getElementById('serviceStack');
+      if (!mount) return;
+      mount.innerHTML = '';
+      frameRegistry.length = 0;
+
+      fixedGroups.forEach((group) => renderFlatGroup(group, mount));
+      naicsSectors.forEach((sector) => renderSectorGroup(sector, mount));
+    };
+
+    const resetAllFramesToDefaults = () => {
+      frameRegistry.forEach((record) => {
+        if (record.selector) record.selector.value = record.defaultUrl;
+        applyFrameSource(record, record.defaultUrl);
+      });
+    };
+
+    const createIdentityAliaser = () => {
+      const aliasMap = new Map();
+      let index = 0;
+      return (rawValue) => {
+        const key = String(rawValue || '').trim();
+        if (!key) return '';
+        if (!aliasMap.has(key)) {
+          index += 1;
+          aliasMap.set(key, `Person-${String(index).padStart(3, '0')}`);
+        }
+        return aliasMap.get(key);
+      };
+    };
+
+    const shouldRedactContextKey = (key) => /webid|display|name|did|subject|actor/i.test(String(key || ''));
+
+    const sanitizeContextValue = (value, parentKey) => {
+      const key = String(parentKey || '');
+      if (value === null) return null;
+      if (Array.isArray(value)) {
+        return value
+          .map((entry) => sanitizeContextValue(entry, key))
+          .filter((entry) => entry !== undefined && entry !== '');
+      }
+
+      if (typeof value === 'object' && value) {
+        const output = {};
+        Object.entries(value).forEach(([childKey, childValue]) => {
+          if (shouldRedactContextKey(childKey)) return;
+          const sanitized = sanitizeContextValue(childValue, childKey);
+          if (sanitized === undefined || sanitized === '') return;
+          output[childKey] = sanitized;
+        });
+        return output;
+      }
+
+      if (typeof value === 'string') {
+        const raw = value.trim();
+        if (!raw) return '';
+        if (shouldRedactContextKey(key)) return '[redacted]';
+        if (/^(did:|https?:\/\/)/i.test(raw)) return '[redacted]';
+        return raw;
+      }
+
+      if (typeof value === 'number' || typeof value === 'boolean') return value;
+      return undefined;
+    };
+
+    const countBy = (rows, keyFromRow) => {
+      const counts = {};
+      rows.forEach((row) => {
+        const rawKey = keyFromRow(row);
+        const key = String(rawKey || 'unknown');
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      return counts;
+    };
+
+    const buildNonIdentifiableAuditLog = () => {
+      const fallbackState = {
+        meta: {},
+        providers: [],
+        events: [],
+        records: [],
+        referrals: [],
+        consents: [],
+        credentials: []
+      };
+      const state = demoStore && typeof demoStore.getState === 'function'
+        ? (demoStore.getState() || fallbackState)
+        : fallbackState;
+
+      const providers = Array.isArray(state.providers) ? state.providers : [];
+      const eventsRaw = Array.isArray(state.events) ? state.events : [];
+      const recordsRaw = Array.isArray(state.records) ? state.records : [];
+      const referralsRaw = Array.isArray(state.referrals) ? state.referrals : [];
+      const consentsRaw = Array.isArray(state.consents) ? state.consents : [];
+      const credentialsRaw = Array.isArray(state.credentials) ? state.credentials : [];
+
+      const aliasForIdentity = createIdentityAliaser();
+
+      const events = eventsRaw
+        .slice()
+        .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
+        .map((entry) => ({
+          timestamp: entry.createdAt || '',
+          eventType: entry.type || 'event',
+          severity: entry.severity || 'info',
+          providerId: entry.providerId || '',
+          subjectRef: aliasForIdentity(entry.subjectWebId),
+          actorRef: aliasForIdentity(entry.actorWebId),
+          context: sanitizeContextValue(entry.payload || {}, 'payload')
+        }));
+
+      const records = recordsRaw
+        .slice()
+        .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
+        .map((entry) => ({
+          timestamp: entry.createdAt || '',
+          providerId: entry.providerId || '',
+          category: entry.category || 'general',
+          summary: String(entry.summary || '').trim() || 'Service action recorded.',
+          subjectRef: aliasForIdentity(entry.subjectWebId),
+          actorRef: aliasForIdentity(entry.actorWebId),
+          details: sanitizeContextValue(entry.details || {}, 'details')
+        }));
+
+      const referrals = referralsRaw
+        .slice()
+        .sort((a, b) => String(a.issuedAt || '').localeCompare(String(b.issuedAt || '')))
+        .map((entry) => ({
+          referralId: entry.id || '',
+          issuedAt: entry.issuedAt || '',
+          fromProviderId: entry.fromProviderId || '',
+          targetCapability: entry.targetCapability || '',
+          status: entry.status || '',
+          issuedByRef: aliasForIdentity(entry.issuedByWebId),
+          subjectRef: aliasForIdentity(entry.subjectWebId),
+          fulfilledByProviderId: entry.fulfilledByProviderId || '',
+          fulfilledAt: entry.fulfilledAt || '',
+          details: sanitizeContextValue(entry.details || {}, 'details')
+        }));
+
+      const consents = consentsRaw
+        .slice()
+        .sort((a, b) => String(a.grantedAt || '').localeCompare(String(b.grantedAt || '')))
+        .map((entry) => ({
+          consentId: entry.id || '',
+          subjectRef: aliasForIdentity(entry.subjectWebId),
+          providerId: entry.providerId || '',
+          scope: entry.scope || '',
+          status: entry.status || '',
+          grantedAt: entry.grantedAt || '',
+          grantedByRef: aliasForIdentity(entry.grantedByWebId),
+          revokedAt: entry.revokedAt || '',
+          revokedByRef: aliasForIdentity(entry.revokedByWebId)
+        }));
+
+      const credentials = credentialsRaw
+        .slice()
+        .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
+        .map((entry) => ({
+          credentialId: entry.id || '',
+          type: entry.type || '',
+          issuerProviderId: entry.issuerProviderId || '',
+          subjectRef: aliasForIdentity(entry.subjectWebId),
+          status: entry.status || '',
+          issuedAt: entry.createdAt || '',
+          metadata: sanitizeContextValue(entry.metadata || {}, 'metadata')
+        }));
+
+      const providerIds = Array.from(new Set(providers.map((entry) => entry.id).filter(Boolean)));
+      const summary = {
+        providerCount: providers.length,
+        providerIds,
+        uniqueSubjectRefs: Array.from(new Set(
+          []
+            .concat(events.map((entry) => entry.subjectRef))
+            .concat(records.map((entry) => entry.subjectRef))
+            .concat(referrals.map((entry) => entry.subjectRef))
+            .filter(Boolean)
+        )).length,
+        eventCountByType: countBy(events, (entry) => entry.eventType),
+        eventCountByProvider: countBy(events.filter((entry) => entry.providerId), (entry) => entry.providerId),
+        referralCountByCapability: countBy(referrals.filter((entry) => entry.targetCapability), (entry) => entry.targetCapability),
+        referralCountByStatus: countBy(referrals, (entry) => entry.status)
+      };
+
+      return {
+        exportType: 'non_identifiable_accountability_audit_log',
+        generatedAt: new Date().toISOString(),
+        source: 'sovereign-individual-demo',
+        privacyModel: 'Direct identifiers are removed. Person references are local aliases (Person-###). No names, WebIDs, DIDs, or source-document content are exported.',
+        summary,
+        timelines: {
+          events,
+          records,
+          referrals,
+          consents,
+          credentials
+        }
+      };
+    };
+
+    const downloadJsonFile = (filename, payload) => {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    const handleDownloadAuditLog = async () => {
+      const auditBtn = document.getElementById('downloadAuditLogBtn');
+      if (auditBtn) {
+        auditBtn.disabled = true;
+        auditBtn.textContent = 'Preparing Audit Log...';
+      }
+
+      try {
+        const auditPayload = buildNonIdentifiableAuditLog();
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `sovereign-non-identifiable-audit-log-${stamp}.json`;
+        downloadJsonFile(filename, auditPayload);
+      } catch (error) {
+        console.error('Non-identifiable audit log export failed:', error);
+      }
+
+      if (auditBtn) {
+        auditBtn.disabled = false;
+        auditBtn.textContent = 'Download Non-Identifiable Audit Log';
+      }
+    };
+
+    const handleResetDemoData = async () => {
+      const resetBtn = document.getElementById('resetDemoDataBtn');
+      if (resetBtn) {
+        resetBtn.disabled = true;
+        resetBtn.textContent = 'Resetting Demo Data...';
+      }
+
+      if (demoStore && typeof demoStore.resetDemoData === 'function') {
+        demoStore.resetDemoData();
+      }
+
+      resetAllFramesToDefaults();
+      tutorialController.handleDemoDataReset();
+
+      if (resetBtn) {
+        resetBtn.disabled = false;
+        resetBtn.textContent = 'Reset Demo Data';
+      }
+    };
+
+    renderServiceGroups();
+    tutorialController.initialize();
+
+    const resetBtn = document.getElementById('resetDemoDataBtn');
+    if (resetBtn) resetBtn.addEventListener('click', handleResetDemoData);
+    const auditBtn = document.getElementById('downloadAuditLogBtn');
+    if (auditBtn) auditBtn.addEventListener('click', handleDownloadAuditLog);
+
+    const walkthroughRestartBtn = document.getElementById('walkthroughRestartBtn');
+    if (walkthroughRestartBtn) {
+      walkthroughRestartBtn.addEventListener('click', () => {
+        tutorialController.restartActiveTutorial();
+      });
+    }
+
+    const tutorialCompletionModal = document.getElementById('tutorialCompletionModal');
+    const tutorialCompletionCloseBtn = document.getElementById('tutorialCompletionCloseBtn');
+    if (tutorialCompletionCloseBtn) {
+      tutorialCompletionCloseBtn.addEventListener('click', () => {
+        tutorialController.dismissTutorialCompletionAndReset();
+      });
+    }
+    if (tutorialCompletionModal) {
+      tutorialCompletionModal.addEventListener('click', (event) => {
+        if (event.target && event.target.classList && event.target.classList.contains('tutorial-modal-scrim')) {
+          tutorialController.dismissTutorialCompletionAndReset();
+        }
+      });
+    }
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        if (!tutorialCompletionModal || tutorialCompletionModal.hidden) return;
+        tutorialController.dismissTutorialCompletionAndReset();
+      }
+    });
+
+    if (demoStore && typeof demoStore.subscribe === 'function' && typeof demoStore.listEvents === 'function') {
+      demoStore.subscribe(() => {
+        tutorialController.handleStoreUpdate();
+      });
+    }
+
+    window.addEventListener('message', (event) => {
+      const data = event && event.data ? event.data : null;
+      if (!data || data.channel !== tutorialController.channel) return;
+      tutorialController.handleProviderStateMessage(data);
+    });
+    })();
+  </script>
+</body>
+</html>

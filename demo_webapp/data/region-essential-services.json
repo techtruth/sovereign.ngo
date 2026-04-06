@@ -1,0 +1,164 @@
+{
+  "regionId": "tri-cities-essential-services-demo",
+  "layer": "essential-services",
+  "status": "active-demo-layer",
+  "description": "Demo region with provider network definitions for essential-services workflows.",
+  "sharedApiCore": {
+    "baseUrl": "https://api.sovereign.ngo/core",
+    "authModel": "token-and-consent-gated",
+    "contractVersion": "v1"
+  },
+  "providers": [
+    {
+      "providerId": "care-resource-center",
+      "displayName": "CARE Resource Center",
+      "type": "navigation-hub",
+      "capabilities": [
+        "intake",
+        "service-request-triage",
+        "referral-orchestration"
+      ]
+    },
+    {
+      "providerId": "community-health-clinic",
+      "displayName": "Community Health Clinic",
+      "type": "healthcare",
+      "capabilities": [
+        "eligibility-review",
+        "care-transfer",
+        "record-verification"
+      ]
+    },
+    {
+      "providerId": "fairmannor-house",
+      "displayName": "FairMannor House",
+      "type": "homelessness-prevention-services",
+      "capabilities": [
+        "coordinated-entry",
+        "prevention-intake",
+        "stabilization-support",
+        "housing-stabilization",
+        "case-transition"
+      ]
+    },
+    {
+      "providerId": "safeharbor-shelter",
+      "displayName": "SafeHarbor Shelter",
+      "type": "emergency-shelter-and-transitional-services",
+      "capabilities": [
+        "emergency-shelter-intake",
+        "transitional-placement",
+        "placement-referrals",
+        "case-transition"
+      ]
+    },
+    {
+      "providerId": "riverstone-radiology-center",
+      "displayName": "Riverstone Radiology Center",
+      "type": "radiology-and-imaging-services",
+      "capabilities": [
+        "radiology-appointments",
+        "xray-imaging",
+        "ultrasound-imaging",
+        "imaging-result-issuance"
+      ]
+    },
+    {
+      "providerId": "summitview-emergency-department",
+      "displayName": "Summitview Emergency Department",
+      "type": "emergency-room-services",
+      "capabilities": [
+        "er-intake",
+        "triage",
+        "disposition-management",
+        "discharge-continuity"
+      ]
+    },
+    {
+      "providerId": "bridgeway-family-services",
+      "displayName": "Bridgeway Family Services",
+      "type": "family-crisis-prevention-services",
+      "capabilities": [
+        "family-intake",
+        "family-stabilization",
+        "family-crisis-prevention",
+        "care-continuity"
+      ]
+    },
+    {
+      "providerId": "pioneer-legal-benefits-navigation",
+      "displayName": "Pioneer Legal and Benefits Navigation",
+      "type": "legal-aid-and-benefits-navigation",
+      "capabilities": [
+        "legal-intake",
+        "benefits-navigation",
+        "appeals-support",
+        "document-guidance"
+      ]
+    },
+    {
+      "providerId": "financial-wellness-center",
+      "displayName": "Financial Wellness Center",
+      "type": "money-management-services",
+      "capabilities": [
+        "money-management-intake",
+        "budget-coaching",
+        "financial-goal-planning"
+      ]
+    },
+    {
+      "providerId": "community-tax-services",
+      "displayName": "Community Tax Services",
+      "type": "tax-preparation-services",
+      "capabilities": [
+        "tax-preparation-intake",
+        "tax-filing-support",
+        "documentation-guidance"
+      ]
+    },
+    {
+      "providerId": "consumer-regulation-support",
+      "displayName": "Consumer Regulation Support Office",
+      "type": "consumer-rights-and-regulation-support",
+      "capabilities": [
+        "consumer-complaint-intake",
+        "consumer-rights-guidance",
+        "regulatory-referral-support"
+      ]
+    },
+    {
+      "providerId": "benefits-legal-aid",
+      "displayName": "Benefits and Legal Aid",
+      "type": "benefits-support",
+      "capabilities": [
+        "document-recovery",
+        "benefits-enrollment",
+        "appeals-support"
+      ]
+    }
+  ],
+  "frontendModes": {
+    "individual": {
+      "route": "/individual/",
+      "focus": [
+        "record-view",
+        "consent-controls",
+        "service-request-initiation"
+      ]
+    },
+    "provider": {
+      "route": "/services/provider/index.html?provider=nolichucky_family_clinic",
+      "focus": [
+        "request-review",
+        "handoff-initiation",
+        "transfer-acceptance"
+      ]
+    },
+    "combined": {
+      "route": "/combined/",
+      "focus": [
+        "end-to-end-transaction-walkthrough"
+      ]
+    }
+  }
+}

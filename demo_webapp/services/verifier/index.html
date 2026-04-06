@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign Demo Identity Verifier Portal</title>
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="./verifier.css">
+</head>
+<body>
+  <main class="wrap">
+    <section class="mast">
+      <div>
+        <h1 id="portalTitle">Identity VC Issuer</h1>
+        <p class="sub" id="portalSubtitle">Identity Verifier Service Portal (Browser Demo)</p>
+        <p class="profile-summary" id="profileSummary"></p>
+      </div>
+      <div class="meta">
+        <div id="verifierDid">Verifier DID</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Login</h2>
+        <label>
+          Sovereign Identity
+          <select id="identitySelect"></select>
+        </label>
+        <div class="row">
+          <button id="loginBtn" type="button">LOGIN</button>
+          <button id="newJohnDoeBtn" class="secondary" type="button">New John Doe</button>
+        </div>
+        <p class="note">Subject DID (from login):</p>
+        <p id="subjectDid" class="mono">Not logged in.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Verify Document</h2>
+        <label>
+          Evidence File (optional)
+          <input id="docFile" type="file">
+        </label>
+        <label class="checkbox">
+          <input id="consentToStore" type="checkbox" checked>
+          Store issued credential in sovereign demo data
+        </label>
+        <button id="verifyBtn" type="button" disabled>Verify and Issue VC</button>
+        <p id="verifyResult" class="mono">No verification yet.</p>
+      </article>
+
+      <article class="panel wide">
+        <h2>Issued Credentials for Logged-In Subject</h2>
+        <ul id="credentialList"></ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Live Event Feed (Most Recent 12)</h2>
+        <pre id="eventFeed" class="mono">[]</pre>
+      </article>
+    </section>
+  </main>
+
+  <script src="../../lib/tutorial-bridge.global.js"></script>
+  <script src="../../data/provider-catalog.global.js"></script>
+  <script src="../../data/verifier-profiles.global.js"></script>
+  <script src="../../lib/demo-store-config.global.js"></script>
+  <script src="../../lib/demo-store-backends.global.js"></script>
+  <script src="../../lib/demo-store.js"></script>
+  <script>
+    (function () {
+      const tutorialBridgeApi = window.SovereignTutorialBridge;
+      if (!tutorialBridgeApi || typeof tutorialBridgeApi.createTutorialBridge !== 'function') {
+        document.body.innerHTML = '<main class="wrap"><p>Tutorial bridge failed to load.</p></main>';
+        return;
+      }
+      const { createTutorialBridge } = tutorialBridgeApi;
+
+      const store = window.SovereignDemoStore;
+      if (!store) {
+        document.body.innerHTML = '<main class="wrap"><p>Demo store failed to load.</p></main>';
+        return;
+      }
+
+      const verifierProfiles = window.SovereignVerifierProfiles;
+      if (!verifierProfiles || typeof verifierProfiles !== 'object') {
+        document.body.innerHTML = '<main class="wrap"><p>Verifier profile config failed to load.</p></main>';
+        return;
+      }
+
+      const { profileConfigs, defaultProfile } = verifierProfiles;
+      const query = new URLSearchParams(window.location.search);
+      const requestedProfileKey = query.get('profile') || defaultProfile;
+      const activeProfileKey = profileConfigs[requestedProfileKey] ? requestedProfileKey : defaultProfile;
+      const profile = profileConfigs[activeProfileKey];
+      const issuerProviderId = `verifier_${activeProfileKey}`;
+
+      const byId = (id) => document.getElementById(id);
+      const asIso = () => new Date().toISOString();
+      const tutorialHighlightIds = [
+        'loginBtn',
+        'newJohnDoeBtn',
+        'verifyBtn',
+        'identitySelect',
+        'docFile',
+        'consentToStore'
+      ];
+
+      let currentSubjectWebId = '';
+      let identityByWebId = new Map();
+
+      const tutorialBridge = createTutorialBridge({
+        byId,
+        highlightIds: tutorialHighlightIds,
+        statePayload: () => {
+          const consentToStore = Boolean(byId('consentToStore') && byId('consentToStore').checked);
+          const canVerify = Boolean(byId('verifyBtn') && !byId('verifyBtn').disabled);
+          return {
+            type: 'provider-state',
+            providerId: issuerProviderId,
+            isLoggedIn: Boolean(currentSubjectWebId),
+            hasOpenReferral: false,
+            selectedIdentityWebId: String((byId('identitySelect') && byId('identitySelect').value) || ''),
+            selectedStaffActionId: '',
+            selectedSelfActionId: '',
+            selectedReferralId: '',
+            selectedReferralOpen: false,
+            consentToStore,
+            canVerify
+          };
+        }
+      });
+
+      const postTutorialState = () => tutorialBridge.postState();
+
+      const fillSelect = (selectEl, options, placeholder) => {
+        selectEl.innerHTML = '';
+        if (!Array.isArray(options) || options.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = placeholder || 'No options available';
+          selectEl.appendChild(option);
+          return;
+        }
+
+        options.forEach((entry) => {
+          const option = document.createElement('option');
+          option.value = entry.value;
+          option.textContent = entry.label;
+          selectEl.appendChild(option);
+        });
+      };
+
+      const refreshIdentityOptions = () => {
+        const identities = store.listIdentities({ excludeStaff: true });
+        identityByWebId = new Map(identities.map((entry) => [entry.webId, entry]));
+        fillSelect(
+          byId('identitySelect'),
+          identities.map((entry) => ({ value: entry.webId, label: `${entry.displayName} (${entry.webId})` })),
+          'No identities available'
+        );
+        if (currentSubjectWebId) {
+          byId('identitySelect').value = currentSubjectWebId;
+        }
+      };
+
+      const refreshLoginState = () => {
+        byId('subjectDid').textContent = currentSubjectWebId || 'Not logged in.';
+        byId('verifyBtn').disabled = !currentSubjectWebId;
+        postTutorialState();
+      };
+
+      const refreshCredentialList = () => {
+        const listEl = byId('credentialList');
+        listEl.innerHTML = '';
+
+        if (!currentSubjectWebId) {
+          const li = document.createElement('li');
+          li.textContent = 'Login required to view credentials.';
+          listEl.appendChild(li);
+          return;
+        }
+
+        const credentials = store
+          .listCredentials(currentSubjectWebId)
+          .filter((entry) => entry.type === profile.credentialType || entry.issuerProviderId === issuerProviderId)
+          .slice(0, 12);
+
+        if (!credentials.length) {
+          const li = document.createElement('li');
+          li.textContent = 'No credentials issued for this verifier profile yet.';
+          listEl.appendChild(li);
+          return;
+        }
+
+        credentials.forEach((entry) => {
+          const li = document.createElement('li');
+          li.textContent = `${entry.createdAt} | ${entry.type} | ${entry.id}`;
+          listEl.appendChild(li);
+        });
+      };
+
+      const refreshEventFeed = () => {
+        const events = store.listEvents({ providerId: issuerProviderId, limit: 12 });
+        byId('eventFeed').textContent = JSON.stringify(events, null, 2);
+      };
+
+      const renderHeader = () => {
+        byId('portalTitle').textContent = profile.label;
+        byId('portalSubtitle').textContent = 'Identity Verifier Service Portal (Browser Demo)';
+        byId('profileSummary').textContent = `Credential Type: ${profile.credentialType}\nSubmit Route: ${profile.submitRoute}`;
+        byId('verifierDid').textContent = `Verifier DID: ${profile.verifierDid}`;
+      };
+
+      const handleLogin = () => {
+        const selected = byId('identitySelect').value;
+        currentSubjectWebId = selected || '';
+
+        if (currentSubjectWebId) {
+          store.addEvent({
+            type: 'subject-login',
+            providerId: issuerProviderId,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: currentSubjectWebId,
+            message: `${profile.label}: subject login`,
+            payload: {
+              verifierProfile: activeProfileKey
+            }
+          });
+        }
+
+        refreshLoginState();
+        refreshCredentialList();
+        refreshEventFeed();
+      };
+
+      const handleNewJohnDoe = () => {
+        const identity = store.createJohnDoe({
+          foundNotes: `Generated for ${profile.label} browser demo flow.`
+        });
+        refreshIdentityOptions();
+        byId('identitySelect').value = identity.webId;
+        currentSubjectWebId = identity.webId;
+
+        store.addEvent({
+          type: 'identity-created-for-verification',
+          providerId: issuerProviderId,
+          subjectWebId: currentSubjectWebId,
+          actorWebId: currentSubjectWebId,
+          message: `${profile.label}: created ${identity.displayName} for verification flow`,
+          payload: {
+            verifierProfile: activeProfileKey
+          },
+          severity: 'warning'
+        });
+
+        refreshLoginState();
+        refreshCredentialList();
+        refreshEventFeed();
+      };
+
+      const nextCredentialId = () => {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+          return `urn:uuid:${window.crypto.randomUUID()}`;
+        }
+        return `urn:uuid:fallback-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      };
+
+      const runVerification = () => {
+        if (!currentSubjectWebId) {
+          byId('verifyResult').textContent = 'Login required before verifying documents.';
+          return;
+        }
+
+        const identity = identityByWebId.get(currentSubjectWebId) || {
+          webId: currentSubjectWebId,
+          displayName: currentSubjectWebId
+        };
+        const claims = profile.buildClaims(identity);
+        const consentToStore = byId('consentToStore').checked;
+        const fileInput = byId('docFile');
+        const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+        const documentName = file ? file.name : 'mock-document-upload';
+
+        let storedCredential = null;
+        let credentialPayload = null;
+        if (consentToStore) {
+          storedCredential = store.issueCredential({
+            subjectWebId: currentSubjectWebId,
+            issuerProviderId,
+            type: profile.credentialType,
+            metadata: {
+              verifierProfile: activeProfileKey,
+              verifierDid: profile.verifierDid,
+              submitRoute: profile.submitRoute,
+              documentName,
+              claims
+            }
+          });
+        } else {
+          credentialPayload = {
+            '@context': ['https://www.w3.org/ns/credentials/v2'],
+            id: nextCredentialId(),
+            type: ['VerifiableCredential', profile.credentialType],
+            issuer: { id: profile.verifierDid, name: profile.label },
+            issuanceDate: asIso(),
+            credentialSubject: {
+              id: currentSubjectWebId,
+              ...claims
+            }
+          };
+        }
+
+        const credentialId = storedCredential ? storedCredential.id : credentialPayload.id;
+
+        store.addEvent({
+          type: 'identity-vc-issued',
+          providerId: issuerProviderId,
+          subjectWebId: currentSubjectWebId,
+          actorWebId: currentSubjectWebId,
+          message: `${profile.label}: issued ${profile.credentialType}`,
+          payload: {
+            verifierProfile: activeProfileKey,
+            credentialType: profile.credentialType,
+            credentialId,
+            consentToStore
+          }
+        });
+
+        const result = {
+          ok: true,
+          verifierProfile: activeProfileKey,
+          verifierDid: profile.verifierDid,
+          authenticatedWebId: currentSubjectWebId,
+          extractedData: claims,
+          consentToStore,
+          credential: storedCredential
+            ? {
+                id: storedCredential.id,
+                type: ['VerifiableCredential', storedCredential.type],
+                metadata: storedCredential.metadata
+              }
+            : credentialPayload,
+          walletStore: consentToStore
+            ? { ok: true, storedCredentialId: storedCredential.id }
+            : { ok: true, skipped: true, reason: 'permission not granted to write to sovereign demo data' }
+        };
+
+        byId('verifyResult').textContent = JSON.stringify(result, null, 2);
+        refreshCredentialList();
+        refreshEventFeed();
+      };
+
+      const boot = () => {
+        renderHeader();
+        refreshIdentityOptions();
+        refreshLoginState();
+        refreshCredentialList();
+        refreshEventFeed();
+
+        byId('loginBtn').addEventListener('click', handleLogin);
+        byId('newJohnDoeBtn').addEventListener('click', handleNewJohnDoe);
+        byId('verifyBtn').addEventListener('click', runVerification);
+        byId('identitySelect').addEventListener('change', postTutorialState);
+        byId('consentToStore').addEventListener('change', postTutorialState);
+
+        store.subscribe(() => {
+          refreshIdentityOptions();
+          refreshCredentialList();
+          refreshEventFeed();
+          postTutorialState();
+        });
+
+        postTutorialState();
+      };
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

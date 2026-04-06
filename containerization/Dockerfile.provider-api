@@ -1,0 +1,11 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY containerization/provider-api-server.js /app/provider-api-server.js
+
+ENV PORT=8080
+
+EXPOSE 8080
+
+CMD ["node", "provider-api-server.js"]

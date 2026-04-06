@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign NGO | Demo Modes</title>
+  <meta name="description" content="Choose a live demo mode for individual, provider, or combined flows.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="./demo.css">
+</head>
+<body>
+  <main class="container">
+    <div class="topbar">
+      <h1>Demo Mode Selector</h1>
+      <div>
+        <a href="https://sovereign.ngo/">Nonprofit Website</a>
+      </div>
+    </div>
+
+    <p class="note">Use route-based demo modes. This demo can run fully container-less with shared browser state across all service frames.</p>
+
+    <section class="landing-grid four-up" aria-label="Demo mode routes">
+      <article class="landing-card">
+        <h2>Individual</h2>
+        <p>Holder and credential view for resident-facing demonstrations and consent walkthroughs.</p>
+        <a href="./individual/">Open /individual</a>
+      </article>
+      <article class="landing-card">
+        <h2>Credential Manager</h2>
+        <p>Direct view of Sovereign credential manager and pod records.</p>
+        <a href="./services/credential-manager/index.html">Open /services/credential-manager</a>
+      </article>
+      <article class="landing-card">
+        <h2>Provider</h2>
+        <p>Issuer and verifier view for partner organizations and service-team operations.</p>
+        <a href="./services/provider/index.html?provider=nolichucky_family_clinic">Open /services/provider</a>
+      </article>
+      <article class="landing-card">
+        <h2>Combined</h2>
+        <p>All views together for end-to-end walkthroughs and multi-role presentation sessions.</p>
+        <a href="./combined/">Open /combined</a>
+      </article>
+    </section>
+
+    <section class="landing-grid" aria-label="Individual and provider features with layer scope">
+      <article class="landing-card">
+        <h2>Individual Mode Includes</h2>
+        <ul>
+          <li>View personal records and credentials in one place.</li>
+          <li>Set data-sharing permissions by granting, updating, or revoking access.</li>
+          <li>Request services from providers through a resident-controlled flow.</li>
+          <li>Initiate transactions across participating organizations.</li>
+          <li>Track status and history of requests and decisions.</li>
+          <li>Review access activity tied to approved sharing permissions.</li>
+        </ul>
+      </article>
+      <article class="landing-card">
+        <h2>Provider Mode Includes</h2>
+        <ul>
+          <li>Review service requests and move them into active workflow.</li>
+          <li>Initiate and accept transfers or handoffs between partner facilities.</li>
+          <li>Verify identity and eligibility with consent-aware checks.</li>
+          <li>Request minimum-necessary records from partner organizations.</li>
+          <li>Update case status, decisions, and next steps in shared operations.</li>
+          <li>Record actions in auditable logs, including exceptions and follow-up needs.</li>
+        </ul>
+      </article>
+      <article class="landing-card">
+        <h2>Layer Scope</h2>
+        <ul>
+          <li>Current demo focus: Essential Services layer.</li>
+          <li>This layer covers consented service requests, sharing permissions, and transaction initiation.</li>
+          <li>Business and additional layers are planned separately and are outside this demo for now.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="landing-grid two-up" aria-label="Shared core and data model">
+      <article class="landing-card">
+        <h2>One API Core, Many Front Ends</h2>
+        <ul>
+          <li>Each demo mode is an independent front end with its own layout and interaction flow.</li>
+          <li>All modes use the same in-browser state contract so behavior stays consistent across UI variants.</li>
+          <li>Current layer in scope: Essential Services.</li>
+        </ul>
+      </article>
+      <article class="landing-card">
+        <h2>Demo Data Artifacts</h2>
+        <ul>
+          <li>Region model: <a href="./data/region-essential-services.json">region-essential-services.json</a></li>
+          <li>Store backend runtime config: <a href="./lib/demo-store-config.global.js">demo-store-config.global.js</a></li>
+          <li>Store backend config example: <a href="./lib/demo-store-config.example.global.js">demo-store-config.example.global.js</a></li>
+        </ul>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

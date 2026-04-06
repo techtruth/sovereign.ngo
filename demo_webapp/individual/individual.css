@@ -1,0 +1,526 @@
+    .service-stack {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .service-group {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+      grid-column: span var(--group-span, 12);
+    }
+
+    .service-group-toggle {
+      margin: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      min-height: 44px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #1a4d6e;
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1.2;
+      background: #f7fbff;
+      list-style: none;
+      cursor: pointer;
+      position: relative;
+      padding-left: 30px;
+      user-select: none;
+    }
+
+    .service-group-toggle::-webkit-details-marker {
+      display: none;
+    }
+
+    .service-group-toggle::before {
+      content: "\25B8";
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+      line-height: 1;
+      color: #1a4d6e;
+      transition: transform 0.14s ease;
+    }
+
+    .service-group[open] > .service-group-toggle::before {
+      transform: translateY(-50%) rotate(90deg);
+    }
+
+    .service-group-toggle:focus-visible {
+      outline: 2px solid #2a74af;
+      outline-offset: 2px;
+    }
+
+    .service-group-title-static {
+      cursor: default;
+    }
+
+    .service-group-title-static::before {
+      content: "\25B8";
+      color: transparent;
+    }
+
+    .service-group-body {
+      display: grid;
+      gap: 10px;
+    }
+
+    .service-group-note {
+      margin: 0;
+      color: var(--ink-soft);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.85rem;
+      padding: 0 2px;
+    }
+
+    .service-group-empty {
+      font-style: italic;
+    }
+
+    .service-group-fixed .service-group-note {
+      min-height: 2.5em;
+    }
+
+    .subsector-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .subsector-group {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .subsector-toggle {
+      margin: 0;
+      padding: 8px 10px 8px 28px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      min-height: 40px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #1a4d6e;
+      font-size: 0.9rem;
+      font-weight: 700;
+      line-height: 1.2;
+      background: #f7fbff;
+      list-style: none;
+      cursor: pointer;
+      position: relative;
+      user-select: none;
+    }
+
+    .subsector-toggle::-webkit-details-marker {
+      display: none;
+    }
+
+    .subsector-toggle::before {
+      content: "\25B8";
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      line-height: 1;
+      color: #1a4d6e;
+      transition: transform 0.14s ease;
+    }
+
+    .subsector-group[open] > .subsector-toggle::before {
+      transform: translateY(-50%) rotate(90deg);
+    }
+
+    .subsector-toggle:focus-visible {
+      outline: 2px solid #2a74af;
+      outline-offset: 2px;
+    }
+
+    .subsector-body {
+      display: grid;
+      gap: 8px;
+    }
+
+    .service-row {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+
+    .service-card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      grid-column: span var(--service-span, 4);
+      min-width: 0;
+    }
+
+    .service-card iframe {
+      width: 100%;
+      height: min(78vh, 980px);
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      background: #fff;
+      box-shadow: none;
+    }
+
+    .service-toolbar {
+      display: grid;
+      gap: 7px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #f7fbff;
+    }
+
+    .service-title-select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #1a4d6e;
+      background: #fff;
+    }
+
+    .service-title-fixed {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #1a4d6e;
+      background: #fff;
+    }
+
+    .service-taxonomy {
+      margin: 0;
+      border: 1px dashed #c8d8e7;
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 6px 8px;
+      color: #40586d;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.78rem;
+      line-height: 1.35;
+      white-space: pre-line;
+    }
+
+    .demo-guide-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      gap: 12px;
+      margin: 0 0 12px;
+      align-items: start;
+    }
+
+    .demo-guide {
+      margin: 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #f8fbff;
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 8px;
+    }
+
+    .demo-guide h2 {
+      margin: 0;
+      color: #164969;
+      font-size: 1.04rem;
+    }
+
+    .demo-guide p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .demo-guide ol {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--ink-soft);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.92rem;
+      display: grid;
+      gap: 5px;
+    }
+
+    .demo-walkthrough {
+      margin: 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #f8fbff;
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 8px;
+    }
+
+    .demo-walkthrough h2 {
+      margin: 0;
+      color: #164969;
+      font-size: 1rem;
+    }
+
+    .demo-walkthrough p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.88rem;
+    }
+
+    .demo-walkthrough ol {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--ink-soft);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 0.85rem;
+      display: grid;
+      gap: 6px;
+    }
+
+    .walkthrough-buttons {
+      display: grid;
+      gap: 6px;
+    }
+
+    .walkthrough-start-btn {
+      appearance: none;
+      border: 1px solid #2a6b3d;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #1f5f36;
+      font: 700 0.82rem "Trebuchet MS", "Segoe UI", sans-serif;
+      padding: 7px 9px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .walkthrough-start-btn.is-active {
+      background: #eaf7ef;
+      border-color: #2f7a47;
+      color: #1a4d2d;
+    }
+
+    .walkthrough-panel {
+      border: 1px dashed #b6cfbf;
+      border-radius: 10px;
+      padding: 9px;
+      background: #fbfffc;
+      display: grid;
+      gap: 6px;
+    }
+
+    .walkthrough-panel h3 {
+      margin: 0;
+      color: #205c37;
+      font-size: 0.92rem;
+    }
+
+    .walkthrough-progress {
+      margin: 0;
+      color: #2d5c42;
+      font: 700 0.8rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .walkthrough-instruction {
+      margin: 0;
+      color: #2d4f63;
+      font: 0.82rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .walkthrough-steps {
+      margin: 0;
+      padding-left: 18px;
+      color: #395265;
+      font: 0.8rem "Trebuchet MS", "Segoe UI", sans-serif;
+      display: grid;
+      gap: 4px;
+    }
+
+    .walkthrough-steps li.is-complete {
+      color: #567180;
+    }
+
+    .walkthrough-steps li.is-active {
+      color: #1e4f69;
+      font-weight: 700;
+    }
+
+    .walkthrough-controls {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .walkthrough-btn {
+      border: 1px solid #2a6b3d;
+      background: #2f7a47;
+      font-size: 0.78rem;
+      padding: 6px 9px;
+    }
+
+    .walkthrough-btn.secondary {
+      border-color: #49657a;
+      background: #5f7f98;
+    }
+
+    .walkthrough-btn:disabled {
+      background: #6e8798;
+      border-color: #5a7080;
+    }
+
+    .tutorial-target {
+      border-color: #2f7a47;
+      box-shadow: 0 0 0 2px rgba(47, 122, 71, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+    }
+
+    body.tutorial-modal-open {
+      overflow: hidden;
+    }
+
+    .tutorial-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+
+    .tutorial-modal[hidden] {
+      display: none;
+    }
+
+    .tutorial-modal-scrim {
+      position: absolute;
+      inset: 0;
+      background: rgba(16, 32, 49, 0.55);
+      backdrop-filter: blur(2px);
+    }
+
+    .tutorial-modal-card {
+      position: relative;
+      width: min(760px, 96vw);
+      border: 1px solid #b9ccde;
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: 0 22px 48px rgba(6, 26, 43, 0.25);
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .tutorial-modal-card h3 {
+      margin: 0;
+      color: #1a4d6e;
+      font-size: 1.06rem;
+    }
+
+    .tutorial-modal-card p {
+      margin: 0;
+      color: #324e63;
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+
+    .tutorial-modal-benefits {
+      margin: 0;
+      padding-left: 18px;
+      color: #324e63;
+      font-size: 0.9rem;
+      display: grid;
+      gap: 5px;
+    }
+
+    .tutorial-modal-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      margin-top: 2px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .demo-action-btn {
+      appearance: none;
+      color: #fff;
+      font: 700 0.84rem "Trebuchet MS", "Segoe UI", sans-serif;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 999px;
+    }
+
+    .demo-action-btn:disabled {
+      color: #eaf3fb;
+      opacity: 1;
+      cursor: not-allowed;
+    }
+
+    #resetDemoDataBtn {
+      border: 1px solid #004a90;
+      background: #005eb8;
+    }
+
+    #resetDemoDataBtn:disabled {
+      background: #2b6f99;
+      border-color: #1f5d86;
+    }
+
+    #downloadAuditLogBtn {
+      border: 1px solid #2a6b3d;
+      background: #2f7a47;
+    }
+
+    #downloadAuditLogBtn:disabled {
+      background: #3d6f4b;
+      border-color: #315c3d;
+    }
+
+    @media (max-width: 980px) {
+      .demo-guide-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .service-group {
+        grid-column: span 12;
+      }
+
+      .service-card {
+        grid-column: span 12;
+      }
+    }

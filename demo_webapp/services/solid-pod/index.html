@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign Solid Pod Demo</title>
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="./solid-pod.css">
+</head>
+<body>
+  <main class="wrap">
+    <section class="mast">
+      <div>
+        <h1>Sovereign Solid Pod</h1>
+        <p class="sub">Resident-controlled record view backed by in-browser demo state.</p>
+      </div>
+      <div id="identitySummary" class="sub"></div>
+    </section>
+
+    <section class="panel">
+      <div class="controls">
+        <label>
+          Sovereign Identity
+          <select id="identitySelect"></select>
+        </label>
+        <button id="refreshBtn" type="button">Refresh View</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Identity Profile</h2>
+        <pre id="profileBlock" class="mono">{}</pre>
+      </article>
+
+      <article class="panel">
+        <h2>Credentials</h2>
+        <ul id="credentialList"></ul>
+      </article>
+
+      <article class="panel">
+        <h2>Pod Resources by Provider</h2>
+        <ul id="resourceList"></ul>
+      </article>
+
+      <article class="panel">
+        <h2>Sharing Permissions</h2>
+        <ul id="consentList"></ul>
+      </article>
+
+      <article class="panel">
+        <h2>Referrals</h2>
+        <ul id="referralList"></ul>
+      </article>
+
+      <article class="panel">
+        <h2>Record Access Passes</h2>
+        <ul id="accessPassList"></ul>
+      </article>
+
+      <article class="panel">
+        <h2>Provider Pod Saved Access Handles</h2>
+        <ul id="providerPodLinkList"></ul>
+      </article>
+
+      <article class="panel">
+        <h2>Recent Events</h2>
+        <ul id="eventList"></ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Raw Pod Snapshot (Wrapped)</h2>
+        <pre id="snapshotBlock" class="mono">{}</pre>
+      </article>
+    </section>
+  </main>
+
+  <script src="../../data/provider-catalog.global.js"></script>
+  <script src="../../lib/demo-store-config.global.js"></script>
+  <script src="../../lib/demo-store-backends.global.js"></script>
+  <script src="../../lib/demo-store.js"></script>
+  <script>
+    (function () {
+      const store = window.SovereignDemoStore;
+      if (!store) {
+        document.body.innerHTML = '<main class="wrap"><p>Demo store unavailable.</p></main>';
+        return;
+      }
+
+      const byId = (id) => document.getElementById(id);
+      let currentWebId = '';
+
+      const fillSelect = (selectEl, rows, placeholder) => {
+        selectEl.innerHTML = '';
+        if (!rows.length) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = placeholder;
+          selectEl.appendChild(option);
+          return;
+        }
+
+        rows.forEach((entry) => {
+          const option = document.createElement('option');
+          option.value = entry.webId;
+          option.textContent = `${entry.displayName} (${entry.webId})`;
+          selectEl.appendChild(option);
+        });
+      };
+
+      const setList = (el, rows, empty) => {
+        el.innerHTML = '';
+        if (!rows.length) {
+          const li = document.createElement('li');
+          li.textContent = empty;
+          el.appendChild(li);
+          return;
+        }
+
+        rows.forEach((text) => {
+          const li = document.createElement('li');
+          if (typeof text === 'string') {
+            li.textContent = text;
+          } else {
+            li.textContent = String(text);
+          }
+          el.appendChild(li);
+        });
+      };
+
+      const refresh = () => {
+        const identities = store.listIdentities();
+        fillSelect(byId('identitySelect'), identities, 'No identities available');
+
+        if (!currentWebId && identities.length) {
+          currentWebId = identities[0].webId;
+        }
+
+        if (currentWebId) {
+          byId('identitySelect').value = currentWebId;
+        }
+
+        const identity = identities.find((entry) => entry.webId === currentWebId);
+        if (!identity) {
+          byId('identitySummary').textContent = 'No identity selected.';
+          byId('profileBlock').textContent = '{}';
+          byId('snapshotBlock').textContent = '{}';
+          setList(byId('credentialList'), [], 'No credentials.');
+          setList(byId('resourceList'), [], 'No provider resources.');
+          setList(byId('consentList'), [], 'No active sharing permissions.');
+          setList(byId('referralList'), [], 'No referrals for this identity.');
+          setList(byId('accessPassList'), [], 'No record access passes.');
+          setList(byId('providerPodLinkList'), [], 'No provider pod saved handles.');
+          setList(byId('eventList'), [], 'No events for this identity.');
+          return;
+        }
+
+        const credentials = store.listCredentials(currentWebId);
+        const records = store.listRecords(currentWebId);
+        const consents = store.listConsents(currentWebId, { includeRevoked: true });
+        const referrals = store.listReferrals({ subjectWebId: currentWebId, includeClosed: true });
+        const accessPasses = store.listRecordAccessPasses(currentWebId, { includeExpired: true, includeInactive: true });
+        const providerPodLinks = store.listProviderPodAccessLinks('', { subjectWebId: currentWebId, includeInactive: true });
+        const events = store.listEvents({ subjectWebId: currentWebId, limit: 16 });
+
+        const recordsByProvider = records.reduce((acc, entry) => {
+          const key = entry.providerLabel || entry.providerId || 'Unknown provider';
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {});
+
+        byId('identitySummary').textContent = `${identity.displayName} | ${identity.webId}`;
+        byId('profileBlock').textContent = JSON.stringify(identity, null, 2);
+
+        setList(
+          byId('credentialList'),
+          credentials.slice(0, 20).map((entry) => `${entry.createdAt} | ${entry.type} | issuer: ${entry.issuerProviderId || 'n/a'}`),
+          'No credentials.'
+        );
+
+        setList(
+          byId('resourceList'),
+          Object.keys(recordsByProvider).sort().map((label) => `${label}: ${recordsByProvider[label]} record(s)`),
+          'No provider resources.'
+        );
+
+        setList(
+          byId('consentList'),
+          consents.slice(0, 20).map((entry) => `${entry.status.toUpperCase()} | ${entry.providerId} | ${entry.scope}`),
+          'No sharing permissions.'
+        );
+
+        setList(
+          byId('referralList'),
+          referrals.slice(0, 20).map((entry) => `${entry.status.toUpperCase()} | ${entry.summary} | target: ${entry.targetCapability}`),
+          'No referrals for this identity.'
+        );
+
+        setList(
+          byId('accessPassList'),
+          accessPasses.slice(0, 20).map((entry) => (
+            `${entry.status.toUpperCase()} | ${entry.id} | source: ${entry.sourceProviderId} | record: ${entry.sourceRecordId} | consent: ${entry.consentMode}`
+          )),
+          'No record access passes.'
+        );
+
+        setList(
+          byId('providerPodLinkList'),
+          providerPodLinks.slice(0, 20).map((entry) => (
+            `${entry.status.toUpperCase()} | ${entry.providerId} saved ${entry.accessPassId} | source: ${entry.sourceProviderId}`
+          )),
+          'No provider pod saved handles.'
+        );
+
+        setList(
+          byId('eventList'),
+          events.map((entry) => `${entry.createdAt} | ${entry.type} | ${entry.message || 'event'}`),
+          'No events for this identity.'
+        );
+
+        const snapshot = {
+          identity,
+          credentials,
+          records,
+          consents,
+          referrals,
+          accessPasses,
+          providerPodLinks,
+          events
+        };
+        byId('snapshotBlock').textContent = JSON.stringify(snapshot, null, 2);
+      };
+
+      byId('identitySelect').addEventListener('change', () => {
+        currentWebId = byId('identitySelect').value;
+        refresh();
+      });
+
+      byId('refreshBtn').addEventListener('click', refresh);
+      store.subscribe(refresh);
+      refresh();
+    })();
+  </script>
+</body>
+</html>

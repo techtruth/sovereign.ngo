@@ -1,0 +1,1404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign Demo Service Portal</title>
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="./provider.css">
+</head>
+<body>
+  <main class="wrap">
+    <section class="mast">
+      <div>
+        <h1 id="portalTitle">Service Portal</h1>
+        <p class="sub" id="portalSubtitle">Service Portal</p>
+        <p class="taxonomy-summary" id="taxonomySummary"></p>
+      </div>
+      <div class="meta">
+        <div id="providerDid">Provider DID</div>
+        <div id="staffStatus">Staff Credential: checking...</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Login</h2>
+        <label>
+          Sovereign Identity
+          <select id="identitySelect"></select>
+        </label>
+        <div class="row">
+          <button id="loginBtn" type="button">LOGIN</button>
+          <span class="or-divider" id="orDivider" hidden>-OR-</span>
+          <button id="emergencyBtn" class="secondary" type="button" hidden>New John Doe</button>
+        </div>
+        <p class="note">Subject DID (from login):</p>
+        <p id="subjectDid" class="mono">Not logged in.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Self-Service Actions</h2>
+        <label>
+          Self-Service Action
+          <select id="selfActionSelect"></select>
+        </label>
+        <p id="selfActionRequirementStatus" class="requirement-status">Requirement Check: Select a self-service action to view VC requirements.</p>
+        <button id="runSelfBtn" type="button" disabled>Run Self-Service Action</button>
+        <p id="selfActionResult" class="mono">No action yet.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Stephen Staffer (Staff Actions)</h2>
+        <label>
+          Staff Action
+          <select id="staffActionSelect"></select>
+        </label>
+        <label>
+          Third-Party Referrals Fulfillable by This Provider
+          <select id="referralSelect">
+            <option value="">No referrals loaded</option>
+          </select>
+        </label>
+        <button id="runStaffBtn" type="button" disabled>Run Staff Action</button>
+        <p id="staffActionResult" class="mono">No action yet.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Active Referrals and Fulfillment State</h2>
+        <ul id="referralList" class="referral-list"></ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Cross-Provider Record Access Passes</h2>
+        <label>
+          Source Record at This Provider
+          <select id="accessRecordSelect"></select>
+        </label>
+        <label>
+          Share With Provider
+          <select id="accessTargetProviderSelect"></select>
+        </label>
+        <label>
+          Consent Duration
+          <select id="accessConsentModeSelect">
+            <option value="one_time">One-time access pass</option>
+            <option value="long_term">Long-term reusable pass</option>
+          </select>
+        </label>
+        <button id="issueAccessPassBtn" type="button" disabled>Issue Record Access Pass</button>
+        <p id="issueAccessPassResult" class="mono">No record access pass issued yet.</p>
+
+        <label>
+          Available Access Passes for This Subject
+          <select id="inboundAccessPassSelect"></select>
+        </label>
+        <button id="saveAccessPassBtn" type="button" disabled>Save Pass to This Provider Pod</button>
+        <p id="saveAccessPassResult" class="mono">No pass saved to this provider pod yet.</p>
+
+        <p class="note">Saved pass handles in this provider pod context:</p>
+        <ul id="providerPodAccessPassList"></ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Recent Records for Logged-In Subject at This Provider</h2>
+        <ul id="recordList"></ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Live Event Feed (Most Recent 12)</h2>
+        <pre id="eventFeed" class="mono">[]</pre>
+      </article>
+    </section>
+  </main>
+
+  <script src="../../lib/tutorial-bridge.global.js"></script>
+  <script src="../../data/provider-catalog.global.js"></script>
+  <script src="../../data/provider-behavior.global.js"></script>
+  <script src="../../lib/demo-store-config.global.js"></script>
+  <script src="../../lib/demo-store-backends.global.js"></script>
+  <script src="../../lib/demo-store.js"></script>
+  <script>
+    (function () {
+      const tutorialBridgeApi = window.SovereignTutorialBridge;
+      if (!tutorialBridgeApi || typeof tutorialBridgeApi.createTutorialBridge !== 'function') {
+        document.body.innerHTML = '<main class="wrap"><p>Tutorial bridge failed to load.</p></main>';
+        return;
+      }
+      const { createTutorialBridge } = tutorialBridgeApi;
+
+      const store = window.SovereignDemoStore;
+      if (!store) {
+        document.body.innerHTML = '<main class="wrap"><p>Demo store failed to load.</p></main>';
+        return;
+      }
+
+      const defaults = {
+        provider: 'nolichucky_family_clinic'
+      };
+
+      const byId = (id) => document.getElementById(id);
+      const query = new URLSearchParams(window.location.search);
+      const providerId = query.get('provider') || defaults.provider;
+      const provider = store.providerById(providerId) || store.providerById(defaults.provider);
+      const staffWebId = store.staffWebId;
+      const currentHost = String((window.location && window.location.host) || '').toLowerCase();
+      const useContainerProviderApi = currentHost === 'localhost:8180' || currentHost === '127.0.0.1:8180';
+      const providerApiBase = useContainerProviderApi ? `/provider-api/${encodeURIComponent(provider.id)}/api` : '';
+
+      let currentSubjectWebId = '';
+      const tutorialHighlightIds = [
+        'loginBtn',
+        'emergencyBtn',
+        'runStaffBtn',
+        'runSelfBtn',
+        'identitySelect',
+        'staffActionSelect',
+        'selfActionSelect',
+        'referralSelect'
+      ];
+
+      const clearTutorialSelectHint = (selectEl) => {
+        if (!selectEl) return;
+        selectEl.removeAttribute('title');
+        Array.from(selectEl.options || []).forEach((option) => {
+          option.classList.remove('tutorial-option-target');
+          if (option.style) {
+            option.style.removeProperty('background-color');
+            option.style.removeProperty('color');
+            option.style.removeProperty('font-weight');
+          }
+        });
+        const hintId = `${selectEl.id}-tutorial-hint`;
+        const hintEl = byId(hintId);
+        if (hintEl) hintEl.remove();
+      };
+
+      const renderTutorialSelectHint = (selectEl, hintText) => {
+        if (!selectEl || !hintText) return;
+        const hintId = `${selectEl.id}-tutorial-hint`;
+        let hintEl = byId(hintId);
+        if (!hintEl) {
+          hintEl = document.createElement('div');
+          hintEl.id = hintId;
+          hintEl.className = 'tutorial-select-hint';
+          const host = selectEl.parentElement;
+          if (host) {
+            host.appendChild(hintEl);
+          }
+        }
+        if (hintEl) {
+          hintEl.textContent = hintText;
+        }
+      };
+
+      const annotateTutorialSelectChoice = (selectEl, details) => {
+        if (!selectEl) return;
+        clearTutorialSelectHint(selectEl);
+
+        const expectedMode = String((details && details.expectedMode) || '').trim();
+        let expectedValue = String((details && details.expectedValue) || '').trim();
+        let expectedLabel = String((details && details.expectedLabel) || '').trim();
+
+        if (expectedMode === 'open' && !expectedValue) {
+          const firstOpen = Array.from(selectEl.options || []).find((option) => option.value && !option.disabled);
+          if (firstOpen) {
+            expectedValue = String(firstOpen.value || '');
+            expectedLabel = expectedLabel || String(firstOpen.textContent || '').trim();
+          }
+        }
+
+        let targetOption = null;
+        if (expectedValue) {
+          targetOption = Array.from(selectEl.options || []).find((option) => String(option.value || '') === expectedValue) || null;
+        }
+
+        if (targetOption) {
+          targetOption.classList.add('tutorial-option-target');
+          targetOption.style.setProperty('background-color', '#ffd22d', 'important');
+          targetOption.style.setProperty('color', '#1f2f3f', 'important');
+          targetOption.style.setProperty('font-weight', '700', 'important');
+          expectedLabel = expectedLabel || String(targetOption.textContent || '').trim();
+        }
+
+        if (expectedLabel) {
+          const hint = `Open this menu and choose: ${expectedLabel}`;
+          selectEl.title = hint;
+          renderTutorialSelectHint(selectEl, hint);
+        }
+      };
+
+      const hasOpenReferralOption = () => {
+        const select = byId('referralSelect');
+        if (!select) return false;
+        return Array.from(select.options || []).some((option) => option.value && !option.disabled);
+      };
+
+      const isSelectedReferralOpen = () => {
+        const select = byId('referralSelect');
+        if (!select || !select.value) return false;
+        const selectedOption = select.selectedOptions && select.selectedOptions[0];
+        return Boolean(selectedOption && !selectedOption.disabled);
+      };
+
+      const tutorialBridge = createTutorialBridge({
+        byId,
+        highlightIds: tutorialHighlightIds,
+        onClearControl: (_controlId, el) => {
+          if (String(el.tagName || '').toUpperCase() === 'SELECT') {
+            clearTutorialSelectHint(el);
+          }
+        },
+        onApplyControl: (_controlId, el, details) => {
+          if (String(el.tagName || '').toUpperCase() !== 'SELECT') return false;
+          el.style.setProperty('outline', '5px solid #ffd22d', 'important');
+          el.style.setProperty('outline-offset', '2px', 'important');
+          el.style.setProperty('box-shadow', '0 0 0 4px rgba(255, 210, 45, 0.35), 0 0 24px rgba(255, 210, 45, 0.74)', 'important');
+          el.style.setProperty('filter', 'saturate(1.18)', 'important');
+          annotateTutorialSelectChoice(el, details || {});
+          return true;
+        },
+        statePayload: () => ({
+          type: 'provider-state',
+          providerId: provider.id,
+          isLoggedIn: Boolean(currentSubjectWebId),
+          hasOpenReferral: hasOpenReferralOption(),
+          selectedIdentityWebId: String((byId('identitySelect') && byId('identitySelect').value) || ''),
+          selectedStaffActionId: String((byId('staffActionSelect') && byId('staffActionSelect').value) || ''),
+          selectedSelfActionId: String((byId('selfActionSelect') && byId('selfActionSelect').value) || ''),
+          selectedReferralId: String((byId('referralSelect') && byId('referralSelect').value) || ''),
+          selectedReferralOpen: isSelectedReferralOpen()
+        })
+      });
+
+      const postTutorialState = () => tutorialBridge.postState();
+
+      const providerBehavior = window.SovereignProviderBehavior;
+      if (!providerBehavior || typeof providerBehavior !== 'object') {
+        document.body.innerHTML = '<main class="wrap"><p>Provider behavior config failed to load.</p></main>';
+        return;
+      }
+
+      const {
+        configMap,
+        pathwayActionExtensions,
+        referralActionCatalog,
+        directCredentialActionCatalog,
+        fulfillmentOutcomeByCapability,
+        selfActionRequirementProfiles,
+        selfActionRequirementProfileById
+      } = providerBehavior;
+
+      const baseConfig = configMap[provider.id] || {
+        selfActions: [{ id: 'request_help', label: 'Request service support' }],
+        staffActions: [{ id: 'record_case_update', label: 'Record service update' }],
+        allowEmergencyOverride: false
+      };
+
+      const config = {
+        selfActions: Array.isArray(baseConfig.selfActions) ? baseConfig.selfActions.map((entry) => ({ ...entry })) : [],
+        staffActions: Array.isArray(baseConfig.staffActions) ? baseConfig.staffActions.map((entry) => ({ ...entry })) : [],
+        allowEmergencyOverride: Boolean(baseConfig.allowEmergencyOverride)
+      };
+
+      const addUniqueAction = (list, action) => {
+        if (!Array.isArray(list) || !action || !action.id) return;
+        if (list.some((entry) => entry.id === action.id)) return;
+        list.push(action);
+      };
+
+      const resolveFulfillmentOutcome = (targetCapability) => {
+        const key = String(targetCapability || '').trim();
+        return fulfillmentOutcomeByCapability[key] || {
+          category: 'referral_fulfillment',
+          summary: 'Referral fulfilled and service update recorded',
+          credentialType: 'ServiceReferralFulfillmentCredential'
+        };
+      };
+
+      const extensionActions = pathwayActionExtensions[provider.id] || [];
+      extensionActions.forEach((entry) => addUniqueAction(config.staffActions, entry));
+      addUniqueAction(config.staffActions, { id: 'fulfill_selected_referral', label: 'Fulfill selected referral' });
+
+      const formatTaxonomySummary = (taxonomies) => {
+        if (!taxonomies || typeof taxonomies !== 'object') return '';
+        const parts = [
+          taxonomies.naics ? `NAICS: ${taxonomies.naics}` : '',
+          taxonomies.airs211 ? `211/AIRS: ${taxonomies.airs211}` : '',
+          taxonomies.hudHmis ? `HUD HMIS: ${taxonomies.hudHmis}` : ''
+        ].filter(Boolean);
+        return parts.join('\n');
+      };
+
+      const setResult = (el, text) => {
+        el.textContent = String(text || '').trim() || 'No action yet.';
+      };
+
+      const notifyProviderApi = async (path, payload) => {
+        if (!providerApiBase) return null;
+        try {
+          const response = await fetch(`${providerApiBase}${path}`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json'
+            },
+            body: JSON.stringify(payload || {})
+          });
+          const data = await response.json().catch(() => null);
+          if (!response.ok) {
+            console.warn('Provider API returned a non-success response.', {
+              providerId: provider.id,
+              path,
+              status: response.status,
+              data
+            });
+          }
+          return data;
+        } catch (error) {
+          console.warn('Provider API call failed.', {
+            providerId: provider.id,
+            path,
+            error
+          });
+          return null;
+        }
+      };
+
+      const credentialTypeLabels = {
+        DriversLicenseCredential: "Driver's License / State ID",
+        PassportCredential: 'Passport / Passport Card',
+        BirthCertificateCredential: 'Birth Certificate',
+        UtilityBillCredential: 'Utility Bill',
+        ProofOfResidencyCredential: 'Proof of Residency',
+        SocialSecurityCredential: 'Social Security',
+        UtilityResidencyEvidenceCredential: 'Utility Residency Evidence'
+      };
+
+      const credentialLabel = (type) => {
+        const key = String(type || '').trim();
+        return credentialTypeLabels[key] || key || 'Credential';
+      };
+
+      const requirementGroupCatalog = {
+        government_id: { label: 'Government ID', anyOf: ['DriversLicenseCredential', 'PassportCredential'] },
+        proof_of_residency: { label: 'Proof of Residency', anyOf: ['ProofOfResidencyCredential', 'UtilityBillCredential', 'UtilityResidencyEvidenceCredential'] },
+        social_security: { label: 'Social Security', anyOf: ['SocialSecurityCredential'] }
+      };
+
+      const materializeSelfActionRequirement = (actionId) => {
+        const profileId = String(selfActionRequirementProfileById[actionId] || '').trim();
+        if (!profileId) return null;
+        const profile = selfActionRequirementProfiles[profileId];
+        if (!profile) return null;
+
+        const groups = (Array.isArray(profile.groups) ? profile.groups : [])
+          .map((groupId) => requirementGroupCatalog[groupId])
+          .filter(Boolean)
+          .map((group) => ({ label: group.label, anyOf: Array.isArray(group.anyOf) ? group.anyOf.slice() : [] }));
+
+        return {
+          profileId,
+          summary: profile.summary || '',
+          groups
+        };
+      };
+
+      const selfActionRequirementCatalog = Object.keys(selfActionRequirementProfileById).reduce((acc, actionId) => {
+        const requirement = materializeSelfActionRequirement(actionId);
+        if (requirement) acc[actionId] = requirement;
+        return acc;
+      }, {});
+
+      const activeCredentialTypeSetForSubject = (subjectWebId) => {
+        if (!subjectWebId) return new Set();
+        const credentials = store.listCredentials(subjectWebId);
+        const activeTypes = credentials
+          .filter((entry) => entry && entry.status === 'active' && entry.type)
+          .map((entry) => String(entry.type || '').trim())
+          .filter(Boolean);
+        return new Set(activeTypes);
+      };
+
+      const requirementGroupOptionsText = (group) => {
+        const choices = Array.isArray(group && group.anyOf) ? group.anyOf : [];
+        if (!choices.length) return '';
+        return choices.map((type) => credentialLabel(type)).join(' OR ');
+      };
+
+      const evaluateSelfActionRequirements = (actionId, subjectWebId) => {
+        const id = String(actionId || '').trim();
+        const requirement = selfActionRequirementCatalog[id] || null;
+        if (!requirement) {
+          return {
+            applicable: false,
+            passed: true,
+            requirement: null,
+            missingGroups: [],
+            matchedGroups: []
+          };
+        }
+
+        const groups = Array.isArray(requirement.groups) ? requirement.groups : [];
+        if (!subjectWebId) {
+          return {
+            applicable: true,
+            passed: groups.length === 0,
+            requirement,
+            missingGroups: groups.slice(),
+            matchedGroups: []
+          };
+        }
+
+        const activeTypes = activeCredentialTypeSetForSubject(subjectWebId);
+        const matchedGroups = [];
+        const missingGroups = [];
+
+        groups.forEach((group) => {
+          const choices = Array.isArray(group && group.anyOf) ? group.anyOf : [];
+          const hasMatch = choices.some((type) => activeTypes.has(String(type || '').trim()));
+          if (hasMatch) matchedGroups.push(group);
+          else missingGroups.push(group);
+        });
+
+        return {
+          applicable: true,
+          passed: missingGroups.length === 0,
+          requirement,
+          missingGroups,
+          matchedGroups
+        };
+      };
+
+      const refreshSelfActionRequirementStatus = () => {
+        const statusEl = byId('selfActionRequirementStatus');
+        const selfSelect = byId('selfActionSelect');
+        if (!statusEl || !selfSelect) return;
+
+        const actionId = String(selfSelect.value || '').trim();
+        if (!actionId) {
+          statusEl.className = 'requirement-status';
+          statusEl.textContent = 'Requirement Check: Select a self-service action to view VC requirements.';
+          return;
+        }
+
+        const evaluation = evaluateSelfActionRequirements(actionId, currentSubjectWebId);
+        if (!evaluation.applicable || !evaluation.requirement) {
+          statusEl.className = 'requirement-status';
+          statusEl.textContent = 'Requirement Check: No VC requirement for this action.';
+          return;
+        }
+
+        const requirement = evaluation.requirement;
+        if (!currentSubjectWebId) {
+          if (evaluation.missingGroups.length === 0) {
+            statusEl.className = 'requirement-status';
+            statusEl.textContent = `Requirement Check: Login required. ${requirement.summary}`;
+            return;
+          }
+          const needed = evaluation.missingGroups
+            .map((group) => `${group.label} (${requirementGroupOptionsText(group)})`)
+            .join('; ');
+          statusEl.className = 'requirement-status warn';
+          statusEl.textContent = `Requirement Check: Login required. ${requirement.summary} Needed: ${needed}.`;
+          return;
+        }
+
+        if (evaluation.passed) {
+          statusEl.className = 'requirement-status ok';
+          statusEl.textContent = `Requirement Check: Ready. ${requirement.summary}`;
+          return;
+        }
+
+        const missing = evaluation.missingGroups
+          .map((group) => `${group.label} (${requirementGroupOptionsText(group)})`)
+          .join('; ');
+        statusEl.className = 'requirement-status warn';
+        statusEl.textContent = `Requirement Check: Missing credentials. Needed: ${missing}. Issue them in Identity and Proof Document VC Issuers.`;
+      };
+
+      const renderHeader = () => {
+        byId('portalTitle').textContent = provider.label;
+        byId('portalSubtitle').textContent = 'Service Portal';
+        byId('taxonomySummary').textContent = formatTaxonomySummary(provider.taxonomies);
+        byId('providerDid').textContent = `Provider DID: ${provider.did}`;
+
+        const hasCredential = store
+          .listCredentials(staffWebId)
+          .some((entry) => entry.type === 'StaffAccessCredential' && entry.issuerProviderId === provider.id && entry.status === 'active');
+
+        const status = byId('staffStatus');
+        status.textContent = hasCredential
+          ? 'Active Staff Credential: Staphen Staffer'
+          : 'Active Staff Credential: not found for Staphen Staffer';
+      };
+
+      const fillSelect = (selectEl, options, placeholder) => {
+        selectEl.innerHTML = '';
+        if (!Array.isArray(options) || options.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = placeholder || 'No options available';
+          selectEl.appendChild(option);
+          return;
+        }
+
+        options.forEach((entry) => {
+          const option = document.createElement('option');
+          option.value = entry.value;
+          option.textContent = entry.label;
+          option.disabled = Boolean(entry.disabled);
+          selectEl.appendChild(option);
+        });
+      };
+
+      const refreshIdentityOptions = () => {
+        const identities = store.listIdentities({ excludeStaff: true });
+        fillSelect(
+          byId('identitySelect'),
+          identities.map((entry) => ({ value: entry.webId, label: `${entry.displayName} (${entry.webId})` })),
+          'No identities available'
+        );
+        if (currentSubjectWebId) {
+          byId('identitySelect').value = currentSubjectWebId;
+        }
+      };
+
+      const refreshActionOptions = () => {
+        fillSelect(
+          byId('selfActionSelect'),
+          config.selfActions.map((entry) => ({ value: entry.id, label: entry.label })),
+          'No self-service actions available'
+        );
+
+        fillSelect(
+          byId('staffActionSelect'),
+          config.staffActions.map((entry) => ({ value: entry.id, label: entry.label })),
+          'No staff actions available'
+        );
+        refreshSelfActionRequirementStatus();
+      };
+
+      const refreshReferralWidgets = () => {
+        const selectEl = byId('referralSelect');
+        const listEl = byId('referralList');
+        listEl.innerHTML = '';
+
+        if (!currentSubjectWebId) {
+          fillSelect(selectEl, [], 'Login required to load referrals');
+          const li = document.createElement('li');
+          li.textContent = 'Login required to view referrals.';
+          listEl.appendChild(li);
+          postTutorialState();
+          return;
+        }
+
+        const referrals = store.listReferrals({
+          subjectWebId: currentSubjectWebId,
+          providerId: provider.id,
+          includeClosed: true
+        });
+
+        if (!referrals.length) {
+          fillSelect(selectEl, [], 'No fulfillable referrals');
+          const li = document.createElement('li');
+          li.textContent = 'No referrals available for this provider and subject.';
+          listEl.appendChild(li);
+          postTutorialState();
+          return;
+        }
+
+        const options = referrals.map((entry) => {
+          const label = `${entry.summary} [${entry.status}]`;
+          return {
+            value: entry.id,
+            label,
+            disabled: entry.status !== 'open'
+          };
+        });
+
+        fillSelect(selectEl, options, 'No referrals loaded');
+
+        referrals.forEach((entry) => {
+          const li = document.createElement('li');
+          li.textContent = `${entry.summary} | target: ${entry.targetCapability} | status: ${entry.status}`;
+          if (entry.status !== 'open') {
+            li.className = 'is-closed';
+          }
+          listEl.appendChild(li);
+        });
+
+        postTutorialState();
+      };
+
+      const providerLabelFromId = (providerId) => {
+        const id = String(providerId || '').trim();
+        if (!id) return 'Any qualified provider';
+        const found = store.providerById(id);
+        return (found && found.label) || id;
+      };
+
+      const refreshRecordAccessWidgets = () => {
+        const sourceRecordSelect = byId('accessRecordSelect');
+        const targetProviderSelect = byId('accessTargetProviderSelect');
+        const issueButton = byId('issueAccessPassBtn');
+        const inboundPassSelect = byId('inboundAccessPassSelect');
+        const saveButton = byId('saveAccessPassBtn');
+        const savedList = byId('providerPodAccessPassList');
+
+        const selectedSourceRecordId = sourceRecordSelect && sourceRecordSelect.value ? String(sourceRecordSelect.value) : '';
+        const selectedTargetProviderId = targetProviderSelect && targetProviderSelect.value ? String(targetProviderSelect.value) : '';
+        const selectedPassId = inboundPassSelect && inboundPassSelect.value ? String(inboundPassSelect.value) : '';
+
+        savedList.innerHTML = '';
+
+        if (!currentSubjectWebId) {
+          fillSelect(sourceRecordSelect, [], 'Login required to load source records');
+          fillSelect(targetProviderSelect, [], 'Login required to choose target provider');
+          fillSelect(inboundPassSelect, [], 'Login required to view access passes');
+          issueButton.disabled = true;
+          saveButton.disabled = true;
+          const li = document.createElement('li');
+          li.textContent = 'Login required to view or save provider pod access pass handles.';
+          savedList.appendChild(li);
+          return;
+        }
+
+        const sourceRecords = store
+          .listRecords(currentSubjectWebId, { providerId: provider.id })
+          .slice(0, 30)
+          .map((entry) => ({
+            value: entry.id,
+            label: `${entry.createdAt} | ${entry.category} | ${entry.summary}`
+          }));
+
+        fillSelect(sourceRecordSelect, sourceRecords, 'No records available at this provider for current subject');
+        if (selectedSourceRecordId) {
+          sourceRecordSelect.value = selectedSourceRecordId;
+        }
+
+        const targetProviders = store
+          .listProviders()
+          .filter((entry) => entry && entry.id && entry.id !== provider.id)
+          .sort((a, b) => String(a.label || a.id).localeCompare(String(b.label || b.id)))
+          .map((entry) => ({
+            value: entry.id,
+            label: entry.label
+          }));
+
+        targetProviders.unshift({
+          value: '',
+          label: 'Any provider you authorize later'
+        });
+
+        fillSelect(targetProviderSelect, targetProviders, 'No target providers available');
+        if (selectedTargetProviderId) {
+          targetProviderSelect.value = selectedTargetProviderId;
+        }
+
+        const inboundAccessPasses = store
+          .listRecordAccessPasses(currentSubjectWebId, {
+            providerId: provider.id,
+            includeExpired: false,
+            includeInactive: false
+          })
+          .filter((entry) => entry.sourceProviderId !== provider.id);
+
+        fillSelect(
+          inboundPassSelect,
+          inboundAccessPasses.map((entry) => ({
+            value: entry.id,
+            label: `${entry.id} | from ${providerLabelFromId(entry.sourceProviderId)} | ${entry.consentMode === 'long_term' ? 'long-term' : 'one-time'}`
+          })),
+          'No inbound access passes available'
+        );
+        if (selectedPassId) {
+          inboundPassSelect.value = selectedPassId;
+        }
+
+        const savedAccessLinks = store.listProviderPodAccessLinks(provider.id, {
+          subjectWebId: currentSubjectWebId,
+          includeInactive: false
+        });
+
+        if (!savedAccessLinks.length) {
+          const li = document.createElement('li');
+          li.textContent = 'No access pass handles saved in this provider pod yet.';
+          savedList.appendChild(li);
+        } else {
+          savedAccessLinks.forEach((entry) => {
+            const li = document.createElement('li');
+            li.textContent = `${entry.savedAt} | ${entry.accessPassId} | source: ${providerLabelFromId(entry.sourceProviderId)} | handle: ${entry.accessHandle}`;
+            savedList.appendChild(li);
+          });
+        }
+
+        issueButton.disabled = !Boolean(sourceRecordSelect.value);
+        saveButton.disabled = !Boolean(inboundPassSelect.value);
+      };
+
+      const refreshRecordList = () => {
+        const listEl = byId('recordList');
+        listEl.innerHTML = '';
+
+        if (!currentSubjectWebId) {
+          const li = document.createElement('li');
+          li.textContent = 'Login required to view records.';
+          listEl.appendChild(li);
+          return;
+        }
+
+        const records = store.listRecords(currentSubjectWebId, { providerId: provider.id }).slice(0, 12);
+        if (!records.length) {
+          const li = document.createElement('li');
+          li.textContent = 'No records for this subject at this provider yet.';
+          listEl.appendChild(li);
+          return;
+        }
+
+        records.forEach((entry) => {
+          const li = document.createElement('li');
+          li.textContent = `${entry.createdAt} | ${entry.category} | ${entry.summary}`;
+          listEl.appendChild(li);
+        });
+      };
+
+      const refreshEventFeed = () => {
+        const events = store.listEvents({ providerId: provider.id, limit: 12 });
+        byId('eventFeed').textContent = JSON.stringify(events, null, 2);
+      };
+
+      const refreshLoginState = () => {
+        byId('subjectDid').textContent = currentSubjectWebId || 'Not logged in.';
+        const isLoggedIn = Boolean(currentSubjectWebId);
+        byId('runSelfBtn').disabled = !isLoggedIn;
+        byId('runStaffBtn').disabled = !isLoggedIn;
+        refreshSelfActionRequirementStatus();
+        postTutorialState();
+      };
+
+      const createSelfServiceRecord = (actionLabel, actionId) => {
+        const record = store.addRecord({
+          subjectWebId: currentSubjectWebId,
+          providerId: provider.id,
+          category: 'self_service',
+          summary: actionLabel,
+          actorWebId: currentSubjectWebId,
+          details: {
+            actionId,
+            mode: 'self-service'
+          }
+        });
+
+        store.addEvent({
+          type: 'self-service-action',
+          providerId: provider.id,
+          subjectWebId: currentSubjectWebId,
+          actorWebId: currentSubjectWebId,
+          message: `${provider.label}: ${actionLabel}`,
+          payload: { actionId, recordId: record.id }
+        });
+
+        return record;
+      };
+
+      const runSelfServiceAction = () => {
+        if (!currentSubjectWebId) {
+          setResult(byId('selfActionResult'), 'Login required before running self-service actions.');
+          return;
+        }
+
+        const actionId = byId('selfActionSelect').value;
+        const action = config.selfActions.find((entry) => entry.id === actionId);
+        if (!action) {
+          setResult(byId('selfActionResult'), 'Select a self-service action first.');
+          return;
+        }
+
+        const requirementEvaluation = evaluateSelfActionRequirements(action.id, currentSubjectWebId);
+        if (requirementEvaluation.applicable && !requirementEvaluation.passed) {
+          const missing = requirementEvaluation.missingGroups
+            .map((group) => `${group.label} (${requirementGroupOptionsText(group)})`)
+            .join('; ');
+          setResult(
+            byId('selfActionResult'),
+            `Action blocked: missing required VC(s).\nNeeded: ${missing}\nIssue required credentials in Identity and Proof Document VC Issuers.`
+          );
+          store.addEvent({
+            type: 'self-action-blocked-missing-credential',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: currentSubjectWebId,
+            message: `${provider.label}: blocked ${action.label} (missing required credentials)`,
+            payload: {
+              actionId: action.id,
+              missingRequirements: requirementEvaluation.missingGroups.map((group) => ({
+                label: group.label,
+                anyOf: Array.isArray(group.anyOf) ? group.anyOf.slice() : []
+              }))
+            },
+            severity: 'warning'
+          });
+          refreshSelfActionRequirementStatus();
+          refreshEventFeed();
+          return;
+        }
+
+        const record = createSelfServiceRecord(action.label, action.id);
+        setResult(byId('selfActionResult'), `Recorded self-service action: ${action.label}\nRecord ID: ${record.id}`);
+        void notifyProviderApi('/actions/self', {
+          providerId: provider.id,
+          providerType: provider.type,
+          subjectWebId: currentSubjectWebId,
+          actionId: action.id,
+          actionLabel: action.label,
+          recordId: record.id
+        });
+        refreshRecordList();
+        refreshReferralWidgets();
+        refreshRecordAccessWidgets();
+        refreshEventFeed();
+      };
+
+      const runStaffAction = () => {
+        if (!currentSubjectWebId) {
+          setResult(byId('staffActionResult'), 'Login required before running staff actions.');
+          return;
+        }
+
+        const actionId = byId('staffActionSelect').value;
+        const action = config.staffActions.find((entry) => entry.id === actionId);
+        if (!action) {
+          setResult(byId('staffActionResult'), 'Select a staff action first.');
+          return;
+        }
+
+        if (referralActionCatalog[actionId]) {
+          const definition = referralActionCatalog[actionId];
+          const referral = store.addReferral({
+            subjectWebId: currentSubjectWebId,
+            fromProviderId: provider.id,
+            targetCapability: definition.targetCapability,
+            summary: definition.summary,
+            actorWebId: staffWebId,
+            details: {
+              referralActionId: actionId,
+              referralPurpose: definition.referralPurpose,
+              fulfillableBy: definition.fulfillableBy,
+              issuerProviderType: provider.type
+            }
+          });
+
+          const credential = store.issueCredential({
+            subjectWebId: currentSubjectWebId,
+            issuerProviderId: provider.id,
+            type: definition.credentialType || 'ServiceReferralCredential',
+            metadata: {
+              referralId: referral.id,
+              targetCapability: definition.targetCapability,
+              referralActionId: actionId,
+              fulfillableBy: definition.fulfillableBy
+            }
+          });
+
+          store.addEvent({
+            type: 'referral-issued',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
+            message: `${provider.label}: issued ${definition.eventLabel || 'service'} referral ${referral.id}`,
+            payload: {
+              referralId: referral.id,
+              targetCapability: definition.targetCapability,
+              credentialId: credential.id
+            }
+          });
+
+          setResult(
+            byId('staffActionResult'),
+            `Referral issued.\nReferral ID: ${referral.id}\nTarget Capability: ${definition.targetCapability}\nCredential ID: ${credential.id}`
+          );
+          void notifyProviderApi('/referrals/issue', {
+            providerId: provider.id,
+            providerType: provider.type,
+            subjectWebId: currentSubjectWebId,
+            actionId,
+            actionLabel: action.label,
+            referralId: referral.id,
+            targetCapability: definition.targetCapability,
+            referralPurpose: definition.referralPurpose,
+            fulfillableBy: definition.fulfillableBy
+          });
+        } else if (actionId === 'fulfill_selected_referral') {
+          const referralId = byId('referralSelect').value;
+          if (!referralId) {
+            setResult(byId('staffActionResult'), 'Select an open referral to fulfill.');
+            return;
+          }
+
+          const availableReferrals = store.listReferrals({
+            subjectWebId: currentSubjectWebId,
+            providerId: provider.id,
+            includeClosed: true
+          });
+          const selectedReferral = availableReferrals.find((entry) => entry.id === referralId);
+          if (!selectedReferral) {
+            setResult(byId('staffActionResult'), 'Selected referral is not available for this provider.');
+            return;
+          }
+
+          const fulfilled = store.fulfillReferral({
+            referralId,
+            providerId: provider.id,
+            actorWebId: staffWebId
+          });
+
+          if (fulfilled.error) {
+            setResult(byId('staffActionResult'), fulfilled.error);
+            return;
+          }
+
+          const outcome = resolveFulfillmentOutcome(selectedReferral.targetCapability);
+
+          const record = store.addRecord({
+            subjectWebId: currentSubjectWebId,
+            providerId: provider.id,
+            category: outcome.category,
+            summary: outcome.summary,
+            actorWebId: staffWebId,
+            details: {
+              referralId,
+              fulfillmentProviderId: provider.id,
+              targetCapability: selectedReferral.targetCapability,
+              referralSummary: selectedReferral.summary
+            }
+          });
+
+          const credential = store.issueCredential({
+            subjectWebId: currentSubjectWebId,
+            issuerProviderId: provider.id,
+            type: outcome.credentialType,
+            metadata: {
+              referralId,
+              recordId: record.id,
+              targetCapability: selectedReferral.targetCapability
+            }
+          });
+
+          store.addEvent({
+            type: 'referral-fulfilled',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
+            message: `${provider.label}: fulfilled referral ${referralId}`,
+            payload: {
+              referralId,
+              targetCapability: selectedReferral.targetCapability,
+              recordId: record.id,
+              credentialId: credential.id
+            }
+          });
+
+          setResult(
+            byId('staffActionResult'),
+            `Referral fulfilled.\nReferral ID: ${referralId}\nTarget Capability: ${selectedReferral.targetCapability}\nRecord ID: ${record.id}\nCredential ID: ${credential.id}`
+          );
+          void notifyProviderApi('/referrals/fulfill', {
+            providerId: provider.id,
+            providerType: provider.type,
+            subjectWebId: currentSubjectWebId,
+            actionId,
+            actionLabel: action.label,
+            referralId,
+            targetCapability: selectedReferral.targetCapability,
+            originProviderId: selectedReferral.fromProviderId,
+            recordId: record.id,
+            credentialId: credential.id
+          });
+        } else if (directCredentialActionCatalog[actionId]) {
+          const definition = directCredentialActionCatalog[actionId];
+          const record = store.addRecord({
+            subjectWebId: currentSubjectWebId,
+            providerId: provider.id,
+            category: definition.category || 'credential_issuance',
+            summary: definition.summary,
+            actorWebId: staffWebId,
+            details: {
+              actionId,
+              mode: 'staff',
+              credentialType: definition.credentialType
+            }
+          });
+
+          const credential = store.issueCredential({
+            subjectWebId: currentSubjectWebId,
+            issuerProviderId: provider.id,
+            type: definition.credentialType,
+            metadata: {
+              recordId: record.id,
+              actionId
+            }
+          });
+
+          store.addEvent({
+            type: 'credential-issued',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
+            message: `${provider.label}: ${definition.summary}`,
+            payload: { actionId, recordId: record.id, credentialId: credential.id }
+          });
+
+          setResult(
+            byId('staffActionResult'),
+            `Credential issued.\nRecord ID: ${record.id}\nCredential ID: ${credential.id}`
+          );
+          void notifyProviderApi('/actions/staff', {
+            providerId: provider.id,
+            providerType: provider.type,
+            subjectWebId: currentSubjectWebId,
+            actionId,
+            actionLabel: action.label,
+            recordId: record.id,
+            credentialId: credential.id
+          });
+        } else if (actionId === 'request_shared_record_access') {
+          const consents = store.listConsents(currentSubjectWebId, { includeRevoked: false });
+          const activeForProvider = consents.filter((entry) => entry.providerId === provider.id || entry.scope === 'all_records');
+
+          store.addEvent({
+            type: 'emergency-record-access-request',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
+            message: `${provider.label}: staff initiated emergency shared-record check`,
+            payload: {
+              activeConsentCount: activeForProvider.length,
+              consentIds: activeForProvider.map((entry) => entry.id)
+            },
+            severity: activeForProvider.length ? 'info' : 'warning'
+          });
+
+          setResult(
+            byId('staffActionResult'),
+            activeForProvider.length
+              ? `Shared record access check logged with ${activeForProvider.length} active consent record(s).`
+              : 'Shared record access check logged. No active consent found for this provider.'
+          );
+          void notifyProviderApi('/actions/staff', {
+            providerId: provider.id,
+            providerType: provider.type,
+            subjectWebId: currentSubjectWebId,
+            actionId,
+            actionLabel: action.label,
+            activeConsentCount: activeForProvider.length,
+            consentIds: activeForProvider.map((entry) => entry.id)
+          });
+        } else {
+          const record = store.addRecord({
+            subjectWebId: currentSubjectWebId,
+            providerId: provider.id,
+            category: 'staff_operation',
+            summary: action.label,
+            actorWebId: staffWebId,
+            details: {
+              actionId,
+              mode: 'staff'
+            }
+          });
+
+          if (actionId === 'record_imaging_results') {
+            store.issueCredential({
+              subjectWebId: currentSubjectWebId,
+              issuerProviderId: provider.id,
+              type: 'ImagingResultCredential',
+              metadata: { recordId: record.id }
+            });
+          }
+
+          if (actionId === 'record_emergency_treatment') {
+            store.issueCredential({
+              subjectWebId: currentSubjectWebId,
+              issuerProviderId: provider.id,
+              type: 'EmergencyTreatmentCredential',
+              metadata: { recordId: record.id }
+            });
+          }
+
+          store.addEvent({
+            type: 'staff-action',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId,
+            message: `${provider.label}: ${action.label}`,
+            payload: { actionId, recordId: record.id }
+          });
+
+          setResult(byId('staffActionResult'), `Recorded staff action: ${action.label}\nRecord ID: ${record.id}`);
+          void notifyProviderApi('/actions/staff', {
+            providerId: provider.id,
+            providerType: provider.type,
+            subjectWebId: currentSubjectWebId,
+            actionId,
+            actionLabel: action.label,
+            recordId: record.id
+          });
+        }
+
+        refreshReferralWidgets();
+        refreshRecordAccessWidgets();
+        refreshRecordList();
+        refreshEventFeed();
+      };
+
+      const issueRecordAccessPass = () => {
+        if (!currentSubjectWebId) {
+          setResult(byId('issueAccessPassResult'), 'Login required before issuing a record access pass.');
+          return;
+        }
+
+        const sourceRecordId = String((byId('accessRecordSelect') && byId('accessRecordSelect').value) || '').trim();
+        const targetProviderId = String((byId('accessTargetProviderSelect') && byId('accessTargetProviderSelect').value) || '').trim();
+        const consentMode = String((byId('accessConsentModeSelect') && byId('accessConsentModeSelect').value) || 'one_time').trim();
+
+        if (!sourceRecordId) {
+          setResult(byId('issueAccessPassResult'), 'Select a source record first.');
+          return;
+        }
+        const issued = store.issueRecordAccessPass({
+          subjectWebId: currentSubjectWebId,
+          sourceProviderId: provider.id,
+          sourceRecordId,
+          sharedWithProviderId: targetProviderId,
+          consentMode,
+          actorWebId: currentSubjectWebId
+        });
+
+        if (!issued || issued.error || !issued.accessPass) {
+          setResult(byId('issueAccessPassResult'), issued && issued.error ? issued.error : 'Failed to issue record access pass.');
+          return;
+        }
+
+        const targetLabel = targetProviderId ? providerLabelFromId(targetProviderId) : 'Any provider you authorize later';
+        const consentText = issued.accessPass.consentMode === 'long_term' ? 'long-term reusable pass' : 'one-time pass';
+        store.addEvent({
+          type: 'record-access-pass-issued',
+          providerId: provider.id,
+          subjectWebId: currentSubjectWebId,
+          actorWebId: currentSubjectWebId,
+          message: `${provider.label}: issued ${consentText} for record sharing to ${targetLabel}`,
+          payload: {
+            accessPassId: issued.accessPass.id,
+            sourceRecordId: issued.accessPass.sourceRecordId,
+            targetProviderId: targetProviderId || '',
+            consentMode: issued.accessPass.consentMode,
+            credentialId: issued.credential ? issued.credential.id : ''
+          }
+        });
+
+        setResult(
+          byId('issueAccessPassResult'),
+          `Record access pass issued.\nPass ID: ${issued.accessPass.id}\nSource Record ID: ${issued.accessPass.sourceRecordId}\nTarget Provider: ${targetLabel}\nConsent: ${consentText}\nCredential ID: ${issued.credential ? issued.credential.id : 'n/a'}`
+        );
+
+        void notifyProviderApi('/actions/self', {
+          providerId: provider.id,
+          providerType: provider.type,
+          subjectWebId: currentSubjectWebId,
+          actionId: 'issue_record_access_pass',
+          actionLabel: 'Issue Record Access Pass',
+          accessPassId: issued.accessPass.id,
+          sourceRecordId: issued.accessPass.sourceRecordId,
+          targetProviderId: targetProviderId || '',
+          consentMode: issued.accessPass.consentMode
+        });
+
+        refreshRecordAccessWidgets();
+        refreshEventFeed();
+      };
+
+      const saveRecordAccessPassToProviderPod = () => {
+        if (!currentSubjectWebId) {
+          setResult(byId('saveAccessPassResult'), 'Login required before saving a record access pass.');
+          return;
+        }
+
+        const accessPassId = String((byId('inboundAccessPassSelect') && byId('inboundAccessPassSelect').value) || '').trim();
+        if (!accessPassId) {
+          setResult(byId('saveAccessPassResult'), 'Select an access pass first.');
+          return;
+        }
+
+        const saved = store.saveRecordAccessPassToProviderPod({
+          accessPassId,
+          providerId: provider.id,
+          subjectWebId: currentSubjectWebId,
+          savedByWebId: staffWebId
+        });
+
+        if (!saved || saved.error || !saved.savedLink) {
+          setResult(byId('saveAccessPassResult'), saved && saved.error ? saved.error : 'Failed to save access pass to provider pod.');
+          return;
+        }
+
+        store.addEvent({
+          type: 'record-access-pass-saved',
+          providerId: provider.id,
+          subjectWebId: currentSubjectWebId,
+          actorWebId: staffWebId,
+          message: `${provider.label}: saved access pass ${saved.savedLink.accessPassId} in provider pod`,
+          payload: {
+            accessPassId: saved.savedLink.accessPassId,
+            sourceProviderId: saved.savedLink.sourceProviderId,
+            sourceRecordId: saved.savedLink.sourceRecordId,
+            accessHandle: saved.savedLink.accessHandle,
+            consentMode: saved.savedLink.consentMode
+          }
+        });
+
+        setResult(
+          byId('saveAccessPassResult'),
+          `Access pass saved to provider pod.\nPass ID: ${saved.savedLink.accessPassId}\nSource Provider: ${providerLabelFromId(saved.savedLink.sourceProviderId)}\nSource Record ID: ${saved.savedLink.sourceRecordId}\nHandle: ${saved.savedLink.accessHandle}`
+        );
+
+        void notifyProviderApi('/actions/staff', {
+          providerId: provider.id,
+          providerType: provider.type,
+          subjectWebId: currentSubjectWebId,
+          actionId: 'save_record_access_pass',
+          actionLabel: 'Save Record Access Pass to Provider Pod',
+          accessPassId: saved.savedLink.accessPassId,
+          sourceProviderId: saved.savedLink.sourceProviderId,
+          sourceRecordId: saved.savedLink.sourceRecordId,
+          accessHandle: saved.savedLink.accessHandle
+        });
+
+        refreshRecordAccessWidgets();
+        refreshEventFeed();
+      };
+
+      const handleLogin = () => {
+        const selected = byId('identitySelect').value;
+        currentSubjectWebId = selected || '';
+
+        if (currentSubjectWebId) {
+          store.addEvent({
+            type: 'subject-login',
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: currentSubjectWebId,
+            message: `${provider.label}: subject login`,
+            payload: {
+              providerType: provider.type
+            }
+          });
+          void notifyProviderApi('/session/login', {
+            providerId: provider.id,
+            providerType: provider.type,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: currentSubjectWebId,
+            mode: 'login'
+          });
+        }
+
+        refreshLoginState();
+        refreshReferralWidgets();
+        refreshRecordAccessWidgets();
+        refreshRecordList();
+        refreshEventFeed();
+      };
+
+      const handleEmergencyOverride = () => {
+        const identity = store.createJohnDoe({
+          foundNotes: `Generated at ${provider.label} emergency override pathway.`
+        });
+
+        refreshIdentityOptions();
+        byId('identitySelect').value = identity.webId;
+        currentSubjectWebId = identity.webId;
+
+        store.addEvent({
+          type: 'emergency-override-login',
+          providerId: provider.id,
+          subjectWebId: currentSubjectWebId,
+          actorWebId: staffWebId,
+          message: `${provider.label}: emergency override created ${identity.displayName}`,
+          severity: 'warning'
+        });
+        void notifyProviderApi('/session/login', {
+          providerId: provider.id,
+          providerType: provider.type,
+          subjectWebId: currentSubjectWebId,
+          actorWebId: staffWebId,
+          mode: 'emergency_override',
+          displayName: identity.displayName
+        });
+
+        refreshLoginState();
+        refreshReferralWidgets();
+        refreshRecordAccessWidgets();
+        refreshRecordList();
+        refreshEventFeed();
+      };
+
+      const boot = () => {
+        renderHeader();
+        refreshIdentityOptions();
+        refreshActionOptions();
+        refreshLoginState();
+        refreshReferralWidgets();
+        refreshRecordAccessWidgets();
+        refreshRecordList();
+        refreshEventFeed();
+
+        const emergencyBtn = byId('emergencyBtn');
+        const orDivider = byId('orDivider');
+        if (config.allowEmergencyOverride) {
+          orDivider.hidden = false;
+          emergencyBtn.hidden = false;
+          emergencyBtn.addEventListener('click', handleEmergencyOverride);
+        }
+
+        byId('loginBtn').addEventListener('click', handleLogin);
+        byId('runSelfBtn').addEventListener('click', runSelfServiceAction);
+        byId('runStaffBtn').addEventListener('click', runStaffAction);
+        byId('issueAccessPassBtn').addEventListener('click', issueRecordAccessPass);
+        byId('saveAccessPassBtn').addEventListener('click', saveRecordAccessPassToProviderPod);
+
+        ['identitySelect', 'staffActionSelect', 'selfActionSelect', 'referralSelect'].forEach((id) => {
+          const el = byId(id);
+          if (!el) return;
+          el.addEventListener('change', () => {
+            if (id === 'selfActionSelect' || id === 'identitySelect') {
+              refreshSelfActionRequirementStatus();
+            }
+            postTutorialState();
+          });
+        });
+
+        ['accessRecordSelect', 'accessTargetProviderSelect', 'accessConsentModeSelect', 'inboundAccessPassSelect'].forEach((id) => {
+          const el = byId(id);
+          if (!el) return;
+          el.addEventListener('change', () => {
+            refreshRecordAccessWidgets();
+          });
+        });
+
+        store.subscribe(() => {
+          refreshIdentityOptions();
+          refreshSelfActionRequirementStatus();
+          refreshReferralWidgets();
+          refreshRecordAccessWidgets();
+          refreshRecordList();
+          refreshEventFeed();
+          renderHeader();
+          postTutorialState();
+        });
+
+        postTutorialState();
+      };
+
+      boot();
+    })();
+  </script>
+</body>
+</html>
