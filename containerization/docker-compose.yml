@@ -38,11 +38,26 @@ services:
     tmpfs:
       - /data
 
+  standards_service:
+    build:
+      context: ..
+      dockerfile: containerization/Dockerfile.standards
+    image: sovereign-standards-service:latest
+    container_name: sovereign-standards-service
+    environment:
+      PORT: 8090
+      DID_DOMAIN: 'demo.sovereign.ngo'
+      STANDARDS_DATA_DIR: '/app/data'
+      STATE_SOURCE_URL: 'http://holder_sovereign:3001/sovereign/demo/state.json'
+    volumes:
+      - ../demo_webapp/data:/app/data:ro
+
   sovereign_gateway:
     image: nginx:alpine
     container_name: sovereign-gateway
     depends_on:
       - holder_sovereign
+      - standards_service
       - provider_web_nolichucky_family_clinic
       - provider_api_nolichucky_family_clinic
       - provider_pod_nolichucky_family_clinic

@@ -71,8 +71,8 @@ const tutorialChains = [
             subsectorId: 'naics-621',
             serviceId: 'hospital-clinic',
             endpointKey: 'nolichucky_family_clinic',
-            label: 'Clinic issues pharmacy referral',
-            instruction: "Set staff action to 'Issue pharmacy fulfillment referral', then click Run Staff Action.",
+            label: 'Clinic issues medication prescription',
+            instruction: "Set staff action to 'Issue medication prescription', then click Run Staff Action.",
             action: { kind: 'staff', actionId: 'issue_pharmacy_referral' },
             expectedEvent: { type: 'referral-issued', providerId: 'nolichucky_family_clinic', targetCapability: 'pharmacy-services' }
           },

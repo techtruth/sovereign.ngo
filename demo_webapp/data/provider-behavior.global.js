@@ -40,7 +40,7 @@
             { id: 'request_emergency_care', label: 'Request emergency care' }
           ],
           staffActions: [
-            { id: 'request_shared_record_access', label: 'Request shared record access' },
+            { id: 'request_shared_record_access', label: 'Request records from another provider' },
             { id: 'record_emergency_treatment', label: 'Record emergency treatment summary' }
           ],
           allowEmergencyOverride: true
@@ -437,11 +437,11 @@
   const pathwayActionExtensions = {
         nolichucky_family_clinic: [
           { id: 'issue_insurance_eligibility_referral', label: 'Issue insurance eligibility referral' },
-          { id: 'issue_pharmacy_referral', label: 'Issue pharmacy fulfillment referral' }
+          { id: 'issue_pharmacy_referral', label: 'Issue medication prescription' }
         ],
         summitview_emergency_department: [
           { id: 'issue_insurance_eligibility_referral', label: 'Issue insurance eligibility referral' },
-          { id: 'issue_pharmacy_referral', label: 'Issue pharmacy fulfillment referral' },
+          { id: 'issue_pharmacy_referral', label: 'Issue medication prescription' },
           { id: 'issue_home_health_referral', label: 'Issue home health follow-up referral' }
         ],
         tri_county_ambulance: [
@@ -540,7 +540,7 @@
         },
         issue_pharmacy_referral: {
           targetCapability: 'pharmacy-services',
-          summary: 'Prescription fulfillment referral to pharmacy',
+          summary: 'Medication prescription sent to pharmacy',
           referralPurpose: 'prescription-fulfillment',
           fulfillableBy: 'pharmacy-provider',
           credentialType: 'PrescriptionReferralCredential',

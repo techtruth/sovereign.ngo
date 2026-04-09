@@ -17,16 +17,42 @@
     const channelName = String(config.channelName || 'sovereign_demo_channel');
     const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(channelName) : null;
 
+    const updatedAtForState = (state) => {
+      if (!state || typeof state !== 'object') return '';
+      const meta = state.meta && typeof state.meta === 'object' ? state.meta : null;
+      return meta && typeof meta.updatedAt === 'string' ? meta.updatedAt : '';
+    };
+
     const readState = () => {
-      const sessionRaw = sessionStorage.getItem(storageKey);
-      if (sessionRaw) {
-        return parseJson(sessionRaw);
+      const sessionState = parseJson(sessionStorage.getItem(storageKey));
+      const localState = parseJson(localStorage.getItem(storageKey));
+      if (!sessionState && !localState) return null;
+      if (!sessionState) return localState;
+      if (!localState) return sessionState;
+
+      const sessionUpdatedAt = updatedAtForState(sessionState);
+      const localUpdatedAt = updatedAtForState(localState);
+      const useSession = !localUpdatedAt || (sessionUpdatedAt && sessionUpdatedAt >= localUpdatedAt);
+      const preferred = useSession ? sessionState : localState;
+      const secondary = useSession ? localState : sessionState;
+      if (preferred !== secondary) {
+        try {
+          sessionStorage.setItem(storageKey, JSON.stringify(preferred));
+        } catch {
+          // no-op
+        }
       }
-      return null;
+      return preferred;
     };
 
     const writeState = (state) => {
-      sessionStorage.setItem(storageKey, JSON.stringify(state));
+      const encoded = JSON.stringify(state);
+      sessionStorage.setItem(storageKey, encoded);
+      try {
+        localStorage.setItem(storageKey, encoded);
+      } catch {
+        // no-op (best effort for environments that block localStorage writes)
+      }
     };
 
     const notify = (payload) => {

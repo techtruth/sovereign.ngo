@@ -54,6 +54,11 @@
       </article>
 
       <article class="panel">
+        <h2>Record Access Requests</h2>
+        <ul id="accessRequestList"></ul>
+      </article>
+
+      <article class="panel">
         <h2>Record Access Passes</h2>
         <ul id="accessPassList"></ul>
       </article>
@@ -93,6 +98,23 @@
       const credentialPrimaryTypeForEntry = (entry) => String(store.credentialPrimaryType(entry) || '').trim() || 'Credential';
       const credentialIssuerProviderIdForEntry = (entry) => String(store.credentialIssuerProviderId(entry) || '').trim();
       const credentialIssuedAtForEntry = (entry) => String(store.credentialIssuedAt(entry) || '').trim();
+      const parsePositiveInt = (value, fallback) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+        return Math.floor(parsed);
+      };
+      const formatAccessTerm = (mode, days, expiresAt) => {
+        const normalizedMode = String(mode || '').trim();
+        if (normalizedMode === 'one_time') return 'one-time';
+        if (normalizedMode === 'time_bound') {
+          const normalizedDays = parsePositiveInt(days, 0);
+          if (normalizedDays > 0) return `${normalizedDays}-day`;
+          if (expiresAt) return `time-bound until ${expiresAt}`;
+          return 'time-bound';
+        }
+        if (normalizedMode === 'indefinite') return 'indefinite';
+        return normalizedMode || 'one-time';
+      };
 
       const fillSelect = (selectEl, rows, placeholder) => {
         selectEl.innerHTML = '';
@@ -153,6 +175,7 @@
           setList(byId('resourceList'), [], 'No provider resources.');
           setList(byId('consentList'), [], 'No active sharing permissions.');
           setList(byId('referralList'), [], 'No referrals for this identity.');
+          setList(byId('accessRequestList'), [], 'No record access requests.');
           setList(byId('accessPassList'), [], 'No record access passes.');
           setList(byId('providerPodLinkList'), [], 'No provider pod saved handles.');
           setList(byId('eventList'), [], 'No events for this identity.');
@@ -163,6 +186,7 @@
         const records = store.listRecords(currentWebId);
         const consents = store.listConsents(currentWebId, { includeRevoked: true });
         const referrals = store.listReferrals({ subjectWebId: currentWebId, includeClosed: true });
+        const accessRequests = store.listRecordAccessRequests(currentWebId, { includeClosed: true });
         const accessPasses = store.listRecordAccessPasses(currentWebId, { includeExpired: true, includeInactive: true });
         const providerPodLinks = store.listProviderPodAccessLinks('', { subjectWebId: currentWebId, includeInactive: true });
         const events = store.listEvents({ subjectWebId: currentWebId, limit: 16 });
@@ -203,9 +227,17 @@
         );
 
         setList(
+          byId('accessRequestList'),
+          accessRequests.slice(0, 20).map((entry) => (
+            `${entry.status.toUpperCase()} | ${entry.id} | requested by: ${entry.requestedByProviderId} | category: ${entry.requestedRecordCategory} | term: ${formatAccessTerm(entry.requestedAccessMode, entry.requestedAccessDays, entry.requestedExpiresAt)}`
+          )),
+          'No record access requests.'
+        );
+
+        setList(
           byId('accessPassList'),
           accessPasses.slice(0, 20).map((entry) => (
-            `${entry.status.toUpperCase()} | ${entry.id} | source: ${entry.sourceProviderId} | record: ${entry.sourceRecordId} | consent: ${entry.consentMode}`
+            `${entry.status.toUpperCase()} | ${entry.id} | source: ${entry.sourceProviderId} | record: ${entry.sourceRecordId} | ref: ${entry.recordReference || 'n/a'} | key: ${entry.decryptionKeyRef || 'n/a'} | enc: ${entry.recordCipherAlg || 'n/a'} | term: ${formatAccessTerm(entry.consentMode, entry.timeBoundDays, entry.expiresAt)}`
           )),
           'No record access passes.'
         );
@@ -213,7 +245,7 @@
         setList(
           byId('providerPodLinkList'),
           providerPodLinks.slice(0, 20).map((entry) => (
-            `${entry.status.toUpperCase()} | ${entry.providerId} saved ${entry.accessPassId} | source: ${entry.sourceProviderId}`
+            `${entry.status.toUpperCase()} | ${entry.providerId} saved ${entry.accessPassId} | source: ${entry.sourceProviderId} | ref: ${entry.recordReference || 'n/a'} | key: ${entry.decryptionKeyRef || 'n/a'}`
           )),
           'No provider pod saved handles.'
         );
@@ -230,6 +262,7 @@
           records,
           consents,
           referrals,
+          accessRequests,
           accessPasses,
           providerPodLinks,
           events

@@ -68,6 +68,21 @@ Implementation anchors:
 - `demo_webapp/data/provider-catalog.global.js`
 - `demo_webapp/data/naics-sectors.global.js`
 
+### 7) Container-only standards endpoints (live in demo network)
+
+- Container mode now serves a live DID and status infrastructure:
+  - `/.well-known/did.json`
+  - `/did/resolve?did=...`
+  - `/trust/registry`
+  - `/vc/status-lists/{encodedIssuerDid}`
+- These are intentionally available only in container mode (`https://localhost:8180/...`), not static `file://` mode.
+
+Implementation anchors:
+
+- `containerization/standards-server.js`
+- `containerization/docker-compose.yml`
+- `containerization/sovereign-gateway.nginx.conf`
+
 ## Intentionally Deferred (Not Full Standard Implementations Yet)
 
 ### 1) OID4VCI / OID4VP protocol flows
@@ -77,13 +92,13 @@ Implementation anchors:
 
 ### 2) DID method resolution and trust registry
 
-- DID strings are used as identifiers.
-- Full DID document resolution, key lifecycle governance, and production trust registry integration are not implemented.
+- Container mode provides demo resolver/trust endpoints.
+- Full production DID operations (key lifecycle governance, external resolver federation, formal trust governance workflows) are not implemented.
 
 ### 3) Public, dereferenceable status-list endpoints
 
-- Status-list URLs are issued in credentials for policy modeling.
-- Static deployment does not host live status list documents for external dereference.
+- Container mode serves live status-list credentials for dereference testing.
+- Static deployment does not host live status-list documents.
 
 ### 4) Full wallet interoperability test profile
 

@@ -18,6 +18,7 @@ It demonstrates a sovereign data model where:
 - `docs/compliance-baseline.md`: demo-safe compliance baseline and production hardening requirements.
 - `docs/production-hardening-checklist.md`: actionable implementation checklist before any real-world data use.
 - `docs/control-matrix.md`: control-by-control evidence matrix mapped to concrete implementation anchors.
+- `docs/transaction-classes.md`: the six transaction classes used in the demo, with abilities, use cases, and examples.
 - `docs/implementation-roadmap.md`: phased path from current demo posture to production readiness.
 
 ## What The Individual Demo Does Today
@@ -27,6 +28,13 @@ It demonstrates a sovereign data model where:
 - Models resident login, service actions, referral issuance, and referral fulfillment.
 - Enforces credential requirements for selected transactions.
 - Stores and exchanges credentials in W3C VC JSON-LD shape across issuer, provider, and audit flows.
+- Organizes workflows into six repeatable transaction classes:
+  - direct service action,
+  - sovereign-mediated record sharing,
+  - cross-org workflow handoff,
+  - shared-state coordination,
+  - credential trust lifecycle,
+  - consent and audit governance.
 - Demonstrates record access pass behavior:
   - a source provider can issue access for a specific source record,
   - long-term passes can be saved by another provider in its provider-pod context for future reuse.

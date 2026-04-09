@@ -20,6 +20,7 @@ const TLS_KEY_PATH = String(process.env.TLS_KEY_PATH || '/etc/sovereign/tls/inte
 const AUDIT_LOG_DIR = String(process.env.AUDIT_LOG_DIR || '/var/lib/sovereign').trim();
 const AUDIT_LOG_PATH = String(process.env.AUDIT_LOG_PATH || path.join(AUDIT_LOG_DIR, `${PROVIDER_ID}.audit.jsonl`)).trim();
 const MAX_AUDIT_ENTRIES = 1200;
+const MAX_REPLAY_ENTRIES = Number(process.env.MAX_REPLAY_ENTRIES || 8000);
 const CLOCK_SKEW_SECONDS = 120;
 const GATEWAY_SENTINEL_HEADER = 'x-gateway-proxy';
 const GATEWAY_SENTINEL_VALUE = 'sovereign-gateway';
@@ -46,6 +47,8 @@ const nowIso = () => new Date().toISOString();
 const requestAudit = [];
 const holderSigningKeyRegistry = new Map();
 const issuerSigningKeyRegistry = new Map();
+const replayByTokenHash = new Map();
+const replayByNonceKey = new Map();
 let auditTipHash = crypto.createHash('sha256').update(`provider-api:${PROVIDER_ID}:genesis`).digest('hex');
 
 const toSafeString = (value) => {
@@ -410,6 +413,93 @@ const verifyAuditRowHash = (row, expectedPrevHash) => {
   return recomputed === hash;
 };
 
+const replayNonceKeyForHolder = (holderDid, nonce) => {
+  const holder = toSafeString(holderDid);
+  const normalizedNonce = toSafeString(nonce);
+  if (!holder || !normalizedNonce) return '';
+  return `${holder}|${normalizedNonce}`;
+};
+
+const dropReplayEntryByTokenHash = (tokenHash) => {
+  const normalizedTokenHash = toSafeString(tokenHash);
+  if (!normalizedTokenHash) return;
+  const row = replayByTokenHash.get(normalizedTokenHash);
+  if (!row) return;
+  replayByTokenHash.delete(normalizedTokenHash);
+  const nonceKey = toSafeString(row.nonceKey);
+  if (nonceKey) {
+    const nonceRow = replayByNonceKey.get(nonceKey);
+    if (nonceRow && nonceRow.tokenHash === normalizedTokenHash) {
+      replayByNonceKey.delete(nonceKey);
+    }
+  }
+};
+
+const pruneReplayEntries = (nowSec) => {
+  const now = Number.isFinite(Number(nowSec)) ? Math.floor(Number(nowSec)) : Math.floor(Date.now() / 1000);
+  for (const [tokenHash, row] of replayByTokenHash.entries()) {
+    const expiresAtSec = Number(row && row.expiresAtSec);
+    if (!Number.isFinite(expiresAtSec) || expiresAtSec > now) continue;
+    dropReplayEntryByTokenHash(tokenHash);
+  }
+};
+
+const trimReplayEntries = () => {
+  const maxEntries = Number.isFinite(MAX_REPLAY_ENTRIES) && MAX_REPLAY_ENTRIES > 0
+    ? Math.floor(MAX_REPLAY_ENTRIES)
+    : 8000;
+  while (replayByTokenHash.size > maxEntries) {
+    const oldestTokenHash = replayByTokenHash.keys().next().value;
+    if (!oldestTokenHash) break;
+    dropReplayEntryByTokenHash(oldestTokenHash);
+  }
+};
+
+const claimReplayEntry = ({ tokenHash, nonceKey, holderDid, exp }) => {
+  const normalizedTokenHash = toSafeString(tokenHash);
+  const normalizedNonceKey = toSafeString(nonceKey);
+  const normalizedHolderDid = toSafeString(holderDid);
+  const expSec = Number(exp);
+  const nowSec = Math.floor(Date.now() / 1000);
+  pruneReplayEntries(nowSec);
+
+  if (!normalizedTokenHash || !normalizedNonceKey || !normalizedHolderDid || !Number.isFinite(expSec)) {
+    return { ok: false, error: 'Replay guard requires token hash, nonce key, holder DID, and exp.' };
+  }
+  if (replayByTokenHash.has(normalizedTokenHash)) {
+    return { ok: false, error: 'Replay detected: vp_token hash has already been submitted.' };
+  }
+  if (replayByNonceKey.has(normalizedNonceKey)) {
+    return { ok: false, error: 'Replay detected: nonce has already been used for this holder.' };
+  }
+
+  const row = {
+    tokenHash: normalizedTokenHash,
+    nonceKey: normalizedNonceKey,
+    holderDid: normalizedHolderDid,
+    createdAt: nowIso(),
+    status: 'pending',
+    expiresAtSec: Math.max(Math.floor(expSec) + CLOCK_SKEW_SECONDS, nowSec + CLOCK_SKEW_SECONDS)
+  };
+  replayByTokenHash.set(normalizedTokenHash, row);
+  replayByNonceKey.set(normalizedNonceKey, row);
+  trimReplayEntries();
+  return { ok: true };
+};
+
+const commitReplayEntry = (tokenHash) => {
+  const normalizedTokenHash = toSafeString(tokenHash);
+  if (!normalizedTokenHash) return;
+  const row = replayByTokenHash.get(normalizedTokenHash);
+  if (!row) return;
+  row.status = 'committed';
+  row.committedAt = nowIso();
+};
+
+const releaseReplayEntry = (tokenHash) => {
+  dropReplayEntryByTokenHash(tokenHash);
+};
+
 const loadAuditFromDisk = () => {
   try {
     fs.mkdirSync(path.dirname(AUDIT_LOG_PATH), { recursive: true });
@@ -524,100 +614,125 @@ const validatePresentationEnvelope = async (payload) => {
 
   const challengeFromEnvelope = isObject(payload.request) ? toSafeString(payload.request.challenge) : '';
   const nonceFromToken = toSafeString(vpPayload.nonce);
+  if (!nonceFromToken) {
+    return { ok: false, error: 'vp_token nonce is required.' };
+  }
   if (challengeFromEnvelope && nonceFromToken && challengeFromEnvelope !== nonceFromToken) {
     return { ok: false, error: 'Presentation challenge must match vp_token nonce.' };
   }
 
+  const vpTokenHash = digestHex(vpToken);
+  const nonceKey = replayNonceKeyForHolder(holder, nonceFromToken);
+  const replayClaim = claimReplayEntry({
+    tokenHash: vpTokenHash,
+    nonceKey,
+    holderDid: holder,
+    exp: vpPayload.exp
+  });
+  if (!replayClaim.ok) {
+    return { ok: false, error: replayClaim.error || 'Replay protection rejected this presentation.' };
+  }
+
+  let replayCommitted = false;
   const vcRows = Array.isArray(presentation.verifiableCredential)
     ? presentation.verifiableCredential.filter((entry) => isObject(entry))
     : [];
   const credentialErrors = [];
 
-  for (let index = 0; index < vcRows.length; index += 1) {
-    const vc = vcRows[index];
-    const vcContexts = Array.isArray(vc['@context']) ? vc['@context'].map(toSafeString) : [];
-    const vcTypes = Array.isArray(vc.type) ? vc.type.map(toSafeString) : [];
-    const issuerId = isObject(vc.issuer) ? toSafeString(vc.issuer.id) : '';
-    const subjectId = isObject(vc.credentialSubject) ? toSafeString(vc.credentialSubject.id) : '';
-    if (!vcContexts.includes(VC_CONTEXT)) {
-      credentialErrors.push(`Credential ${index} missing VC context.`);
-    }
-    if (!vcTypes.includes('VerifiableCredential')) {
-      credentialErrors.push(`Credential ${index} missing VerifiableCredential type.`);
-    }
-    if (!toSafeString(vc.id)) {
-      credentialErrors.push(`Credential ${index} missing id.`);
-    }
-    if (!issuerId) {
-      credentialErrors.push(`Credential ${index} missing issuer.id.`);
-    }
-    if (!subjectId) {
-      credentialErrors.push(`Credential ${index} missing credentialSubject.id.`);
-    }
-    if (!isObject(vc.credentialStatus)) {
-      credentialErrors.push(`Credential ${index} missing credentialStatus.`);
-      continue;
-    }
-    const statusListType = toSafeString(vc.credentialStatus.type);
-    const statusPurpose = toSafeString(vc.credentialStatus.statusPurpose);
-    const statusListCredential = toSafeString(vc.credentialStatus.statusListCredential);
-    const statusListIndex = Number(vc.credentialStatus.statusListIndex);
-    if (statusListType !== STATUS_LIST_ENTRY_TYPE) {
-      credentialErrors.push(`Credential ${index} has invalid credentialStatus.type.`);
-    }
-    if (statusPurpose !== STATUS_LIST_PURPOSE) {
-      credentialErrors.push(`Credential ${index} has invalid credentialStatus.statusPurpose.`);
-    }
-    if (!statusListCredential) {
-      credentialErrors.push(`Credential ${index} missing credentialStatus.statusListCredential.`);
-    }
-    if (statusListCredential && !statusListCredential.startsWith(STATUS_LIST_BASE_URL)) {
-      credentialErrors.push(`Credential ${index} must use demo.sovereign.ngo status list credential URL.`);
-    }
-    if (!Number.isFinite(statusListIndex) || statusListIndex < 0) {
-      credentialErrors.push(`Credential ${index} has invalid credentialStatus.statusListIndex.`);
-    }
-    const statusListIssuerDid = issuerDidFromStatusListCredential(statusListCredential);
-    if (!statusListIssuerDid || statusListIssuerDid !== issuerId) {
-      credentialErrors.push(`Credential ${index} status list issuer must match credential issuer.`);
+  try {
+    for (let index = 0; index < vcRows.length; index += 1) {
+      const vc = vcRows[index];
+      const vcContexts = Array.isArray(vc['@context']) ? vc['@context'].map(toSafeString) : [];
+      const vcTypes = Array.isArray(vc.type) ? vc.type.map(toSafeString) : [];
+      const issuerId = isObject(vc.issuer) ? toSafeString(vc.issuer.id) : '';
+      const subjectId = isObject(vc.credentialSubject) ? toSafeString(vc.credentialSubject.id) : '';
+      if (!vcContexts.includes(VC_CONTEXT)) {
+        credentialErrors.push(`Credential ${index} missing VC context.`);
+      }
+      if (!vcTypes.includes('VerifiableCredential')) {
+        credentialErrors.push(`Credential ${index} missing VerifiableCredential type.`);
+      }
+      if (!toSafeString(vc.id)) {
+        credentialErrors.push(`Credential ${index} missing id.`);
+      }
+      if (!issuerId) {
+        credentialErrors.push(`Credential ${index} missing issuer.id.`);
+      }
+      if (!subjectId) {
+        credentialErrors.push(`Credential ${index} missing credentialSubject.id.`);
+      }
+      if (!isObject(vc.credentialStatus)) {
+        credentialErrors.push(`Credential ${index} missing credentialStatus.`);
+        continue;
+      }
+      const statusListType = toSafeString(vc.credentialStatus.type);
+      const statusPurpose = toSafeString(vc.credentialStatus.statusPurpose);
+      const statusListCredential = toSafeString(vc.credentialStatus.statusListCredential);
+      const statusListIndex = Number(vc.credentialStatus.statusListIndex);
+      if (statusListType !== STATUS_LIST_ENTRY_TYPE) {
+        credentialErrors.push(`Credential ${index} has invalid credentialStatus.type.`);
+      }
+      if (statusPurpose !== STATUS_LIST_PURPOSE) {
+        credentialErrors.push(`Credential ${index} has invalid credentialStatus.statusPurpose.`);
+      }
+      if (!statusListCredential) {
+        credentialErrors.push(`Credential ${index} missing credentialStatus.statusListCredential.`);
+      }
+      if (statusListCredential && !statusListCredential.startsWith(STATUS_LIST_BASE_URL)) {
+        credentialErrors.push(`Credential ${index} must use demo.sovereign.ngo status list credential URL.`);
+      }
+      if (!Number.isFinite(statusListIndex) || statusListIndex < 0) {
+        credentialErrors.push(`Credential ${index} has invalid credentialStatus.statusListIndex.`);
+      }
+      const statusListIssuerDid = issuerDidFromStatusListCredential(statusListCredential);
+      if (!statusListIssuerDid || statusListIssuerDid !== issuerId) {
+        credentialErrors.push(`Credential ${index} status list issuer must match credential issuer.`);
+      }
+
+      const vcProofVerification = await verifyVcProofJwt(vc, {
+        expectedAudience: PROVIDER_DID
+      });
+      if (!vcProofVerification.ok) {
+        credentialErrors.push(`Credential ${index} proof verification failed: ${vcProofVerification.error}`);
+        continue;
+      }
+
+      const knownIssuerKeyFingerprint = issuerSigningKeyRegistry.get(vcProofVerification.issuerDid) || '';
+      if (knownIssuerKeyFingerprint && knownIssuerKeyFingerprint !== vcProofVerification.keyFingerprint) {
+        credentialErrors.push(`Credential ${index} issuer signing key mismatch for ${vcProofVerification.issuerDid}.`);
+        continue;
+      }
+      issuerSigningKeyRegistry.set(vcProofVerification.issuerDid, vcProofVerification.keyFingerprint);
     }
 
-    const vcProofVerification = await verifyVcProofJwt(vc, {
-      expectedAudience: PROVIDER_DID
-    });
-    if (!vcProofVerification.ok) {
-      credentialErrors.push(`Credential ${index} proof verification failed: ${vcProofVerification.error}`);
-      continue;
+    if (credentialErrors.length) {
+      return {
+        ok: false,
+        error: credentialErrors.join(' ')
+      };
     }
 
-    const knownIssuerKeyFingerprint = issuerSigningKeyRegistry.get(vcProofVerification.issuerDid) || '';
-    if (knownIssuerKeyFingerprint && knownIssuerKeyFingerprint !== vcProofVerification.keyFingerprint) {
-      credentialErrors.push(`Credential ${index} issuer signing key mismatch for ${vcProofVerification.issuerDid}.`);
-      continue;
-    }
-    issuerSigningKeyRegistry.set(vcProofVerification.issuerDid, vcProofVerification.keyFingerprint);
-  }
+    commitReplayEntry(vpTokenHash);
+    replayCommitted = true;
 
-  if (credentialErrors.length) {
     return {
-      ok: false,
-      error: credentialErrors.join(' ')
+      ok: true,
+      holder,
+      signerDid: vpTokenVerification.signerDid,
+      signerKeyFingerprint: vpTokenVerification.publicKeyFingerprint,
+      credentialCount: vcRows.length,
+      credentialIds: vcRows.map((vc) => toSafeString(vc.id)).filter(Boolean),
+      exchangeType: toSafeString(payload.exchangeType) || 'service-event',
+      challenge: challengeFromEnvelope || nonceFromToken,
+      domain: isObject(payload.request) ? toSafeString(payload.request.domain) : '',
+      serviceContext: isObject(payload.serviceContext) ? payload.serviceContext : {},
+      vpTokenHash
     };
+  } finally {
+    if (!replayCommitted) {
+      releaseReplayEntry(vpTokenHash);
+    }
   }
-
-  return {
-    ok: true,
-    holder,
-    signerDid: vpTokenVerification.signerDid,
-    signerKeyFingerprint: vpTokenVerification.publicKeyFingerprint,
-    credentialCount: vcRows.length,
-    credentialIds: vcRows.map((vc) => toSafeString(vc.id)).filter(Boolean),
-    exchangeType: toSafeString(payload.exchangeType) || 'service-event',
-    challenge: challengeFromEnvelope || nonceFromToken,
-    domain: isObject(payload.request) ? toSafeString(payload.request.domain) : '',
-    serviceContext: isObject(payload.serviceContext) ? payload.serviceContext : {},
-    vpTokenHash: digestHex(vpToken)
-  };
 };
 
 const unauthorizedApiResponse = (res) => {
@@ -634,10 +749,12 @@ const requestHandler = async (req, res) => {
   const requestPath = url.pathname;
 
   if (method === 'GET' && requestPath === '/health') {
+    pruneReplayEntries(Math.floor(Date.now() / 1000));
     sendJson(res, 200, {
       ok: true,
       ...providerEnvelope,
       auditEntries: requestAudit.length,
+      replayEntries: replayByTokenHash.size,
       auditTipHash,
       now: nowIso()
     });
@@ -658,9 +775,11 @@ const requestHandler = async (req, res) => {
   }
 
   if (method === 'GET' && requestPath === '/api/info') {
+    pruneReplayEntries(Math.floor(Date.now() / 1000));
     sendJson(res, 200, {
       ok: true,
       ...providerEnvelope,
+      replayEntries: replayByTokenHash.size,
       auditTipHash,
       now: nowIso()
     });

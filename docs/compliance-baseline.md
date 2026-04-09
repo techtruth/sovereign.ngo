@@ -42,6 +42,11 @@ Date of this snapshot: **April 6, 2026**.
 
 - Individual view supports non-identifiable audit export for demonstration of accountability without raw source-document disclosure.
 
+### 7) Container-only live standards routing
+
+- Container topology exposes DID resolver, trust registry, and status-list dereference endpoints through gateway paths.
+- Static `file://` mode intentionally does not expose these network endpoints.
+
 ## Demo-Only Controls (Not Production Compliant)
 
 ### 1) Authentication model is not production identity assurance
@@ -65,9 +70,10 @@ Date of this snapshot: **April 6, 2026**.
 
 - Service views still expose human-readable identifiers and raw event feeds.
 
-### 6) Status-list URLs are modeled, not published as live registries
+### 6) Static mode does not host live registries
 
-- Status-list references are present in credentials but are not served as live dereference endpoints in static deployment.
+- Status-list and DID/trust routes are available only in container mode.
+- Static deployment remains offline and non-networked by design.
 
 ### 7) Administrative and operational controls are incomplete
 

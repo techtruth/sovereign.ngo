@@ -56,6 +56,18 @@
             <option value="">No referrals loaded</option>
           </select>
         </label>
+        <label id="recordRequestTermWrap" hidden>
+          Requested Access Term
+          <select id="recordRequestTermSelect">
+            <option value="one_time">One-time</option>
+            <option value="time_bound">For a period</option>
+            <option value="indefinite">Indefinite until revoked</option>
+          </select>
+        </label>
+        <label id="recordRequestDaysWrap" hidden>
+          Requested Period (days)
+          <input id="recordRequestDaysInput" type="number" min="1" max="3650" step="1" value="30">
+        </label>
         <button id="runStaffBtn" type="button" disabled>Run Staff Action</button>
         <p id="staffActionResult" class="mono">No action yet.</p>
       </article>
@@ -66,33 +78,33 @@
       </article>
 
       <article class="panel wide">
-        <h2>Cross-Provider Record Access Passes</h2>
+        <h2>Record Sharing Access Packets</h2>
         <label>
           Source Record at This Provider
           <select id="accessRecordSelect"></select>
         </label>
         <label>
-          Share With Provider
-          <select id="accessTargetProviderSelect"></select>
-        </label>
-        <label>
           Consent Duration
           <select id="accessConsentModeSelect">
             <option value="one_time">One-time access pass</option>
-            <option value="long_term">Long-term reusable pass</option>
+            <option value="time_bound">Time-bound reusable pass</option>
+            <option value="indefinite">Indefinite reusable pass</option>
           </select>
+        </label>
+        <label id="accessConsentDaysWrap" hidden>
+          Time-Bound Period (days)
+          <input id="accessConsentDaysInput" type="number" min="1" max="3650" step="1" value="30">
         </label>
         <button id="issueAccessPassBtn" type="button" disabled>Issue Record Access Pass</button>
         <p id="issueAccessPassResult" class="mono">No record access pass issued yet.</p>
-
         <label>
-          Available Access Passes for This Subject
+          Available Sovereign Access Packets
           <select id="inboundAccessPassSelect"></select>
         </label>
-        <button id="saveAccessPassBtn" type="button" disabled>Save Pass to This Provider Pod</button>
-        <p id="saveAccessPassResult" class="mono">No pass saved to this provider pod yet.</p>
+        <button id="fetchSharedRecordBtn" type="button" disabled>Fetch Shared Record via Access Packet</button>
+        <p id="fetchSharedRecordResult" class="mono">No shared record fetched yet.</p>
 
-        <p class="note">Saved pass handles in this provider pod context:</p>
+        <p class="note" id="accessSavedContextNote">Issued passes stay in the Sovereign Pod with a record reference and decryption key reference, then can be presented to authorized providers later.</p>
         <ul id="providerPodAccessPassList"></ul>
       </article>
 
@@ -263,6 +275,7 @@
           providerId: provider.id,
           isLoggedIn: Boolean(currentSubjectWebId),
           hasOpenReferral: hasOpenReferralOption(),
+          currentSubjectWebId: String(currentSubjectWebId || ''),
           selectedIdentityWebId: String((byId('identitySelect') && byId('identitySelect').value) || ''),
           selectedStaffActionId: String((byId('staffActionSelect') && byId('staffActionSelect').value) || ''),
           selectedSelfActionId: String((byId('selfActionSelect') && byId('selfActionSelect').value) || ''),
@@ -318,7 +331,17 @@
 
       const extensionActions = pathwayActionExtensions[provider.id] || [];
       extensionActions.forEach((entry) => addUniqueAction(config.staffActions, entry));
+      addUniqueAction(config.staffActions, { id: 'request_shared_record_access', label: 'Request records from another provider' });
       addUniqueAction(config.staffActions, { id: 'fulfill_selected_referral', label: 'Fulfill selected referral' });
+      const toActionOption = (entry, kind) => {
+        const actionId = String(entry && entry.id ? entry.id : '').trim();
+        const label = String(entry && entry.label ? entry.label : actionId).trim() || actionId;
+        return {
+          value: actionId,
+          label,
+          disabled: false
+        };
+      };
 
       const formatTaxonomySummary = (taxonomies) => {
         if (!taxonomies || typeof taxonomies !== 'object') return '';
@@ -332,6 +355,33 @@
 
       const setResult = (el, text) => {
         el.textContent = String(text || '').trim() || 'No action yet.';
+      };
+
+      const parsePositiveInt = (value, fallback) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+        return Math.floor(parsed);
+      };
+
+      const formatAccessTerm = (mode, days, expiresAt) => {
+        const normalizedMode = String(mode || '').trim();
+        if (normalizedMode === 'one_time') {
+          return 'one-time';
+        }
+        if (normalizedMode === 'time_bound') {
+          const normalizedDays = parsePositiveInt(days, 0);
+          if (normalizedDays > 0) {
+            return `${normalizedDays}-day`;
+          }
+          if (expiresAt) {
+            return `time-bound until ${expiresAt}`;
+          }
+          return 'time-bound';
+        }
+        if (normalizedMode === 'indefinite') {
+          return 'indefinite';
+        }
+        return normalizedMode || 'one-time';
       };
 
       const nextUrn = () => {
@@ -919,16 +969,39 @@
       const refreshActionOptions = () => {
         fillSelect(
           byId('selfActionSelect'),
-          config.selfActions.map((entry) => ({ value: entry.id, label: entry.label })),
+          config.selfActions.map((entry) => toActionOption(entry, 'self')),
           'No self-service actions available'
         );
 
         fillSelect(
           byId('staffActionSelect'),
-          config.staffActions.map((entry) => ({ value: entry.id, label: entry.label })),
+          config.staffActions.map((entry) => toActionOption(entry, 'staff')),
           'No staff actions available'
         );
         refreshSelfActionRequirementStatus();
+        refreshRecordRequestControls();
+      };
+
+      const refreshRecordRequestControls = () => {
+        const selectedActionId = String((byId('staffActionSelect') && byId('staffActionSelect').value) || '').trim();
+        const showRequestControls = selectedActionId === 'request_shared_record_access';
+        const termWrap = byId('recordRequestTermWrap');
+        const daysWrap = byId('recordRequestDaysWrap');
+        const termSelect = byId('recordRequestTermSelect');
+        const daysInput = byId('recordRequestDaysInput');
+
+        if (termWrap) termWrap.hidden = !showRequestControls;
+        if (daysWrap) daysWrap.hidden = !showRequestControls;
+
+        const term = String((termSelect && termSelect.value) || 'one_time').trim();
+        const showDays = showRequestControls && term === 'time_bound';
+        if (daysWrap) daysWrap.hidden = !showDays;
+        if (daysInput) {
+          daysInput.disabled = !showDays;
+          if (!showDays && !daysInput.value) {
+            daysInput.value = '30';
+          }
+        }
       };
 
       const refreshReferralWidgets = () => {
@@ -990,28 +1063,60 @@
         return (found && found.label) || id;
       };
 
+      const defaultRecordAccessRequestTemplate = () => {
+        const capabilities = Array.isArray(provider.capabilities) ? provider.capabilities : [];
+        if (capabilities.includes('utility-service')) {
+          return {
+            requestedRecordCategory: 'medical-necessity-record',
+            reasonSummary: 'Needs medical documentation to review priority utility support eligibility.'
+          };
+        }
+        if (capabilities.includes('emergency-care')) {
+          return {
+            requestedRecordCategory: 'continuity-of-care-record',
+            reasonSummary: 'Needs prior treatment records to support continuity of care.'
+          };
+        }
+        return {
+          requestedRecordCategory: 'service-eligibility-record',
+          reasonSummary: 'Needs supporting records to complete this service review.'
+        };
+      };
+
       const refreshRecordAccessWidgets = () => {
         const sourceRecordSelect = byId('accessRecordSelect');
-        const targetProviderSelect = byId('accessTargetProviderSelect');
+        const consentModeSelect = byId('accessConsentModeSelect');
+        const consentDaysWrap = byId('accessConsentDaysWrap');
+        const consentDaysInput = byId('accessConsentDaysInput');
         const issueButton = byId('issueAccessPassBtn');
         const inboundPassSelect = byId('inboundAccessPassSelect');
-        const saveButton = byId('saveAccessPassBtn');
+        const fetchSharedButton = byId('fetchSharedRecordBtn');
+        const contextNote = byId('accessSavedContextNote');
         const savedList = byId('providerPodAccessPassList');
 
         const selectedSourceRecordId = sourceRecordSelect && sourceRecordSelect.value ? String(sourceRecordSelect.value) : '';
-        const selectedTargetProviderId = targetProviderSelect && targetProviderSelect.value ? String(targetProviderSelect.value) : '';
-        const selectedPassId = inboundPassSelect && inboundPassSelect.value ? String(inboundPassSelect.value) : '';
+        const selectedInboundPassId = inboundPassSelect && inboundPassSelect.value ? String(inboundPassSelect.value) : '';
 
         savedList.innerHTML = '';
 
+        if (consentDaysWrap && consentModeSelect) {
+          const currentMode = String(consentModeSelect.value || 'one_time').trim();
+          consentDaysWrap.hidden = currentMode !== 'time_bound';
+          if (consentDaysInput) {
+            consentDaysInput.disabled = currentMode !== 'time_bound';
+          }
+        }
+
         if (!currentSubjectWebId) {
           fillSelect(sourceRecordSelect, [], 'Login required to load source records');
-          fillSelect(targetProviderSelect, [], 'Login required to choose target provider');
-          fillSelect(inboundPassSelect, [], 'Login required to view access passes');
+          fillSelect(inboundPassSelect, [], 'Login required to load sovereign access packets');
           issueButton.disabled = true;
-          saveButton.disabled = true;
+          if (fetchSharedButton) fetchSharedButton.disabled = true;
+          if (contextNote) {
+            contextNote.textContent = 'Login required to view provider pod access packet handles.';
+          }
           const li = document.createElement('li');
-          li.textContent = 'Login required to view or save provider pod access pass handles.';
+          li.textContent = 'Login required to view provider pod access packet handles.';
           savedList.appendChild(li);
           return;
         }
@@ -1029,64 +1134,54 @@
           sourceRecordSelect.value = selectedSourceRecordId;
         }
 
-        const targetProviders = store
-          .listProviders()
-          .filter((entry) => entry && entry.id && entry.id !== provider.id)
-          .sort((a, b) => String(a.label || a.id).localeCompare(String(b.label || b.id)))
-          .map((entry) => ({
-            value: entry.id,
-            label: entry.label
-          }));
-
-        targetProviders.unshift({
-          value: '',
-          label: 'Any provider you authorize later'
-        });
-
-        fillSelect(targetProviderSelect, targetProviders, 'No target providers available');
-        if (selectedTargetProviderId) {
-          targetProviderSelect.value = selectedTargetProviderId;
-        }
-
         const inboundAccessPasses = store
           .listRecordAccessPasses(currentSubjectWebId, {
             providerId: provider.id,
             includeExpired: false,
             includeInactive: false
           })
-          .filter((entry) => entry.sourceProviderId !== provider.id);
-
-        fillSelect(
-          inboundPassSelect,
-          inboundAccessPasses.map((entry) => ({
+          .slice(0, 30)
+          .map((entry) => ({
             value: entry.id,
-            label: `${entry.id} | from ${providerLabelFromId(entry.sourceProviderId)} | ${entry.consentMode === 'long_term' ? 'long-term' : 'one-time'}`
-          })),
-          'No inbound access passes available'
-        );
-        if (selectedPassId) {
-          inboundPassSelect.value = selectedPassId;
+            label: `${entry.createdAt} | source: ${providerLabelFromId(entry.sourceProviderId)} | record: ${entry.sourceRecordId} | ${formatAccessTerm(entry.consentMode, entry.timeBoundDays, entry.expiresAt)}`
+          }));
+        fillSelect(inboundPassSelect, inboundAccessPasses, 'No active sovereign access packets available');
+        if (selectedInboundPassId && inboundAccessPasses.some((entry) => entry.value === selectedInboundPassId)) {
+          inboundPassSelect.value = selectedInboundPassId;
+        }
+        if (fetchSharedButton) {
+          fetchSharedButton.disabled = !Boolean(inboundPassSelect && inboundPassSelect.value);
         }
 
-        const savedAccessLinks = store.listProviderPodAccessLinks(provider.id, {
+        if (consentModeSelect) {
+          consentModeSelect.disabled = false;
+          const selectedMode = String(consentModeSelect.value || 'one_time').trim();
+          if (consentDaysInput) {
+            consentDaysInput.disabled = selectedMode !== 'time_bound';
+          }
+        }
+
+        if (contextNote) {
+          contextNote.textContent = 'Generic passes stay in the Sovereign Pod until the sovereign authorizes a provider later.';
+        }
+
+        const savedAccessLinks = store.listProviderPodAccessLinks('', {
           subjectWebId: currentSubjectWebId,
           includeInactive: false
         });
-
         if (!savedAccessLinks.length) {
           const li = document.createElement('li');
-          li.textContent = 'No access pass handles saved in this provider pod yet.';
+          li.textContent = 'No provider pod access packet handles saved yet.';
           savedList.appendChild(li);
         } else {
           savedAccessLinks.forEach((entry) => {
             const li = document.createElement('li');
-            li.textContent = `${entry.savedAt} | ${entry.accessPassId} | source: ${providerLabelFromId(entry.sourceProviderId)} | handle: ${entry.accessHandle}`;
+            li.textContent = `${entry.savedAt} | ${entry.accessPassId} | provider: ${providerLabelFromId(entry.providerId)} | source: ${providerLabelFromId(entry.sourceProviderId)} | ref: ${entry.recordReference || 'n/a'} | key: ${entry.decryptionKeyRef || 'n/a'} | handle: ${entry.accessHandle}`;
             savedList.appendChild(li);
           });
         }
 
         issueButton.disabled = !Boolean(sourceRecordSelect.value);
-        saveButton.disabled = !Boolean(inboundPassSelect.value);
       };
 
       const refreshRecordList = () => {
@@ -1295,6 +1390,35 @@
               credentialId: credential.id
             }
           });
+          if (actionId === 'issue_pharmacy_referral') {
+            const rx = store.issuePrescriptionAuthorizationFromReferral({
+              referralId: referral.id,
+              subjectWebId: currentSubjectWebId,
+              issuedByProviderId: provider.id,
+              maxFills: 1,
+              actorWebId: staffWebId
+            });
+            if (rx && !rx.error && rx.authorization) {
+              store.addEvent({
+                type: 'prescription-fill-right-issued',
+                providerId: provider.id,
+                subjectWebId: currentSubjectWebId,
+                actorWebId: staffWebId,
+                message: `${provider.label}: issued prescription fill right ${rx.authorization.id} for referral ${referral.id}`,
+                payload: {
+                  referralId: referral.id,
+                  authorizationId: rx.authorization.id,
+                  totalFills: rx.authorization.totalFills,
+                  remainingFills: rx.authorization.remainingFills,
+                  expiresAt: rx.authorization.expiresAt
+                }
+              });
+              setResult(
+                byId('staffActionResult'),
+                `Referral issued.\nReferral ID: ${referral.id}\nTarget Capability: ${definition.targetCapability}\nCredential ID: ${credential.id}\nFill Right: ${rx.authorization.id} (${rx.authorization.remainingFills}/${rx.authorization.totalFills} remaining)`
+              );
+            }
+          }
         } else if (actionId === 'fulfill_selected_referral') {
           const referralId = byId('referralSelect').value;
           if (!referralId) {
@@ -1311,6 +1435,24 @@
           if (!selectedReferral) {
             setResult(byId('staffActionResult'), 'Selected referral is not available for this provider.');
             return;
+          }
+          let rxConsume = null;
+          if (String(selectedReferral.targetCapability || '').trim() === 'pharmacy-services') {
+            rxConsume = store.consumePrescriptionFillRight({
+              referralId,
+              providerId: provider.id,
+              subjectWebId: currentSubjectWebId,
+              actorWebId: staffWebId
+            });
+            if (!rxConsume || rxConsume.error || !rxConsume.authorization) {
+              setResult(
+                byId('staffActionResult'),
+                rxConsume && rxConsume.error
+                  ? rxConsume.error
+                  : 'Prescription fill right check failed.'
+              );
+              return;
+            }
           }
 
           const fulfilled = store.fulfillReferral({
@@ -1356,6 +1498,21 @@
             }
           });
           const credentialVc = credentialVcForEntry(credential);
+          if (rxConsume && rxConsume.authorization) {
+            store.addEvent({
+              type: 'prescription-fill-right-consumed',
+              providerId: provider.id,
+              subjectWebId: currentSubjectWebId,
+              actorWebId: staffWebId,
+              message: `${provider.label}: consumed prescription fill right for referral ${referralId}`,
+              payload: {
+                referralId,
+                authorizationId: rxConsume.authorization.id,
+                remainingFills: rxConsume.authorization.remainingFills,
+                totalFills: rxConsume.authorization.totalFills
+              }
+            });
+          }
 
           store.addEvent({
             type: 'referral-fulfilled',
@@ -1374,7 +1531,9 @@
 
           setResult(
             byId('staffActionResult'),
-            `Referral fulfilled.\nReferral ID: ${referralId}\nTarget Capability: ${selectedReferral.targetCapability}\nRecord ID: ${record.id}\nCredential ID: ${credential.id}`
+            rxConsume && rxConsume.authorization
+              ? `Referral fulfilled.\nReferral ID: ${referralId}\nTarget Capability: ${selectedReferral.targetCapability}\nRecord ID: ${record.id}\nCredential ID: ${credential.id}\nFill Right Remaining: ${rxConsume.authorization.remainingFills}/${rxConsume.authorization.totalFills}`
+              : `Referral fulfilled.\nReferral ID: ${referralId}\nTarget Capability: ${selectedReferral.targetCapability}\nRecord ID: ${record.id}\nCredential ID: ${credential.id}`
           );
           void notifyProviderApi({
             exchangeType: 'referral-fulfill',
@@ -1452,27 +1611,50 @@
             }
           });
         } else if (actionId === 'request_shared_record_access') {
-          const consents = store.listConsents(currentSubjectWebId, { includeRevoked: false });
-          const activeForProvider = consents.filter((entry) => entry.providerId === provider.id || entry.scope === 'all_records');
+          const requestTemplate = defaultRecordAccessRequestTemplate();
+          const requestedAccessMode = String((byId('recordRequestTermSelect') && byId('recordRequestTermSelect').value) || 'one_time').trim();
+          const requestedAccessDays = requestedAccessMode === 'time_bound'
+            ? parsePositiveInt(byId('recordRequestDaysInput') && byId('recordRequestDaysInput').value, 30)
+            : 0;
+          const requested = store.addRecordAccessRequest({
+            subjectWebId: currentSubjectWebId,
+            requestedByProviderId: provider.id,
+            sourceProviderId: '',
+            requestedRecordCategory: requestTemplate.requestedRecordCategory,
+            reasonSummary: requestTemplate.reasonSummary,
+            requestedAccessMode,
+            requestedAccessDays,
+            requestedByWebId: staffWebId
+          });
+
+          if (!requested || requested.error || !requested.request) {
+            setResult(
+              byId('staffActionResult'),
+              requested && requested.error ? requested.error : 'Failed to create record access request.'
+            );
+            return;
+          }
 
           store.addEvent({
-            type: 'emergency-record-access-request',
+            type: 'record-access-requested',
             providerId: provider.id,
             subjectWebId: currentSubjectWebId,
             actorWebId: staffWebId,
-            message: `${provider.label}: staff initiated emergency shared-record check`,
+            message: `${provider.label}: requested a cross-provider record access packet`,
             payload: {
-              activeConsentCount: activeForProvider.length,
-              consentIds: activeForProvider.map((entry) => entry.id)
+              requestId: requested.request.id,
+              requestedRecordCategory: requested.request.requestedRecordCategory,
+              requestedAccessMode: requested.request.requestedAccessMode,
+              requestedAccessDays: requested.request.requestedAccessDays,
+              reasonSummary: requested.request.reasonSummary,
+              sourceProviderId: requested.request.sourceProviderId || ''
             },
-            severity: activeForProvider.length ? 'info' : 'warning'
+            severity: 'info'
           });
 
           setResult(
             byId('staffActionResult'),
-            activeForProvider.length
-              ? `Shared record access check logged with ${activeForProvider.length} active consent record(s).`
-              : 'Shared record access check logged. No active consent found for this provider.'
+            `Record access request saved in Sovereign Pod.\nRequest ID: ${requested.request.id}\nRequested Category: ${requested.request.requestedRecordCategory}\nRequested Term: ${formatAccessTerm(requested.request.requestedAccessMode, requested.request.requestedAccessDays, requested.request.requestedExpiresAt)}`
           );
           void notifyProviderApi({
             exchangeType: 'staff-action',
@@ -1481,8 +1663,12 @@
             actionId,
             actionLabel: action.label,
             payload: {
-              activeConsentCount: activeForProvider.length,
-              consentIds: activeForProvider.map((entry) => entry.id)
+              requestId: requested.request.id,
+              requestedRecordCategory: requested.request.requestedRecordCategory,
+              requestedAccessMode: requested.request.requestedAccessMode,
+              requestedAccessDays: requested.request.requestedAccessDays,
+              reasonSummary: requested.request.reasonSummary,
+              sourceProviderId: requested.request.sourceProviderId || ''
             }
           });
         } else {
@@ -1546,48 +1732,71 @@
         refreshEventFeed();
       };
 
-      const issueRecordAccessPass = () => {
+      const issueRecordAccessPass = async () => {
         if (!currentSubjectWebId) {
           setResult(byId('issueAccessPassResult'), 'Login required before issuing a record access pass.');
           return;
         }
 
         const sourceRecordId = String((byId('accessRecordSelect') && byId('accessRecordSelect').value) || '').trim();
-        const targetProviderId = String((byId('accessTargetProviderSelect') && byId('accessTargetProviderSelect').value) || '').trim();
-        const consentMode = String((byId('accessConsentModeSelect') && byId('accessConsentModeSelect').value) || 'one_time').trim();
+        let consentMode = String((byId('accessConsentModeSelect') && byId('accessConsentModeSelect').value) || 'one_time').trim();
+        let timeBoundDays = consentMode === 'time_bound'
+          ? parsePositiveInt(byId('accessConsentDaysInput') && byId('accessConsentDaysInput').value, 30)
+          : 0;
 
         if (!sourceRecordId) {
           setResult(byId('issueAccessPassResult'), 'Select a source record first.');
           return;
         }
-        const issued = store.issueRecordAccessPass({
-          subjectWebId: currentSubjectWebId,
-          sourceProviderId: provider.id,
-          sourceRecordId,
-          sharedWithProviderId: targetProviderId,
-          consentMode,
-          actorWebId: currentSubjectWebId
-        });
+        let issued;
+        try {
+          issued = await store.issueRecordAccessPass({
+            subjectWebId: currentSubjectWebId,
+            sourceProviderId: provider.id,
+            sourceRecordId,
+            requestId: '',
+            sharedWithProviderId: '',
+            consentMode,
+            timeBoundDays,
+            actorWebId: currentSubjectWebId
+          });
+        } catch (error) {
+          const message = error && error.message ? error.message : 'Failed to encrypt and issue record access pass.';
+          setResult(byId('issueAccessPassResult'), message);
+          return;
+        }
 
         if (!issued || issued.error || !issued.accessPass) {
           setResult(byId('issueAccessPassResult'), issued && issued.error ? issued.error : 'Failed to issue record access pass.');
           return;
         }
 
-        const targetLabel = targetProviderId ? providerLabelFromId(targetProviderId) : 'Any provider you authorize later';
-        const consentText = issued.accessPass.consentMode === 'long_term' ? 'long-term reusable pass' : 'one-time pass';
+        const targetLabel = 'Any provider you authorize later';
+        const consentText = formatAccessTerm(
+          issued.accessPass.consentMode,
+          issued.accessPass.timeBoundDays,
+          issued.accessPass.expiresAt
+        );
         const issuedCredentialVc = issued.credential ? credentialVcForEntry(issued.credential) : null;
+        const autoSaveNote = 'Not auto-saved (generic pass in Sovereign Pod).';
         store.addEvent({
           type: 'record-access-pass-issued',
           providerId: provider.id,
           subjectWebId: currentSubjectWebId,
           actorWebId: currentSubjectWebId,
-          message: `${provider.label}: issued ${consentText} for record sharing to ${targetLabel}`,
+          message: `${provider.label}: issued ${consentText} for sovereign-authorized record sharing`,
           payload: {
             accessPassId: issued.accessPass.id,
             sourceRecordId: issued.accessPass.sourceRecordId,
-            targetProviderId: targetProviderId || '',
+            requestId: '',
+            targetProviderId: '',
             consentMode: issued.accessPass.consentMode,
+            timeBoundDays: issued.accessPass.timeBoundDays || 0,
+            expiresAt: issued.accessPass.expiresAt || '',
+            recordReference: issued.accessPass.recordReference || '',
+            decryptionKeyRef: issued.accessPass.decryptionKeyRef || '',
+            decryptionKeyWrapAlg: issued.accessPass.decryptionKeyWrapAlg || '',
+            recordCipherAlg: issued.accessPass.recordCipherAlg || '',
             credentialId: issued.credential ? issued.credential.id : '',
             credentialVc: issuedCredentialVc
           }
@@ -1595,7 +1804,7 @@
 
         setResult(
           byId('issueAccessPassResult'),
-          `Record access pass issued.\nPass ID: ${issued.accessPass.id}\nSource Record ID: ${issued.accessPass.sourceRecordId}\nTarget Provider: ${targetLabel}\nConsent: ${consentText}\nCredential ID: ${issued.credential ? issued.credential.id : 'n/a'}`
+          `Record access pass issued.\nPass ID: ${issued.accessPass.id}\nSource Record ID: ${issued.accessPass.sourceRecordId}\nRecord Reference: ${issued.accessPass.recordReference || 'n/a'}\nDecryption Key Ref: ${issued.accessPass.decryptionKeyRef || 'n/a'}\nSharing Scope: ${targetLabel}\nConsent: ${consentText}\nAuto-Save: ${autoSaveNote}\nCredential ID: ${issued.credential ? issued.credential.id : 'n/a'}`
         );
 
         void notifyProviderApi({
@@ -1608,8 +1817,15 @@
           payload: {
             accessPassId: issued.accessPass.id,
             sourceRecordId: issued.accessPass.sourceRecordId,
-            targetProviderId: targetProviderId || '',
+            requestId: '',
+            targetProviderId: '',
             consentMode: issued.accessPass.consentMode,
+            timeBoundDays: issued.accessPass.timeBoundDays || 0,
+            expiresAt: issued.accessPass.expiresAt || '',
+            recordReference: issued.accessPass.recordReference || '',
+            decryptionKeyRef: issued.accessPass.decryptionKeyRef || '',
+            decryptionKeyWrapAlg: issued.accessPass.decryptionKeyWrapAlg || '',
+            recordCipherAlg: issued.accessPass.recordCipherAlg || '',
             credentialId: issued.credential ? issued.credential.id : ''
           }
         });
@@ -1618,65 +1834,79 @@
         refreshEventFeed();
       };
 
-      const saveRecordAccessPassToProviderPod = () => {
+      const fetchSharedRecordViaAccessPass = async () => {
         if (!currentSubjectWebId) {
-          setResult(byId('saveAccessPassResult'), 'Login required before saving a record access pass.');
+          setResult(byId('fetchSharedRecordResult'), 'Login required before fetching a shared record.');
           return;
         }
-
         const accessPassId = String((byId('inboundAccessPassSelect') && byId('inboundAccessPassSelect').value) || '').trim();
         if (!accessPassId) {
-          setResult(byId('saveAccessPassResult'), 'Select an access pass first.');
+          setResult(byId('fetchSharedRecordResult'), 'Select an access packet first.');
           return;
         }
 
-        const saved = store.saveRecordAccessPassToProviderPod({
-          accessPassId,
-          providerId: provider.id,
+        let resolved = null;
+        try {
+          resolved = await store.resolveSharedRecordFromAccessPass({
+            accessPassId,
+            providerId: provider.id,
+            subjectWebId: currentSubjectWebId,
+            actorWebId: staffWebId
+          });
+        } catch (error) {
+          const message = error && error.message ? error.message : 'Failed to fetch and decrypt shared record.';
+          setResult(byId('fetchSharedRecordResult'), message);
+          return;
+        }
+        if (!resolved || resolved.error || !resolved.record) {
+          setResult(
+            byId('fetchSharedRecordResult'),
+            resolved && resolved.error ? resolved.error : 'Failed to fetch and decrypt shared record.'
+          );
+          return;
+        }
+
+        const sourceProviderId = String(resolved.accessPass && resolved.accessPass.sourceProviderId ? resolved.accessPass.sourceProviderId : '').trim();
+        const sourceProviderLabel = providerLabelFromId(sourceProviderId);
+        const sourceSummary = String(resolved.record.summary || 'shared record').trim();
+        const imported = store.addRecord({
           subjectWebId: currentSubjectWebId,
-          savedByWebId: staffWebId
+          providerId: provider.id,
+          category: 'shared_record_review',
+          summary: `Reviewed shared record from ${sourceProviderLabel}: ${sourceSummary}`,
+          actorWebId: staffWebId,
+          details: {
+            accessPassId,
+            sourceProviderId,
+            sourceRecordId: resolved.accessPass ? resolved.accessPass.sourceRecordId : '',
+            recordReference: resolved.accessPass ? resolved.accessPass.recordReference : '',
+            importedCategory: String(resolved.record.category || '').trim()
+          }
         });
 
-        if (!saved || saved.error || !saved.savedLink) {
-          setResult(byId('saveAccessPassResult'), saved && saved.error ? saved.error : 'Failed to save access pass to provider pod.');
-          return;
-        }
-
         store.addEvent({
-          type: 'record-access-pass-saved',
+          type: 'shared-record-fetched',
           providerId: provider.id,
           subjectWebId: currentSubjectWebId,
           actorWebId: staffWebId,
-          message: `${provider.label}: saved access pass ${saved.savedLink.accessPassId} in provider pod`,
+          message: `${provider.label}: fetched shared record via access pass ${accessPassId}`,
           payload: {
-            accessPassId: saved.savedLink.accessPassId,
-            sourceProviderId: saved.savedLink.sourceProviderId,
-            sourceRecordId: saved.savedLink.sourceRecordId,
-            accessHandle: saved.savedLink.accessHandle,
-            consentMode: saved.savedLink.consentMode
+            accessPassId,
+            sourceProviderId,
+            sourceRecordId: resolved.accessPass ? resolved.accessPass.sourceRecordId : '',
+            recordReference: resolved.accessPass ? resolved.accessPass.recordReference : '',
+            importedRecordId: imported.id,
+            oneTimeConsumed: Boolean(resolved.oneTimeConsumed)
           }
         });
 
         setResult(
-          byId('saveAccessPassResult'),
-          `Access pass saved to provider pod.\nPass ID: ${saved.savedLink.accessPassId}\nSource Provider: ${providerLabelFromId(saved.savedLink.sourceProviderId)}\nSource Record ID: ${saved.savedLink.sourceRecordId}\nHandle: ${saved.savedLink.accessHandle}`
+          byId('fetchSharedRecordResult'),
+          `Shared record fetched and decrypted.\nAccess Pass ID: ${accessPassId}\nSource Provider: ${sourceProviderLabel}\nSource Summary: ${sourceSummary}\nImported Record ID: ${imported.id}${resolved.oneTimeConsumed ? '\nOne-Time Pass: consumed' : ''}`
         );
 
-        void notifyProviderApi({
-          exchangeType: 'record-access-pass-save',
-          subjectWebId: currentSubjectWebId,
-          actorWebId: staffWebId,
-          actionId: 'save_record_access_pass',
-          actionLabel: 'Save Record Access Pass to Provider Pod',
-          payload: {
-            accessPassId: saved.savedLink.accessPassId,
-            sourceProviderId: saved.savedLink.sourceProviderId,
-            sourceRecordId: saved.savedLink.sourceRecordId,
-            accessHandle: saved.savedLink.accessHandle
-          }
-        });
-
         refreshRecordAccessWidgets();
+        refreshRecordList();
         refreshEventFeed();
       };
 
@@ -1772,7 +2002,7 @@
         byId('runSelfBtn').addEventListener('click', runSelfServiceAction);
         byId('runStaffBtn').addEventListener('click', runStaffAction);
         byId('issueAccessPassBtn').addEventListener('click', issueRecordAccessPass);
-        byId('saveAccessPassBtn').addEventListener('click', saveRecordAccessPassToProviderPod);
+        byId('fetchSharedRecordBtn').addEventListener('click', fetchSharedRecordViaAccessPass);
 
         ['identitySelect', 'staffActionSelect', 'selfActionSelect', 'referralSelect'].forEach((id) => {
           const el = byId(id);
@@ -1781,14 +2011,20 @@
             if (id === 'selfActionSelect' || id === 'identitySelect') {
               refreshSelfActionRequirementStatus();
             }
+            if (id === 'staffActionSelect') {
+              refreshRecordRequestControls();
+            }
             postTutorialState();
           });
         });
 
-        ['accessRecordSelect', 'accessTargetProviderSelect', 'accessConsentModeSelect', 'inboundAccessPassSelect'].forEach((id) => {
+        ['recordRequestTermSelect', 'recordRequestDaysInput', 'accessRecordSelect', 'accessConsentModeSelect', 'accessConsentDaysInput', 'inboundAccessPassSelect'].forEach((id) => {
           const el = byId(id);
           if (!el) return;
           el.addEventListener('change', () => {
+            if (id === 'recordRequestTermSelect' || id === 'recordRequestDaysInput') {
+              refreshRecordRequestControls();
+            }
             refreshRecordAccessWidgets();
           });
         });

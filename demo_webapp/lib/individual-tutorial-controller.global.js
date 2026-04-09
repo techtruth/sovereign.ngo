@@ -22,10 +22,34 @@ let activeTutorialStepIndex = 0;
 let activeTutorialTargetCard = null;
 let activeTutorialInstruction = '';
 let activeTutorialComplete = false;
+let activeTutorialSubjectWebId = '';
 let tutorialSeenEventIds = new Set();
 const tutorialChannel = TUTORIAL_CHANNEL;
 const providerPortalState = new Map();
+let guidanceRefreshQueued = false;
 let tutorialCompletionShownFor = '';
+
+const queueGuidanceRefresh = (options) => {
+  if (guidanceRefreshQueued) return;
+  guidanceRefreshQueued = true;
+  const opts = options || {};
+  const run = () => {
+    guidanceRefreshQueued = false;
+    if (!activeTutorialId) return;
+    const currentStep = getActiveTutorialStep();
+    if (!currentStep) return;
+    focusTutorialStep(currentStep, {
+      scroll: opts.scroll === true,
+      forceReload: Boolean(opts.forceReload)
+    });
+    renderWalkthroughPanel();
+  };
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(run);
+    return;
+  }
+  setTimeout(run, 0);
+};
 
 const getFrameMessageTargetOrigin = (record) => {
   if (!record || !record.frame) return '*';
@@ -71,6 +95,7 @@ const resetTutorialStatus = () => {
   activeTutorialStepIndex = 0;
   activeTutorialComplete = false;
   activeTutorialInstruction = '';
+  activeTutorialSubjectWebId = '';
   tutorialCompletionShownFor = '';
   clearTutorialButtonHighlights();
   clearTutorialTarget();
@@ -300,6 +325,51 @@ const canClickControl = (controlEl) => {
   return true;
 };
 
+const buildIdentityAlignmentGuidance = (record, doc, runtimeState, isLoggedIn) => {
+  const expectedSubjectWebId = String(activeTutorialSubjectWebId || '').trim();
+  if (!expectedSubjectWebId) return '';
+
+  const selectedIdentityWebId = String(
+    (doc && doc.getElementById('identitySelect') && doc.getElementById('identitySelect').value)
+    || (runtimeState && runtimeState.selectedIdentityWebId)
+    || ''
+  ).trim();
+  if (selectedIdentityWebId !== expectedSubjectWebId) {
+    const optionLabel = getSelectOptionLabelByValue(doc, 'identitySelect', expectedSubjectWebId);
+    highlightTutorialButtons(record, ['identitySelect'], {
+      expectedValue: expectedSubjectWebId,
+      expectedLabel: optionLabel
+    });
+    return optionLabel
+      ? `Choose Sovereign Identity: ${optionLabel}.`
+      : 'Choose the same identity used in the previous tutorial step.';
+  }
+
+  const loggedInSubjectWebId = String((runtimeState && runtimeState.currentSubjectWebId) || '').trim();
+  if (isLoggedIn && loggedInSubjectWebId && loggedInSubjectWebId !== expectedSubjectWebId) {
+    highlightTutorialButtons(record, ['loginBtn']);
+    return 'This card is logged into a different identity. Click LOGIN to switch to the selected tutorial identity.';
+  }
+
+  return '';
+};
+
+const sameProviderRuntimeState = (a, b) => {
+  if (!a || !b) return false;
+  return (
+    Boolean(a.isLoggedIn) === Boolean(b.isLoggedIn)
+    && Boolean(a.hasOpenReferral) === Boolean(b.hasOpenReferral)
+    && String(a.currentSubjectWebId || '') === String(b.currentSubjectWebId || '')
+    && String(a.selectedIdentityWebId || '') === String(b.selectedIdentityWebId || '')
+    && String(a.selectedStaffActionId || '') === String(b.selectedStaffActionId || '')
+    && String(a.selectedSelfActionId || '') === String(b.selectedSelfActionId || '')
+    && String(a.selectedReferralId || '') === String(b.selectedReferralId || '')
+    && Boolean(a.selectedReferralOpen) === Boolean(b.selectedReferralOpen)
+    && Boolean(a.consentToStore) === Boolean(b.consentToStore)
+    && Boolean(a.canVerify) === Boolean(b.canVerify)
+  );
+};
+
 const updateTutorialActionGuidance = (step, record) => {
   if (!step || !record || !step.action || typeof step.action !== 'object') return '';
 
@@ -318,6 +388,8 @@ const updateTutorialActionGuidance = (step, record) => {
     const isLoggedIn = runtimeState
       ? Boolean(runtimeState.isLoggedIn)
       : canClickControl(doc && doc.getElementById('runStaffBtn'));
+    const identityGuidance = buildIdentityAlignmentGuidance(record, doc, runtimeState, isLoggedIn);
+    if (identityGuidance) return identityGuidance;
 
     if (!isLoggedIn) {
       highlightTutorialButtons(record, ['loginBtn']);
@@ -379,6 +451,8 @@ const updateTutorialActionGuidance = (step, record) => {
     const isLoggedIn = runtimeState
       ? Boolean(runtimeState.isLoggedIn)
       : canClickControl(doc && doc.getElementById('runSelfBtn'));
+    const identityGuidance = buildIdentityAlignmentGuidance(record, doc, runtimeState, isLoggedIn);
+    if (identityGuidance) return identityGuidance;
 
     if (!isLoggedIn) {
       highlightTutorialButtons(record, ['loginBtn']);
@@ -409,6 +483,8 @@ const updateTutorialActionGuidance = (step, record) => {
     const isLoggedIn = runtimeState
       ? Boolean(runtimeState.isLoggedIn)
       : Boolean(verifyBtn && !verifyBtn.disabled);
+    const identityGuidance = buildIdentityAlignmentGuidance(record, doc, runtimeState, isLoggedIn);
+    if (identityGuidance) return identityGuidance;
 
     if (!isLoggedIn) {
       highlightTutorialButtons(record, ['loginBtn']);
@@ -519,6 +595,7 @@ const renderWalkthroughButtons = () => {
       activeTutorialId = chain.id;
       activeTutorialStepIndex = 0;
       activeTutorialComplete = false;
+      activeTutorialSubjectWebId = '';
       tutorialCompletionShownFor = '';
       closeTutorialCompletionModal();
       primeTutorialSeenEvents();
@@ -593,7 +670,12 @@ const advanceTutorialFromEvent = (event) => {
   if (!tutorial || !Array.isArray(tutorial.steps) || tutorial.steps.length === 0) return false;
   const currentStep = tutorial.steps[activeTutorialStepIndex] || null;
   if (!currentStep || !currentStep.expectedEvent) return false;
+  const eventSubjectWebId = String(event && event.subjectWebId ? event.subjectWebId : '').trim();
+  if (activeTutorialSubjectWebId && eventSubjectWebId && eventSubjectWebId !== activeTutorialSubjectWebId) return false;
   if (!doesEventMatchExpected(event, currentStep.expectedEvent)) return false;
+  if (!activeTutorialSubjectWebId && eventSubjectWebId) {
+    activeTutorialSubjectWebId = eventSubjectWebId;
+  }
 
   if (activeTutorialStepIndex >= tutorial.steps.length - 1) {
     activeTutorialComplete = true;
@@ -622,10 +704,7 @@ const handleTutorialStoreUpdate = () => {
   });
 
   if (!hasAdvanced) {
-    const currentStep = getActiveTutorialStep();
-    if (!currentStep) return;
-    focusTutorialStep(currentStep, { scroll: false });
-    renderWalkthroughPanel();
+    queueGuidanceRefresh({ scroll: false });
   }
 };
 
@@ -634,8 +713,7 @@ const handleTutorialStoreUpdate = () => {
     if (!currentStep) return;
     const expectedRecord = resolveTutorialRecord(currentStep);
     if (!expectedRecord || expectedRecord.id !== record.id) return;
-    focusTutorialStep(currentStep, { scroll: false });
-    renderWalkthroughPanel();
+    queueGuidanceRefresh({ scroll: false });
   };
 
   const handleStoreUpdate = () => {
@@ -644,10 +722,11 @@ const handleTutorialStoreUpdate = () => {
 
   const handleProviderStateMessage = (data) => {
     if (!data || data.type !== 'provider-state' || !data.providerId) return;
-
-    providerPortalState.set(String(data.providerId), {
+    const providerId = String(data.providerId);
+    const nextState = {
       isLoggedIn: Boolean(data.isLoggedIn),
       hasOpenReferral: Boolean(data.hasOpenReferral),
+      currentSubjectWebId: String(data.currentSubjectWebId || ''),
       selectedIdentityWebId: String(data.selectedIdentityWebId || ''),
       selectedStaffActionId: String(data.selectedStaffActionId || ''),
       selectedSelfActionId: String(data.selectedSelfActionId || ''),
@@ -655,13 +734,17 @@ const handleTutorialStoreUpdate = () => {
       selectedReferralOpen: Boolean(data.selectedReferralOpen),
       consentToStore: Boolean(data.consentToStore),
       canVerify: Boolean(data.canVerify)
-    });
+    };
+    const previousState = providerPortalState.get(providerId);
+    if (previousState && sameProviderRuntimeState(previousState, nextState)) return;
+    providerPortalState.set(providerId, nextState);
 
     if (!activeTutorialId) return;
     const currentStep = getActiveTutorialStep();
     if (!currentStep) return;
-    focusTutorialStep(currentStep, { scroll: false });
-    renderWalkthroughPanel();
+    const currentStepProviderId = getStepProviderId(currentStep);
+    if (currentStepProviderId && currentStepProviderId !== providerId) return;
+    queueGuidanceRefresh({ scroll: false });
   };
 
   const handleExternalTutorialEvent = (event) => {
@@ -669,14 +752,12 @@ const handleTutorialStoreUpdate = () => {
     if (!activeTutorialId) return;
     const advanced = advanceTutorialFromEvent(event);
     if (advanced) return;
-    const currentStep = getActiveTutorialStep();
-    if (!currentStep) return;
-    focusTutorialStep(currentStep, { scroll: false });
-    renderWalkthroughPanel();
+    queueGuidanceRefresh({ scroll: false });
   };
 
   const handleDemoDataReset = () => {
     primeTutorialSeenEvents();
+    activeTutorialSubjectWebId = '';
     tutorialCompletionShownFor = '';
     closeTutorialCompletionModal();
 

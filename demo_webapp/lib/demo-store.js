@@ -75,6 +75,53 @@
     return `${prefix}_${rand}${stamp.slice(-4)}`;
   };
 
+  const textEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+  const textDecoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
+
+  const requireWebCrypto = () => {
+    const cryptoApi = typeof globalThis !== 'undefined' ? globalThis.crypto : null;
+    if (!cryptoApi || typeof cryptoApi.getRandomValues !== 'function' || !cryptoApi.subtle) {
+      throw new Error('Web Crypto API is required for record access packet encryption.');
+    }
+    return cryptoApi;
+  };
+
+  const randomBytes = (size) => {
+    const cryptoApi = requireWebCrypto();
+    const out = new Uint8Array(size);
+    cryptoApi.getRandomValues(out);
+    return out;
+  };
+
+  const bytesToBase64Url = (bytes) => {
+    if (!bytes || typeof bytes.length !== 'number') return '';
+    if (typeof btoa !== 'function') {
+      throw new Error('btoa is required for base64url encoding.');
+    }
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, chunk);
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  };
+
+  const base64UrlToBytes = (value) => {
+    const normalized = asTrimmed(value).replace(/-/g, '+').replace(/_/g, '/');
+    if (!normalized) return new Uint8Array(0);
+    if (typeof atob !== 'function') {
+      throw new Error('atob is required for base64url decoding.');
+    }
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    const binary = atob(padded);
+    const out = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      out[i] = binary.charCodeAt(i);
+    }
+    return out;
+  };
+
   const providerById = (providerId) => providerCatalog.find((entry) => entry.id === providerId) || null;
 
   const providerDidFromId = (providerId) => {
@@ -437,6 +484,98 @@
     return entry;
   };
 
+  const ensureSubjectPodCryptoProfile = (state, subjectWebId) => {
+    const normalizedSubjectWebId = asTrimmed(subjectWebId);
+    if (!normalizedSubjectWebId) {
+      throw new Error('Subject WebID is required for pod crypto profile.');
+    }
+    const identity = state.identities.find((entry) => entry.webId === normalizedSubjectWebId);
+    if (!identity || identity.status === 'inactive') {
+      throw new Error('Subject identity is not available for pod crypto profile.');
+    }
+    if (!isObject(identity.podCrypto)) {
+      identity.podCrypto = {};
+    }
+    if (!asTrimmed(identity.podCrypto.keyRef)) {
+      identity.podCrypto.keyRef = uid('kek');
+    }
+    if (!asTrimmed(identity.podCrypto.wrappingKey)) {
+      identity.podCrypto.wrappingKey = bytesToBase64Url(randomBytes(32));
+      identity.podCrypto.createdAt = nowIso();
+    }
+    identity.podCrypto.updatedAt = nowIso();
+    return identity.podCrypto;
+  };
+
+  const encryptRecordForAccessPacket = async ({
+    state,
+    subjectWebId,
+    record
+  }) => {
+    if (!textEncoder) {
+      throw new Error('TextEncoder is required for record access packet encryption.');
+    }
+    const cryptoApi = requireWebCrypto();
+    const subtle = cryptoApi.subtle;
+    const podCrypto = ensureSubjectPodCryptoProfile(state, subjectWebId);
+
+    const envelopePayload = {
+      recordId: asTrimmed(record.id),
+      subjectWebId: asTrimmed(record.subjectWebId),
+      sourceProviderId: asTrimmed(record.providerId),
+      sourceProviderDid: asTrimmed(record.providerDid),
+      sourceProviderLabel: asTrimmed(record.providerLabel),
+      category: asTrimmed(record.category),
+      summary: asTrimmed(record.summary),
+      details: isObject(record.details) ? deepClone(record.details) : {},
+      createdAt: asTrimmed(record.createdAt),
+      encryptedAt: nowIso()
+    };
+    const plaintext = textEncoder.encode(JSON.stringify(envelopePayload));
+
+    const contentKey = await subtle.generateKey(
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['encrypt', 'decrypt']
+    );
+    const iv = randomBytes(12);
+    const ciphertext = await subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      contentKey,
+      plaintext
+    );
+
+    const wrappingKeyRaw = base64UrlToBytes(podCrypto.wrappingKey);
+    const wrappingKey = await subtle.importKey(
+      'raw',
+      wrappingKeyRaw,
+      { name: 'AES-KW' },
+      false,
+      ['wrapKey', 'unwrapKey']
+    );
+    const wrappedKey = await subtle.wrapKey(
+      'raw',
+      contentKey,
+      wrappingKey,
+      { name: 'AES-KW' }
+    );
+
+    return {
+      recordReference: `urn:sovereign:record-ref:${encodeURIComponent(asTrimmed(record.providerId))}:${encodeURIComponent(asTrimmed(record.id))}`,
+      decryptionKeyRef: asTrimmed(podCrypto.keyRef),
+      decryptionKeyCiphertext: bytesToBase64Url(new Uint8Array(wrappedKey)),
+      decryptionKeyWrapAlg: 'A256KW',
+      recordCipherAlg: 'A256GCM',
+      encryptedRecordEnvelope: {
+        alg: 'A256GCM',
+        iv: bytesToBase64Url(iv),
+        ciphertext: bytesToBase64Url(new Uint8Array(ciphertext)),
+        mediaType: 'application/json',
+        createdAt: nowIso()
+      }
+    };
+  };
+
   const credentialTypes = (entry) => {
     if (!isValidCredentialEntry(entry)) return [];
     return entry.credential.type.filter((value) => value !== 'VerifiableCredential');
@@ -510,7 +649,9 @@
       records: [],
       consents: [],
       referrals: [],
+      recordAccessRequests: [],
       recordAccessPasses: [],
+      prescriptionAuthorizations: [],
       providerPodAccessLinks: [],
       events: [],
       statusLists: {}
@@ -547,6 +688,16 @@
       if (!Array.isArray(parsed.identities) || !Array.isArray(parsed.providers)) return null;
       if (!Array.isArray(parsed.credentials) || !Array.isArray(parsed.records)) return null;
       if (!Array.isArray(parsed.consents) || !Array.isArray(parsed.referrals)) return null;
+      if (parsed.recordAccessRequests === undefined) {
+        parsed.recordAccessRequests = [];
+      } else if (!Array.isArray(parsed.recordAccessRequests)) {
+        return null;
+      }
+      if (parsed.prescriptionAuthorizations === undefined) {
+        parsed.prescriptionAuthorizations = [];
+      } else if (!Array.isArray(parsed.prescriptionAuthorizations)) {
+        return null;
+      }
       if (!Array.isArray(parsed.recordAccessPasses) || !Array.isArray(parsed.providerPodAccessLinks) || !Array.isArray(parsed.events)) {
         return null;
       }
@@ -642,6 +793,16 @@
   const withState = (mutator, reason) => {
     const state = ensureState();
     const result = mutator(state) || {};
+    saveState(state, reason || 'update');
+    return {
+      state: deepClone(state),
+      ...result
+    };
+  };
+
+  const withStateAsync = async (mutator, reason) => {
+    const state = ensureState();
+    const result = await mutator(state) || {};
     saveState(state, reason || 'update');
     return {
       state: deepClone(state),
@@ -971,8 +1132,10 @@
   }, 'referral-added').referral;
 
   const providerCanFulfillReferral = (providerId, referral) => {
-    if (!providerId || !referral) return false;
-    const provider = providerById(providerId);
+    const normalizedProviderId = asTrimmed(providerId);
+    if (!normalizedProviderId || !referral) return false;
+    if (asTrimmed(referral.fromProviderId) === normalizedProviderId) return false;
+    const provider = providerById(normalizedProviderId);
     if (!provider) return false;
     if (referral.status !== 'open') return false;
     const capability = String(referral.targetCapability || '').trim();
@@ -990,7 +1153,11 @@
     }
 
     if (opts.providerId) {
-      rows = rows.filter((entry) => providerCanFulfillReferral(opts.providerId, entry) || entry.fulfilledByProviderId === opts.providerId);
+      const normalizedProviderId = asTrimmed(opts.providerId);
+      rows = rows.filter((entry) => {
+        if (asTrimmed(entry.fromProviderId) === normalizedProviderId) return false;
+        return providerCanFulfillReferral(normalizedProviderId, entry) || asTrimmed(entry.fulfilledByProviderId) === normalizedProviderId;
+      });
     }
 
     if (!opts.includeClosed) {
@@ -1005,6 +1172,297 @@
 
     return deepClone(rows);
   };
+
+  const listRecordAccessRequests = (subjectWebId, options) => {
+    const opts = options || {};
+    const state = ensureState();
+    let rows = Array.isArray(state.recordAccessRequests) ? state.recordAccessRequests.slice() : [];
+
+    if (subjectWebId) {
+      rows = rows.filter((entry) => entry.subjectWebId === subjectWebId);
+    }
+
+    if (opts.requestedByProviderId) {
+      rows = rows.filter((entry) => entry.requestedByProviderId === opts.requestedByProviderId);
+    }
+
+    if (opts.sourceProviderId) {
+      rows = rows.filter((entry) => !entry.sourceProviderId || entry.sourceProviderId === opts.sourceProviderId);
+    }
+
+    if (!opts.includeClosed) {
+      rows = rows.filter((entry) => entry.status === 'open');
+    }
+
+    rows = rows.slice().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    return deepClone(rows);
+  };
+
+  const getRecordAccessRequest = (requestId) => {
+    const normalizedRequestId = String(requestId || '').trim();
+    if (!normalizedRequestId) return null;
+    const state = ensureState();
+    const found = Array.isArray(state.recordAccessRequests)
+      ? state.recordAccessRequests.find((entry) => entry.id === normalizedRequestId)
+      : null;
+    return found ? deepClone(found) : null;
+  };
+
+  const addRecordAccessRequest = ({
+    subjectWebId,
+    requestedByProviderId,
+    sourceProviderId,
+    requestedRecordCategory,
+    reasonSummary,
+    requestedAccessMode,
+    requestedAccessDays,
+    requestedByWebId
+  }) => withState((state) => {
+    const normalizedSubjectWebId = String(subjectWebId || '').trim();
+    const normalizedRequestedByProviderId = String(requestedByProviderId || '').trim();
+    const normalizedSourceProviderId = String(sourceProviderId || '').trim();
+    const normalizedRequestedRecordCategory = String(requestedRecordCategory || '').trim() || 'general-record';
+    const normalizedReasonSummary = String(reasonSummary || '').trim() || 'Record review requested.';
+    const requestedModeRaw = String(requestedAccessMode || '').trim();
+    const normalizedRequestedAccessMode = (
+      requestedModeRaw === 'time_bound' || requestedModeRaw === 'indefinite' || requestedModeRaw === 'one_time'
+    ) ? requestedModeRaw : 'one_time';
+    const normalizedRequestedAccessDays = normalizedRequestedAccessMode === 'time_bound'
+      ? Math.min(3650, Math.max(1, Math.floor(Number(requestedAccessDays) || 30)))
+      : 0;
+    const requestedExpiresAt = normalizedRequestedAccessMode === 'one_time'
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      : (normalizedRequestedAccessMode === 'time_bound'
+        ? new Date(Date.now() + normalizedRequestedAccessDays * 24 * 60 * 60 * 1000).toISOString()
+        : '');
+
+    if (!normalizedSubjectWebId || !normalizedRequestedByProviderId) {
+      return { request: null, error: 'Missing required fields for record access request.' };
+    }
+
+    const identity = state.identities.find((entry) => entry.webId === normalizedSubjectWebId);
+    if (!identity || identity.status === 'inactive') {
+      return { request: null, error: 'Subject identity is not available.' };
+    }
+
+    const requestingProvider = providerById(normalizedRequestedByProviderId);
+    if (!requestingProvider) {
+      return { request: null, error: 'Requesting provider is not recognized.' };
+    }
+
+    if (normalizedSourceProviderId && !providerById(normalizedSourceProviderId)) {
+      return { request: null, error: 'Requested source provider is not recognized.' };
+    }
+
+    const request = {
+      id: uid('rar'),
+      subjectWebId: normalizedSubjectWebId,
+      requestedByProviderId: normalizedRequestedByProviderId,
+      requestedByProviderDid: providerDidFromId(normalizedRequestedByProviderId),
+      sourceProviderId: normalizedSourceProviderId,
+      sourceProviderDid: providerDidFromId(normalizedSourceProviderId),
+      requestedRecordCategory: normalizedRequestedRecordCategory,
+      reasonSummary: normalizedReasonSummary,
+      requestedAccessMode: normalizedRequestedAccessMode,
+      requestedAccessDays: normalizedRequestedAccessDays,
+      requestedExpiresAt,
+      status: 'open',
+      createdAt: nowIso(),
+      requestedByWebId: String(requestedByWebId || '').trim(),
+      fulfilledAt: '',
+      fulfilledByProviderId: '',
+      fulfilledByProviderDid: '',
+      fulfilledByWebId: '',
+      accessPassId: ''
+    };
+
+    state.recordAccessRequests.push(request);
+    return { request: deepClone(request), error: '' };
+  }, 'record-access-request-added');
+
+  const fulfillRecordAccessRequest = ({
+    requestId,
+    accessPassId,
+    fulfilledByProviderId,
+    fulfilledByWebId
+  }) => withState((state) => {
+    const normalizedRequestId = String(requestId || '').trim();
+    if (!normalizedRequestId) {
+      return { request: null, error: 'Record access request id is required.' };
+    }
+    const request = state.recordAccessRequests.find((entry) => entry.id === normalizedRequestId);
+    if (!request) {
+      return { request: null, error: 'Record access request was not found.' };
+    }
+    if (request.status !== 'open') {
+      return { request: null, error: 'Record access request is not open.' };
+    }
+
+    request.status = 'fulfilled';
+    request.fulfilledAt = nowIso();
+    request.fulfilledByProviderId = String(fulfilledByProviderId || '').trim();
+    request.fulfilledByProviderDid = providerDidFromId(request.fulfilledByProviderId);
+    request.fulfilledByWebId = String(fulfilledByWebId || '').trim();
+    request.accessPassId = String(accessPassId || '').trim();
+
+    return { request: deepClone(request), error: '' };
+  }, 'record-access-request-fulfilled');
+
+  const issuePrescriptionAuthorizationFromReferral = ({
+    referralId,
+    subjectWebId,
+    issuedByProviderId,
+    maxFills,
+    expiresAt,
+    actorWebId
+  }) => withState((state) => {
+    const normalizedReferralId = asTrimmed(referralId);
+    const normalizedSubjectWebId = asTrimmed(subjectWebId);
+    const normalizedIssuerProviderId = asTrimmed(issuedByProviderId);
+    if (!normalizedReferralId || !normalizedSubjectWebId || !normalizedIssuerProviderId) {
+      return { authorization: null, error: 'Missing required fields for prescription fill-right authorization.' };
+    }
+
+    const referral = state.referrals.find((entry) => asTrimmed(entry.id) === normalizedReferralId);
+    if (!referral) {
+      return { authorization: null, error: 'Referral not found for prescription fill-right authorization.' };
+    }
+    if (asTrimmed(referral.subjectWebId) !== normalizedSubjectWebId) {
+      return { authorization: null, error: 'Referral subject mismatch for prescription fill-right authorization.' };
+    }
+    if (asTrimmed(referral.fromProviderId) !== normalizedIssuerProviderId) {
+      return { authorization: null, error: 'Only referral issuer can create prescription fill-right authorization.' };
+    }
+    if (asTrimmed(referral.targetCapability) !== 'pharmacy-services') {
+      return { authorization: null, error: 'Referral is not a pharmacy-services referral.' };
+    }
+
+    if (!Array.isArray(state.prescriptionAuthorizations)) {
+      state.prescriptionAuthorizations = [];
+    }
+    const existing = state.prescriptionAuthorizations.find((entry) => (
+      asTrimmed(entry.referralId) === normalizedReferralId &&
+      asTrimmed(entry.subjectWebId) === normalizedSubjectWebId &&
+      (asTrimmed(entry.status) === 'active' || asTrimmed(entry.status) === 'exhausted')
+    ));
+    if (existing) {
+      return { authorization: deepClone(existing), error: '' };
+    }
+
+    const normalizedTotalFills = Math.min(12, Math.max(1, Math.floor(Number(maxFills) || 1)));
+    const parsedExpiresAt = Date.parse(asTrimmed(expiresAt));
+    const normalizedExpiresAt = Number.isFinite(parsedExpiresAt)
+      ? new Date(parsedExpiresAt).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const authorization = {
+      id: uid('rxauth'),
+      referralId: normalizedReferralId,
+      subjectWebId: normalizedSubjectWebId,
+      issuedByProviderId: normalizedIssuerProviderId,
+      issuedByProviderDid: providerDidFromId(normalizedIssuerProviderId),
+      totalFills: normalizedTotalFills,
+      remainingFills: normalizedTotalFills,
+      consumedEntries: [],
+      status: 'active',
+      createdAt: nowIso(),
+      expiresAt: normalizedExpiresAt,
+      lastConsumedAt: '',
+      issuedByWebId: asTrimmed(actorWebId)
+    };
+    state.prescriptionAuthorizations.push(authorization);
+    return { authorization: deepClone(authorization), error: '' };
+  }, 'prescription-fill-right-issued');
+
+  const getPrescriptionAuthorizationByReferral = (referralId) => {
+    const normalizedReferralId = asTrimmed(referralId);
+    if (!normalizedReferralId) return null;
+    const state = ensureState();
+    const found = Array.isArray(state.prescriptionAuthorizations)
+      ? state.prescriptionAuthorizations.find((entry) => asTrimmed(entry.referralId) === normalizedReferralId)
+      : null;
+    return found ? deepClone(found) : null;
+  };
+
+  const listPrescriptionAuthorizations = (subjectWebId, options) => {
+    const normalizedSubjectWebId = asTrimmed(subjectWebId);
+    const opts = options || {};
+    const state = ensureState();
+    let rows = Array.isArray(state.prescriptionAuthorizations)
+      ? state.prescriptionAuthorizations.slice()
+      : [];
+    if (normalizedSubjectWebId) {
+      rows = rows.filter((entry) => asTrimmed(entry.subjectWebId) === normalizedSubjectWebId);
+    }
+    if (!opts.includeClosed) {
+      rows = rows.filter((entry) => asTrimmed(entry.status) === 'active');
+    }
+    rows = rows.slice().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    return deepClone(rows);
+  };
+
+  const consumePrescriptionFillRight = ({
+    referralId,
+    providerId,
+    subjectWebId,
+    actorWebId
+  }) => withState((state) => {
+    const normalizedReferralId = asTrimmed(referralId);
+    const normalizedProviderId = asTrimmed(providerId);
+    const normalizedSubjectWebId = asTrimmed(subjectWebId);
+    if (!normalizedReferralId || !normalizedProviderId || !normalizedSubjectWebId) {
+      return { authorization: null, fill: null, error: 'Missing required fields for prescription fill-right consume.' };
+    }
+    const provider = providerById(normalizedProviderId);
+    if (!provider || !Array.isArray(provider.capabilities) || !provider.capabilities.includes('pharmacy-services')) {
+      return { authorization: null, fill: null, error: 'Only pharmacy-capable providers can consume prescription fill-right state.' };
+    }
+    if (!Array.isArray(state.prescriptionAuthorizations)) {
+      state.prescriptionAuthorizations = [];
+    }
+    const authorization = state.prescriptionAuthorizations.find((entry) => (
+      asTrimmed(entry.referralId) === normalizedReferralId &&
+      asTrimmed(entry.subjectWebId) === normalizedSubjectWebId
+    ));
+    if (!authorization) {
+      return { authorization: null, fill: null, error: 'No prescription fill-right authorization found for this referral.' };
+    }
+    if (asTrimmed(authorization.status) !== 'active') {
+      return { authorization: null, fill: null, error: 'Prescription fill-right authorization is not active.' };
+    }
+    const expiresAtMs = Date.parse(asTrimmed(authorization.expiresAt));
+    if (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()) {
+      authorization.status = 'expired';
+      return { authorization: null, fill: null, error: 'Prescription fill-right authorization has expired.' };
+    }
+    const remaining = Math.max(0, Math.floor(Number(authorization.remainingFills) || 0));
+    if (remaining <= 0) {
+      authorization.status = 'exhausted';
+      return { authorization: null, fill: null, error: 'No remaining prescription fill rights for this referral.' };
+    }
+    if (!Array.isArray(authorization.consumedEntries)) {
+      authorization.consumedEntries = [];
+    }
+    const fill = {
+      id: uid('rxfill'),
+      referralId: normalizedReferralId,
+      providerId: normalizedProviderId,
+      providerDid: providerDidFromId(normalizedProviderId),
+      consumedByWebId: asTrimmed(actorWebId),
+      consumedAt: nowIso()
+    };
+    authorization.consumedEntries.unshift(fill);
+    authorization.remainingFills = remaining - 1;
+    authorization.lastConsumedAt = fill.consumedAt;
+    if (authorization.remainingFills <= 0) {
+      authorization.status = 'exhausted';
+    }
+    return {
+      authorization: deepClone(authorization),
+      fill: deepClone(fill),
+      error: ''
+    };
+  }, 'prescription-fill-right-consumed');
 
   const listRecordAccessPasses = (subjectWebId, options) => {
     const opts = options || {};
@@ -1041,21 +1499,23 @@
     return deepClone(rows);
   };
 
-  const issueRecordAccessPass = ({
+  const issueRecordAccessPass = async ({
     subjectWebId,
     sourceProviderId,
     sourceRecordId,
+    requestId,
     sharedWithProviderId,
     consentMode,
+    timeBoundDays,
     actorWebId
-  }) => withState((state) => {
+  }) => withStateAsync(async (state) => {
     if (!subjectWebId || !sourceProviderId || !sourceRecordId) {
-      return { accessPass: null, credential: null, error: 'Missing required fields for record access pass issuance.' };
+      return { accessPass: null, credential: null, request: null, error: 'Missing required fields for record access pass issuance.' };
     }
 
     const identity = state.identities.find((entry) => entry.webId === subjectWebId);
     if (!identity || identity.status === 'inactive') {
-      return { accessPass: null, credential: null, error: 'Subject identity is not available.' };
+      return { accessPass: null, credential: null, request: null, error: 'Subject identity is not available.' };
     }
 
     const record = state.records.find((entry) => (
@@ -1064,15 +1524,74 @@
       entry.providerId === sourceProviderId
     ));
     if (!record) {
-      return { accessPass: null, credential: null, error: 'Source record was not found for this subject and provider.' };
+      return { accessPass: null, credential: null, request: null, error: 'Source record was not found for this subject and provider.' };
     }
 
-    const normalizedConsentMode = String(consentMode || '').trim() === 'long_term' ? 'long_term' : 'one_time';
+    const requestedConsentMode = String(consentMode || '').trim();
+    const normalizedConsentMode = (
+      requestedConsentMode === 'time_bound' ||
+      requestedConsentMode === 'indefinite' ||
+      requestedConsentMode === 'one_time'
+    ) ? requestedConsentMode : 'one_time';
+    const normalizedTimeBoundDays = Math.min(3650, Math.max(1, Math.floor(Number(timeBoundDays) || 30)));
     const now = nowIso();
-    const expiresAt = normalizedConsentMode === 'one_time'
-      ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      : '';
-    const normalizedSharedWithProviderId = String(sharedWithProviderId || '').trim();
+    const normalizedRequestId = String(requestId || '').trim();
+    let matchedRequest = null;
+    let normalizedSharedWithProviderId = String(sharedWithProviderId || '').trim();
+
+    if (normalizedRequestId) {
+      matchedRequest = state.recordAccessRequests.find((entry) => entry.id === normalizedRequestId) || null;
+      if (!matchedRequest) {
+        return { accessPass: null, credential: null, request: null, error: 'Selected record access request was not found.' };
+      }
+      if (matchedRequest.subjectWebId !== subjectWebId) {
+        return { accessPass: null, credential: null, request: null, error: 'Record access request does not belong to this subject.' };
+      }
+      if (matchedRequest.status !== 'open') {
+        return { accessPass: null, credential: null, request: null, error: 'Record access request is no longer open.' };
+      }
+      if (matchedRequest.sourceProviderId && matchedRequest.sourceProviderId !== sourceProviderId) {
+        return { accessPass: null, credential: null, request: null, error: 'Record access request is scoped to a different source provider.' };
+      }
+      const requesterProviderId = String(matchedRequest.requestedByProviderId || '').trim();
+      if (!requesterProviderId) {
+        return { accessPass: null, credential: null, request: null, error: 'Record access request has no target provider.' };
+      }
+      if (normalizedSharedWithProviderId && normalizedSharedWithProviderId !== requesterProviderId) {
+        return { accessPass: null, credential: null, request: null, error: 'Selected request target does not match the pass target provider.' };
+      }
+      normalizedSharedWithProviderId = requesterProviderId;
+    }
+
+    const effectiveConsentMode = matchedRequest
+      ? String(matchedRequest.requestedAccessMode || 'one_time').trim() || 'one_time'
+      : normalizedConsentMode;
+    const effectiveTimeBoundDays = matchedRequest
+      ? Math.min(3650, Math.max(1, Math.floor(Number(matchedRequest.requestedAccessDays) || 30)))
+      : normalizedTimeBoundDays;
+    const matchedRequestExpiresAt = matchedRequest ? String(matchedRequest.requestedExpiresAt || '').trim() : '';
+    let expiresAt = '';
+    if (effectiveConsentMode === 'one_time') {
+      expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    } else if (effectiveConsentMode === 'time_bound') {
+      const matchedExpiresAtMs = Date.parse(matchedRequestExpiresAt);
+      if (matchedRequest && Number.isFinite(matchedExpiresAtMs) && matchedExpiresAtMs > Date.now()) {
+        expiresAt = new Date(matchedExpiresAtMs).toISOString();
+      } else {
+        expiresAt = new Date(Date.now() + effectiveTimeBoundDays * 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
+    const encryptedPacket = await encryptRecordForAccessPacket({
+      state,
+      subjectWebId,
+      record
+    });
+    const recordReference = encryptedPacket.recordReference;
+    const decryptionKeyRef = encryptedPacket.decryptionKeyRef;
+    const decryptionKeyCiphertext = encryptedPacket.decryptionKeyCiphertext;
+    const decryptionKeyWrapAlg = encryptedPacket.decryptionKeyWrapAlg;
+    const recordCipherAlg = encryptedPacket.recordCipherAlg;
+    const encryptedRecordEnvelope = encryptedPacket.encryptedRecordEnvelope;
 
     const accessPass = {
       id: uid('rap'),
@@ -1082,9 +1601,17 @@
       sourceRecordId,
       sourceRecordCategory: record.category || '',
       sourceRecordSummary: record.summary || '',
+      requestId: normalizedRequestId,
       sharedWithProviderId: normalizedSharedWithProviderId,
       sharedWithProviderDid: providerDidFromId(normalizedSharedWithProviderId),
-      consentMode: normalizedConsentMode,
+      consentMode: effectiveConsentMode,
+      timeBoundDays: effectiveConsentMode === 'time_bound' ? effectiveTimeBoundDays : 0,
+      recordReference,
+      decryptionKeyRef,
+      decryptionKeyCiphertext,
+      decryptionKeyWrapAlg,
+      recordCipherAlg,
+      encryptedRecordEnvelope,
       accessHandle: uid('hdl'),
       accessEndpoint: `/provider-api/${encodeURIComponent(sourceProviderId)}/api/presentations/submit`,
       createdAt: now,
@@ -1108,27 +1635,163 @@
       state,
       claims: {
         accessPassId: accessPass.id,
+        requestId: normalizedRequestId,
         sourceRecordId,
         sourceProviderId,
         sharedWithProviderId: normalizedSharedWithProviderId,
-        consentMode: normalizedConsentMode,
+        consentMode: effectiveConsentMode,
+        timeBoundDays: effectiveConsentMode === 'time_bound' ? effectiveTimeBoundDays : 0,
         expiresAt,
+        recordReference,
+        decryptionKeyRef,
+        decryptionKeyCiphertext,
+        decryptionKeyWrapAlg,
+        recordCipherAlg,
+        encryptedRecordEnvelope: deepClone(encryptedRecordEnvelope),
         accessHandle: accessPass.accessHandle,
         accessEndpoint: accessPass.accessEndpoint
       },
       metadata: {
         accessPassId: accessPass.id,
+        requestId: normalizedRequestId,
         sourceRecordId,
         sourceProviderId,
         sharedWithProviderId: normalizedSharedWithProviderId,
-        consentMode: normalizedConsentMode,
-        expiresAt
+        consentMode: effectiveConsentMode,
+        timeBoundDays: effectiveConsentMode === 'time_bound' ? effectiveTimeBoundDays : 0,
+        expiresAt,
+        recordReference,
+        decryptionKeyRef,
+        decryptionKeyWrapAlg,
+        recordCipherAlg,
+        encryptedRecordEnvelope: deepClone(encryptedRecordEnvelope)
       }
     });
     state.credentials.push(credential);
 
-    return { accessPass: deepClone(accessPass), credential: deepClone(credential), error: '' };
+    if (matchedRequest) {
+      matchedRequest.status = 'fulfilled';
+      matchedRequest.fulfilledAt = now;
+      matchedRequest.fulfilledByProviderId = sourceProviderId;
+      matchedRequest.fulfilledByProviderDid = providerDidFromId(sourceProviderId);
+      matchedRequest.fulfilledByWebId = actorWebId || '';
+      matchedRequest.accessPassId = accessPass.id;
+    }
+
+    return {
+      accessPass: deepClone(accessPass),
+      credential: deepClone(credential),
+      request: matchedRequest ? deepClone(matchedRequest) : null,
+      error: ''
+    };
   }, 'record-access-pass-issued');
+
+  const resolveSharedRecordFromAccessPass = async ({
+    accessPassId,
+    providerId,
+    subjectWebId,
+    actorWebId
+  }) => withStateAsync(async (state) => {
+    if (!textDecoder) {
+      return { accessPass: null, record: null, oneTimeConsumed: false, error: 'TextDecoder is required for shared record decryption.' };
+    }
+    const normalizedAccessPassId = asTrimmed(accessPassId);
+    const normalizedProviderId = asTrimmed(providerId);
+    const normalizedSubjectWebId = asTrimmed(subjectWebId);
+    if (!normalizedAccessPassId || !normalizedProviderId || !normalizedSubjectWebId) {
+      return { accessPass: null, record: null, oneTimeConsumed: false, error: 'Missing required fields to resolve shared record from access pass.' };
+    }
+    const accessPass = state.recordAccessPasses.find((entry) => asTrimmed(entry.id) === normalizedAccessPassId);
+    if (!accessPass) {
+      return { accessPass: null, record: null, oneTimeConsumed: false, error: 'Record access pass not found.' };
+    }
+    if (asTrimmed(accessPass.subjectWebId) !== normalizedSubjectWebId) {
+      return { accessPass: null, record: null, oneTimeConsumed: false, error: 'Record access pass does not belong to this subject.' };
+    }
+    if (asTrimmed(accessPass.status) !== 'active') {
+      return { accessPass: null, record: null, oneTimeConsumed: false, error: 'Record access pass is not active.' };
+    }
+    if (asTrimmed(accessPass.sharedWithProviderId) && asTrimmed(accessPass.sharedWithProviderId) !== normalizedProviderId) {
+      return { accessPass: null, record: null, oneTimeConsumed: false, error: 'Record access pass is scoped to a different provider.' };
+    }
+    if (asTrimmed(accessPass.expiresAt)) {
+      const expiresAtMs = Date.parse(asTrimmed(accessPass.expiresAt));
+      if (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()) {
+        accessPass.status = 'expired';
+        return { accessPass: null, record: null, oneTimeConsumed: false, error: 'Record access pass has expired.' };
+      }
+    }
+    const encryptedEnvelope = isObject(accessPass.encryptedRecordEnvelope)
+      ? accessPass.encryptedRecordEnvelope
+      : null;
+    if (!encryptedEnvelope) {
+      return { accessPass: null, record: null, oneTimeConsumed: false, error: 'Record access pass has no encrypted record payload.' };
+    }
+
+    const podCrypto = ensureSubjectPodCryptoProfile(state, normalizedSubjectWebId);
+    const wrappingKeyRaw = base64UrlToBytes(podCrypto.wrappingKey);
+    const subtle = requireWebCrypto().subtle;
+    const wrappingKey = await subtle.importKey(
+      'raw',
+      wrappingKeyRaw,
+      { name: 'AES-KW' },
+      false,
+      ['unwrapKey']
+    );
+    const wrappedKeyBytes = base64UrlToBytes(asTrimmed(accessPass.decryptionKeyCiphertext));
+    const contentKey = await subtle.unwrapKey(
+      'raw',
+      wrappedKeyBytes,
+      wrappingKey,
+      { name: 'AES-KW' },
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
+    const iv = base64UrlToBytes(asTrimmed(encryptedEnvelope.iv));
+    const ciphertext = base64UrlToBytes(asTrimmed(encryptedEnvelope.ciphertext));
+    const plaintextBuffer = await subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      contentKey,
+      ciphertext
+    );
+    const plaintextJson = textDecoder.decode(plaintextBuffer);
+    let recordPayload = null;
+    try {
+      recordPayload = JSON.parse(plaintextJson);
+    } catch {
+      return { accessPass: null, record: null, oneTimeConsumed: false, error: 'Shared record payload failed JSON decode.' };
+    }
+
+    if (!Array.isArray(accessPass.accessedBy)) {
+      accessPass.accessedBy = [];
+    }
+    accessPass.accessedBy.unshift({
+      providerId: normalizedProviderId,
+      providerDid: providerDidFromId(normalizedProviderId),
+      actorWebId: asTrimmed(actorWebId),
+      accessedAt: nowIso()
+    });
+    accessPass.lastAccessedAt = accessPass.accessedBy[0].accessedAt;
+    accessPass.accessCount = Math.max(0, Math.floor(Number(accessPass.accessCount) || 0)) + 1;
+
+    let oneTimeConsumed = false;
+    if (asTrimmed(accessPass.consentMode) === 'one_time') {
+      accessPass.status = 'consumed';
+      accessPass.consumedAt = nowIso();
+      accessPass.consumedByProviderId = normalizedProviderId;
+      accessPass.consumedByProviderDid = providerDidFromId(normalizedProviderId);
+      accessPass.consumedByWebId = asTrimmed(actorWebId);
+      oneTimeConsumed = true;
+    }
+
+    return {
+      accessPass: deepClone(accessPass),
+      record: deepClone(recordPayload),
+      oneTimeConsumed,
+      error: ''
+    };
+  }, 'record-access-pass-resolved');
 
   const saveRecordAccessPassToProviderPod = ({
     accessPassId,
@@ -1153,8 +1816,8 @@
     if (accessPass.sharedWithProviderId && accessPass.sharedWithProviderId !== providerId) {
       return { savedLink: null, error: 'This record access pass is scoped to a different provider.' };
     }
-    if (accessPass.consentMode !== 'long_term') {
-      return { savedLink: null, error: 'Only long-term record access passes can be saved for future provider access.' };
+    if (String(accessPass.consentMode || '').trim() === 'one_time') {
+      return { savedLink: null, error: 'Only reusable record access passes (time-bound or indefinite) can be saved for future provider access.' };
     }
     if (accessPass.expiresAt) {
       const expiresAtMs = Date.parse(accessPass.expiresAt);
@@ -1182,6 +1845,12 @@
       sourceProviderId: accessPass.sourceProviderId,
       sourceProviderDid: accessPass.sourceProviderDid,
       sourceRecordId: accessPass.sourceRecordId,
+      recordReference: accessPass.recordReference,
+      decryptionKeyRef: accessPass.decryptionKeyRef,
+      decryptionKeyCiphertext: accessPass.decryptionKeyCiphertext,
+      decryptionKeyWrapAlg: accessPass.decryptionKeyWrapAlg,
+      recordCipherAlg: accessPass.recordCipherAlg,
+      encryptedRecordEnvelope: deepClone(accessPass.encryptedRecordEnvelope || {}),
       accessHandle: accessPass.accessHandle,
       accessEndpoint: accessPass.accessEndpoint,
       consentMode: accessPass.consentMode,
@@ -1216,6 +1885,9 @@
     const referral = state.referrals.find((entry) => entry.id === referralId);
     if (!referral) {
       return { referral: null, error: 'Referral not found.' };
+    }
+    if (asTrimmed(referral.fromProviderId) === asTrimmed(providerId)) {
+      return { referral: null, error: 'Providers cannot fulfill referrals they issued themselves.' };
     }
     if (!providerCanFulfillReferral(providerId, referral)) {
       return { referral: null, error: 'Selected provider cannot fulfill this referral.' };
@@ -1313,7 +1985,16 @@
     addReferral,
     listReferrals,
     fulfillReferral,
+    addRecordAccessRequest,
+    getRecordAccessRequest,
+    listRecordAccessRequests,
+    fulfillRecordAccessRequest,
+    issuePrescriptionAuthorizationFromReferral,
+    getPrescriptionAuthorizationByReferral,
+    listPrescriptionAuthorizations,
+    consumePrescriptionFillRight,
     issueRecordAccessPass,
+    resolveSharedRecordFromAccessPass,
     listRecordAccessPasses,
     saveRecordAccessPassToProviderPod,
     listProviderPodAccessLinks
