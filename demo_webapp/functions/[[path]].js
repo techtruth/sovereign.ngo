@@ -1,6 +1,6 @@
 const REALM = 'Sovereign Demo';
 const PROTECTED_PATH_PREFIXES = ['/demo/bedcount'];
-const PROTECTED_EXACT_PATHS = new Set(['/', '/index.html']);
+const PROTECTED_EXACT_PATHS = new Set();
 
 function text(value) {
   if (value === null || value === undefined) return '';
