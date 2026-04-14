@@ -1,4 +1,6 @@
 const REALM = 'Sovereign Demo';
+const PROTECTED_PATH_PREFIXES = ['/demo/bedcount'];
+const PROTECTED_EXACT_PATHS = new Set(['/', '/index.html']);
 
 function text(value) {
   if (value === null || value === undefined) return '';
@@ -67,7 +69,16 @@ function misconfiguredResponse() {
 
 function shouldProtectPath(pathname) {
   const normalized = text(pathname).toLowerCase();
-  return normalized === '/' || normalized === '/index.html';
+  if (!normalized) {
+    return false;
+  }
+
+  const canonical = normalized === '/' ? '/' : normalized.replace(/\/+$/, '');
+  if (PROTECTED_EXACT_PATHS.has(canonical)) {
+    return true;
+  }
+
+  return PROTECTED_PATH_PREFIXES.some((prefix) => canonical === prefix || canonical.startsWith(`${prefix}/`));
 }
 
 export async function onRequest(context) {

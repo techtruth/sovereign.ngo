@@ -1,0 +1,1222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sovereign NGO | Bed Count Demo</title>
+  <meta name="description" content="Password-protected bed pressure and coordinated entry throughput demo.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <link rel="stylesheet" href="../../demo.css">
+  <style>
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fbff;
+      padding: 10px;
+    }
+
+    .kpi h3 {
+      margin: 0;
+      font: 700 0.82rem "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #315f7d;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .kpi p {
+      margin: 4px 0 0;
+      font: 700 1.45rem "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #153f5b;
+    }
+
+    .kpi p.alert {
+      color: #9f2c2c;
+    }
+
+    .pressure-wrap {
+      margin-top: 10px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .pressure-track {
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #eef4fa;
+      overflow: hidden;
+    }
+
+    .pressure-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #3888b9 0%, #de6f53 100%);
+      transition: width 0.2s ease;
+    }
+
+    .meta,
+    .data-note {
+      margin: 10px 0 0;
+      color: var(--ink-soft);
+      font: 0.9rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .overall-count-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+      color: #1c4b69;
+      font: 700 1rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .overall-count-primary {
+      color: #1c4b69;
+    }
+
+    .overall-count-available {
+      color: #1c4b69;
+    }
+
+    .overall-count-available.danger {
+      color: #9f2c2c;
+    }
+
+    .overall-count-track {
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid #bfd3e3;
+      background: #ebf3fa;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .overall-count-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #3f98c8 0%, #2f7aab 100%);
+      transition: width 0.2s ease;
+    }
+
+    .overall-count-fill.over {
+      background: linear-gradient(90deg, #7ea842 0%, #4f8d3b 100%);
+    }
+
+    .overall-count-fill.under {
+      background: linear-gradient(90deg, #c89a3f 0%, #ad7b2e 100%);
+    }
+
+    .provider-bed-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .provider-bed-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f7fbff;
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .provider-bed-card h3 {
+      margin: 0;
+      color: #214f6b;
+      font: 700 0.92rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .provider-bed-card .meta {
+      margin: 0;
+      color: #416177;
+      font: 0.82rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .provider-status-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 2px 0 2px;
+    }
+
+    .provider-status-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font: 700 0.72rem "Trebuchet MS", "Segoe UI", sans-serif;
+      letter-spacing: 0.01em;
+      border: 1px solid transparent;
+      text-transform: uppercase;
+    }
+
+    .provider-status-badge.has-tooltip {
+      position: relative;
+      cursor: help;
+    }
+
+    .provider-status-badge.has-tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + 8px);
+      width: max-content;
+      max-width: 260px;
+      background: #17384f;
+      color: #fff;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font: 500 0.72rem "Trebuchet MS", "Segoe UI", sans-serif;
+      text-transform: none;
+      letter-spacing: normal;
+      line-height: 1.35;
+      box-shadow: 0 8px 18px rgba(10, 28, 41, 0.28);
+      white-space: normal;
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition: opacity 0.14s ease, transform 0.14s ease;
+      z-index: 12;
+    }
+
+    .provider-status-badge.has-tooltip::before {
+      content: "";
+      position: absolute;
+      left: 12px;
+      bottom: calc(100% + 2px);
+      border-width: 6px 6px 0 6px;
+      border-style: solid;
+      border-color: #17384f transparent transparent transparent;
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition: opacity 0.14s ease, transform 0.14s ease;
+      z-index: 12;
+    }
+
+    .provider-status-badge.has-tooltip:hover::after,
+    .provider-status-badge.has-tooltip:hover::before,
+    .provider-status-badge.has-tooltip:focus-visible::after,
+    .provider-status-badge.has-tooltip:focus-visible::before {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .provider-status-badge.failure {
+      color: #8f2a2a;
+      background: #fce8e8;
+      border-color: #e1b2b2;
+    }
+
+    .provider-status-badge.warning {
+      color: #7a551f;
+      background: #fbf3e5;
+      border-color: #ddc79e;
+    }
+
+    .provider-bed-card .count {
+      margin: 0;
+      color: #153f5b;
+      font: 700 1.15rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .provider-bed-card .percent {
+      margin: 0;
+      color: #35596f;
+      font: 0.82rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .provider-bed-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .provider-bed-stat {
+      margin: 0;
+      border: 1px solid #d2e0ec;
+      border-radius: 8px;
+      background: #edf5fb;
+      padding: 5px 6px;
+      display: grid;
+      gap: 2px;
+    }
+
+    .provider-bed-stat .label {
+      color: #4a6a80;
+      font: 700 0.67rem "Trebuchet MS", "Segoe UI", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .provider-bed-stat .value {
+      color: #184863;
+      font: 700 0.82rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .provider-bed-stat.has-tooltip {
+      position: relative;
+      cursor: help;
+    }
+
+    .provider-bed-stat.has-tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + 8px);
+      width: max-content;
+      max-width: 260px;
+      background: #17384f;
+      color: #fff;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font: 500 0.72rem "Trebuchet MS", "Segoe UI", sans-serif;
+      text-transform: none;
+      letter-spacing: normal;
+      line-height: 1.35;
+      box-shadow: 0 8px 18px rgba(10, 28, 41, 0.28);
+      white-space: normal;
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition: opacity 0.14s ease, transform 0.14s ease;
+      z-index: 12;
+    }
+
+    .provider-bed-stat.has-tooltip::before {
+      content: "";
+      position: absolute;
+      left: 12px;
+      bottom: calc(100% + 2px);
+      border-width: 6px 6px 0 6px;
+      border-style: solid;
+      border-color: #17384f transparent transparent transparent;
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition: opacity 0.14s ease, transform 0.14s ease;
+      z-index: 12;
+    }
+
+    .provider-bed-stat.has-tooltip:hover::after,
+    .provider-bed-stat.has-tooltip:hover::before,
+    .provider-bed-stat.has-tooltip:focus-visible::after,
+    .provider-bed-stat.has-tooltip:focus-visible::before {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .provider-bed-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      border: 1px solid #c7d8e7;
+      background: #ebf3fa;
+      overflow: hidden;
+    }
+
+    .provider-bed-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4e9fca 0%, #246c99 100%);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font: 0.92rem "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .table-scroll table {
+      min-width: 1280px;
+    }
+
+    .contact-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .contact-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid #b9cddd;
+      background: #f1f7fc;
+      text-decoration: none;
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+
+    .contact-icon.phone {
+      color: #1f6288;
+    }
+
+    .contact-icon.email {
+      color: #7a551f;
+    }
+
+    .contact-icon:hover {
+      background: #e4eff8;
+      border-color: #9eb7cb;
+    }
+
+    .sync-status-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font: 700 0.76rem "Trebuchet MS", "Segoe UI", sans-serif;
+      letter-spacing: 0.01em;
+      border: 1px solid transparent;
+      text-transform: uppercase;
+    }
+
+    .sync-status-badge.success {
+      color: #1f6c40;
+      background: #e8f7ee;
+      border-color: #b8dec7;
+    }
+
+    .sync-status-badge.warning {
+      color: #7a551f;
+      background: #fbf3e5;
+      border-color: #ddc79e;
+    }
+
+    .sync-status-badge.failure {
+      color: #8f2a2a;
+      background: #fce8e8;
+      border-color: #e1b2b2;
+    }
+
+    .sync-status-badge.neutral {
+      color: #35596f;
+      background: #edf4fa;
+      border-color: #c4d5e3;
+    }
+
+    .cadence-value.none {
+      color: #8f2a2a;
+      font-weight: 700;
+    }
+
+    th,
+    td {
+      padding: 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead th {
+      color: #174564;
+      font-weight: 700;
+      background: #f6fbff;
+    }
+
+    tbody tr:last-child th,
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    @media (max-width: 980px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <div class="topbar">
+      <h1>Bed Count Coordination Demo</h1>
+      <div>
+        <a href="../../index.html">Back to demo home</a>
+      </div>
+    </div>
+
+    <section class="grid one-up" aria-label="Overall bed count progress">
+      <article class="panel">
+        <h2>Local Provider's Bed Availability</h2>
+        <div class="overall-count-head">
+          <strong>
+            <span id="overall-bed-count-primary" class="overall-count-primary">0 / 0 beds</span>
+            -
+            <span id="overall-bed-count-available" class="overall-count-available">0 beds occupied</span>
+          </strong>
+          <span id="overall-bed-count-percent">0%</span>
+        </div>
+        <div class="overall-count-track" aria-hidden="true">
+          <div id="overall-bed-count-fill" class="overall-count-fill"></div>
+        </div>
+        <div id="provider-bed-count-grid" class="provider-bed-grid"></div>
+      </article>
+    </section>
+
+    <section class="grid one-up" aria-label="Bed pressure summary">
+      <article class="panel">
+        <h2>Shortfall Predictions</h2>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <h3>ES/TH Bed Capacity</h3>
+            <p id="kpi-beds">0</p>
+          </div>
+          <div class="kpi">
+            <h3>Unsheltered People</h3>
+            <p id="kpi-unsheltered">0</p>
+          </div>
+          <div class="kpi">
+            <h3>Estimated Shortfall</h3>
+            <p id="kpi-shortfall">0</p>
+          </div>
+          <div class="kpi">
+            <h3>Pressure Ratio</h3>
+            <p id="kpi-ratio">0%</p>
+          </div>
+        </div>
+        <div class="pressure-wrap">
+          <strong>Unsheltered-to-bed pressure</strong>
+          <div class="pressure-track" aria-hidden="true">
+            <div id="pressure-fill" class="pressure-fill"></div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid one-up" aria-label="Queue counts">
+      <article class="panel">
+        <h2>Queue Counts</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Stage</th>
+              <th scope="col">Count</th>
+            </tr>
+          </thead>
+          <tbody id="queue-table-body"></tbody>
+        </table>
+      </article>
+    </section>
+
+    <section class="grid one-up" aria-label="Transition timing">
+      <article class="panel">
+        <h2>Transitions</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Flow</th>
+              <th scope="col">Count</th>
+              <th scope="col">Median Days</th>
+            </tr>
+          </thead>
+          <tbody id="transition-table-body"></tbody>
+        </table>
+      </article>
+    </section>
+
+    <section class="grid one-up" aria-label="Outcomes and data quality details">
+      <article class="panel">
+        <h2>Outcomes And Data Quality</h2>
+        <table>
+          <tbody id="outcomes-table-body"></tbody>
+        </table>
+        <p id="data-quality-note" class="data-note"></p>
+      </article>
+    </section>
+
+    <section class="grid one-up" aria-label="Provider access">
+      <article class="panel">
+        <h2>Data access to bed providers</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Provider</th>
+                <th scope="col">Service Area</th>
+                <th scope="col">Access Mode</th>
+                <th scope="col">Integration Details</th>
+                <th scope="col">Cadence</th>
+                <th scope="col">Contact</th>
+                <th scope="col">Sync Status</th>
+                <th scope="col">Last Sync</th>
+              </tr>
+            </thead>
+            <tbody id="provider-table-body"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const DATA_URL = '../../data/bedcount.johnson-city.sample.json';
+
+      const FALLBACK_SNAPSHOT = {
+        snapshot_id: 'jc-2026-03',
+        locality: 'Johnson City',
+        period: { from: '2026-01', to: '2026-02' },
+        bed_capacity: {
+          es_th_beds_available: 582,
+          unsheltered_people: 538,
+          estimated_shortfall: 0
+        },
+        queue_counts: {
+          coordinated_entry_active: 1737,
+          pending_referral: 420,
+          referral_sent: 286,
+          referral_accepted: 142,
+          rrh_enrollment_pending: 73,
+          rrh_housed: 55
+        },
+        transitions: [
+          { from_stage: 'coordinated_entry_active', to_stage: 'referral_sent', count: 286, median_days: 9.5 },
+          { from_stage: 'referral_sent', to_stage: 'referral_accepted', count: 142, median_days: 7 },
+          { from_stage: 'referral_accepted', to_stage: 'rrh_housed', count: 55, median_days: 21 }
+        ],
+        outcomes: {
+          rrh_placements: 55,
+          returns_to_homelessness_12m: 0
+        },
+        providers: [
+          {
+            name: 'Salvation Navy Centre of Hope',
+            service_area: 'Johnson City',
+            beds_available: 96,
+            beds_total: 112,
+            avg_occupied_days: 34.2,
+            avg_refill_hours: 5.4,
+            turnover_per_bed_30d: 1.9,
+            data_access_mode: 'HMIS API',
+            access_details: 'Read-only bed and occupancy sync through HMIS connector.',
+            cadence: 'Near-real-time (target 15 min poll)',
+            integration_key: 'hmis_jc_salvation_center_of_hope',
+            integration_owner: 'johnsoncitytn@uss.salvationarmy.org',
+            integration_phone: '(423) 926-8901',
+            integration_email: 'johnsoncitytn@uss.salvationarmy.org',
+            last_sync_status: 'synced',
+            last_sync_at: '2026-04-14T12:05:00Z'
+          },
+          {
+            name: 'Prarieland Health Safehouse',
+            service_area: 'Johnson City / Kingsport',
+            beds_available: 64,
+            beds_total: 76,
+            avg_occupied_days: 29.6,
+            avg_refill_hours: 8.1,
+            turnover_per_bed_30d: 2.3,
+            data_access_mode: 'HMIS API',
+            access_details: 'Read-only bed and occupancy sync through HMIS connector.',
+            cadence: 'Near-real-time (target 15 min poll)',
+            integration_key: 'hmis_tri_frontier_safe_house',
+            integration_owner: 'fhinfo@frontierhealth.org',
+            integration_phone: '(844) 578-7233',
+            integration_email: 'fhinfo@frontierhealth.org',
+            last_sync_status: 'synced',
+            last_sync_at: '2026-04-14T12:03:00Z'
+          },
+          {
+            name: 'Viewfare Housing / Mannor House',
+            service_area: 'Johnson City',
+            beds_available: 58,
+            beds_total: 72,
+            avg_occupied_days: 41.8,
+            avg_refill_hours: 17.5,
+            turnover_per_bed_30d: 1.2,
+            data_access_mode: 'Secure CSV Export',
+            access_details: 'Encrypted nightly export transformed by CSV adapter and posted to bedcount ingest endpoint.',
+            cadence: 'Daily (01:30 ET)',
+            integration_key: 'csv_jc_fairview_manna_house',
+            integration_owner: 'live@fairviewhousing.org',
+            integration_phone: '(423) 434-9310',
+            integration_email: 'live@fairviewhousing.org',
+            last_sync_status: 'warning',
+            last_sync_at: '2026-04-13T05:35:00Z'
+          },
+          {
+            name: 'Help Heaven Minitries',
+            service_area: 'Kingsport',
+            beds_available: 72,
+            beds_total: 84,
+            avg_occupied_days: 27.4,
+            avg_refill_hours: 6.2,
+            turnover_per_bed_30d: 2.5,
+            data_access_mode: 'HMIS API',
+            access_details: 'Read-only bed and occupancy sync through HMIS connector.',
+            cadence: 'Near-real-time (target 15 min poll)',
+            integration_key: 'hmis_kpt_hope_haven_ministries',
+            integration_owner: 'hopehavenministries@gmail.com',
+            integration_phone: '(423) 246-6012',
+            integration_email: 'hopehavenministries@gmail.com',
+            last_sync_status: 'synced',
+            last_sync_at: '2026-04-14T12:02:00Z'
+          },
+          {
+            name: 'Family Matters of Greater Kingsport',
+            service_area: 'Kingsport',
+            beds_available: 24,
+            beds_total: 30,
+            avg_occupied_days: 22.7,
+            avg_refill_hours: 11.3,
+            turnover_per_bed_30d: 3.1,
+            data_access_mode: 'Secure Portal Entry',
+            access_details: 'Family-shelter bed updates entered by partner staff in secure portal workflow.',
+            cadence: 'Manual (target every 4 hours)',
+            integration_key: 'portal_kpt_family_matters_greater',
+            integration_owner: 'office@familypromisekingsport.org',
+            integration_phone: '(423) 246-6500',
+            integration_email: 'office@familypromisekingsport.org',
+            last_sync_status: 'synced',
+            last_sync_at: '2026-04-14T11:41:00Z'
+          },
+          {
+            name: 'Kingsport Homeless Ministry / Grace House',
+            service_area: 'Kingsport',
+            beds_available: 49,
+            beds_total: 60,
+            avg_occupied_days: 36.5,
+            avg_refill_hours: 9.4,
+            turnover_per_bed_30d: 1.7,
+            data_access_mode: 'SFTP CSV Batch',
+            access_details: 'Twice-daily encrypted batch pulled from SFTP drop and normalized via adapter pipeline.',
+            cadence: 'Twice daily (06:00 ET, 18:00 ET)',
+            integration_key: 'sftp_kpt_grace_house_batch',
+            integration_owner: 'info@kpthm.org',
+            integration_phone: '(423) 732-0522',
+            integration_email: 'info@kpthm.org',
+            last_sync_status: 'synced',
+            last_sync_at: '2026-04-14T10:01:00Z'
+          },
+          {
+            name: "The Sheep's Inn",
+            service_area: 'Elizabethton',
+            beds_available: 36,
+            beds_total: 44,
+            avg_occupied_days: 48.9,
+            avg_refill_hours: 26.0,
+            turnover_per_bed_30d: 0.9,
+            data_access_mode: 'Secure Portal Entry',
+            access_details: 'Staff enter bed availability in a partner portal form with validation and audit trail.',
+            cadence: 'Manual (target every 4 hours)',
+            integration_key: 'portal_elz_shepherds_inn',
+            integration_owner: '(423) 542-0180',
+            integration_phone: '(423) 542-0180',
+            last_sync_status: 'stale',
+            last_sync_at: '2026-04-13T22:40:00Z'
+          },
+          {
+            name: "Heaven of Mary's Mercy",
+            service_area: 'Johnson City',
+            beds_available: 21,
+            beds_total: 28,
+            avg_occupied_days: 38.1,
+            avg_refill_hours: 18.8,
+            turnover_per_bed_30d: 1.4,
+            data_access_mode: 'Secure Portal Entry',
+            access_details: 'Capacity is verified by phone check-in and entered into secure portal entry form.',
+            cadence: 'Manual (target every 4 hours)',
+            integration_key: 'portal_jc_heaven_of_marys_mercy',
+            integration_owner: '(423) 929-0616',
+            integration_phone: '(423) 929-0616',
+            integration_email: '',
+            last_sync_status: 'stale',
+            last_sync_at: '2026-04-14T07:58:00Z'
+          },
+          {
+            name: 'Upper Unity House',
+            service_area: 'Greeneville',
+            beds_available: 28,
+            beds_total: 36,
+            avg_occupied_days: 31.3,
+            avg_refill_hours: 7.6,
+            turnover_per_bed_30d: 2.0,
+            data_access_mode: 'HMIS API',
+            access_details: 'Read-only bed and occupancy sync through HMIS connector.',
+            cadence: 'Near-real-time (target 15 min poll)',
+            integration_key: 'hmis_grv_upper_unity_house',
+            integration_owner: '(423) 638-4099',
+            integration_phone: '(423) 638-4099',
+            integration_email: '',
+            last_sync_status: 'synced',
+            last_sync_at: '2026-04-14T11:49:00Z'
+          },
+          {
+            name: 'Johnson County Safe House',
+            service_area: 'Mountain City',
+            beds_available: 32,
+            beds_total: 40,
+            avg_occupied_days: 44.2,
+            avg_refill_hours: 35.4,
+            turnover_per_bed_30d: 0.8,
+            data_access_mode: 'Secure Portal Entry',
+            access_details: 'Staff enter bed availability in a partner portal form with validation and audit trail.',
+            cadence: 'None',
+            integration_key: 'portal_mtc_johnson_safe_haven',
+            integration_owner: 'jcsafehaven1@hotmail.com',
+            integration_phone: '(423) 727-1914',
+            integration_email: 'jcsafehaven1@hotmail.com',
+            last_sync_status: 'manual_pending',
+            last_sync_at: '2026-04-14T08:12:00Z'
+          }
+        ],
+        data_quality: {
+          source_ids: ['S18', 'S24', 'S25'],
+          last_refresh_utc: '2026-03-27T04:30:00Z',
+          deidentified: true
+        }
+      };
+
+      const STAGE_LABELS = {
+        coordinated_entry_active: 'Coordinated entry active',
+        pending_referral: 'Pending referral',
+        referral_sent: 'Referral sent',
+        referral_accepted: 'Referral accepted',
+        rrh_enrollment_pending: 'RRH enrollment pending',
+        rrh_housed: 'RRH housed'
+      };
+
+      const state = {
+        snapshot: FALLBACK_SNAPSHOT
+      };
+
+      function toNumber(value, fallback) {
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? numeric : fallback;
+      }
+
+      function formatInteger(value) {
+        return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+      }
+
+      function formatPercent(value) {
+        return new Intl.NumberFormat('en-US', {
+          style: 'percent',
+          maximumFractionDigits: 1
+        }).format(value);
+      }
+
+      function formatMetric(value, suffix, maxFractionDigits) {
+        const numeric = toNumber(value, NaN);
+        if (!Number.isFinite(numeric)) {
+          return 'n/a';
+        }
+        const formatted = new Intl.NumberFormat('en-US', {
+          maximumFractionDigits: maxFractionDigits
+        }).format(numeric);
+        return `${formatted}${suffix}`;
+      }
+
+      function formatDateTime(value) {
+        const parsed = new Date(value);
+        if (!Number.isFinite(parsed.getTime())) {
+          return 'Unknown';
+        }
+        return parsed.toLocaleString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          timeZoneName: 'short'
+        });
+      }
+
+      function asStageLabel(key) {
+        if (STAGE_LABELS[key]) {
+          return STAGE_LABELS[key];
+        }
+        return String(key || '')
+          .split('_')
+          .filter(Boolean)
+          .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+          .join(' ');
+      }
+
+      function setText(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+          element.textContent = value;
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function phoneHref(value) {
+        const digits = String(value || '').replace(/\D+/g, '');
+        if (!digits) {
+          return '';
+        }
+        if (digits.length === 10) {
+          return `tel:+1${digits}`;
+        }
+        if (digits.length === 11 && digits.startsWith('1')) {
+          return `tel:+${digits}`;
+        }
+        return `tel:+${digits}`;
+      }
+
+      function contactMarkup(provider) {
+        const providerName = escapeHtml(provider?.name || 'provider');
+        const rawOwner = String(provider?.integration_owner || '').trim();
+        let email = String(provider?.integration_email || '').trim();
+        let phoneRaw = String(provider?.integration_phone || '').trim();
+
+        if (!email && rawOwner.includes('@')) {
+          email = rawOwner;
+        }
+        if (!phoneRaw && rawOwner && !rawOwner.includes('@')) {
+          phoneRaw = rawOwner;
+        }
+
+        const icons = [];
+        if (phoneRaw) {
+          const phone = phoneHref(phoneRaw);
+          if (phone) {
+            const phoneLabel = escapeHtml(phoneRaw);
+            icons.push(
+              `<a class="contact-icon phone" href="${phone}" aria-label="Call ${providerName} at ${phoneLabel}" title="Call ${phoneLabel}">☎</a>`
+            );
+          }
+        }
+
+        if (email) {
+          const emailSafe = escapeHtml(email);
+          const href = `mailto:${encodeURIComponent(email)}`;
+          icons.push(
+            `<a class="contact-icon email" href="${href}" aria-label="Email ${providerName} at ${emailSafe}" title="Email ${emailSafe}">✉</a>`
+          );
+        }
+
+        if (!icons.length) {
+          return 'n/a';
+        }
+        return `<div class="contact-icons">${icons.join('')}</div>`;
+      }
+
+      function pressureColorForRatio(ratio) {
+        const normalized = Math.max(0, Math.min(1, toNumber(ratio, 0)));
+        const start = { r: 0x38, g: 0x88, b: 0xb9 };
+        const end = { r: 0xde, g: 0x6f, b: 0x53 };
+
+        const interpolate = (left, right) => Math.round(left + ((right - left) * normalized));
+        const toHex = (value) => value.toString(16).padStart(2, '0');
+        const red = interpolate(start.r, end.r);
+        const green = interpolate(start.g, end.g);
+        const blue = interpolate(start.b, end.b);
+        return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+      }
+
+      function providerCardBadges(provider) {
+        const syncStatus = String(provider?.last_sync_status || '').trim().toLowerCase();
+        const accessMode = String(provider?.data_access_mode || '').trim().toLowerCase();
+        const cadence = String(provider?.cadence || '').trim().toLowerCase();
+
+        const staleStatuses = new Set([
+          'stale',
+          'warning',
+          'manual_pending',
+          'out_of_cadence',
+          'out-of-cadence',
+          'failed',
+          'error'
+        ]);
+        const isStaleOrOutOfCadence = staleStatuses.has(syncStatus);
+        const isManualEntry = accessMode.includes('portal') || cadence.includes('manual');
+
+        const badges = [];
+        if (isStaleOrOutOfCadence) {
+          badges.push('<span class="provider-status-badge failure has-tooltip" tabindex="0" data-tooltip="Stale data means this provider has not synced on expected cadence, so bed counts may be outdated.">Stale data</span>');
+        }
+        if (isManualEntry) {
+          badges.push('<span class="provider-status-badge warning has-tooltip" tabindex="0" data-tooltip="Manual entry means data is collected through a partner portal or by calling the provider, rather than automated system sync.">Manual entry</span>');
+        }
+
+        if (!badges.length) {
+          return '';
+        }
+        return `<div class="provider-status-badges">${badges.join('')}</div>`;
+      }
+
+      function providerCardStatsMarkup(provider) {
+        const avgOccupied = formatMetric(provider?.avg_occupied_days, ' d', 1);
+        const refill = formatMetric(provider?.avg_refill_hours, ' h', 1);
+        const turnover = formatMetric(provider?.turnover_per_bed_30d, ' /bed', 1);
+        return `<div class="provider-bed-stats"><p class="provider-bed-stat has-tooltip" tabindex="0" data-tooltip="Average number of days a bed stays occupied before turnover."><span class="label">Avg Bed Stay</span><span class="value">${avgOccupied}</span></p><p class="provider-bed-stat has-tooltip" tabindex="0" data-tooltip="Average time between a client exit and that bed being ready for the next placement."><span class="label">Ready Time</span><span class="value">${refill}</span></p><p class="provider-bed-stat has-tooltip" tabindex="0" data-tooltip="Average occupancy cycles completed per bed during the last 30 days."><span class="label">Monthly Turnover</span><span class="value">${turnover}</span></p></div>`;
+      }
+
+      function syncStatusMarkup(rawStatus) {
+        const statusRaw = String(rawStatus || '').trim();
+        if (!statusRaw) {
+          return '<span class="sync-status-badge neutral">n/a</span>';
+        }
+
+        const status = statusRaw.toLowerCase();
+        let tone = 'neutral';
+        if (status === 'synced') {
+          tone = 'success';
+        } else if (status === 'warning' || status === 'manual_pending') {
+          tone = 'warning';
+        } else if (status === 'stale' || status === 'failed' || status === 'error') {
+          tone = 'failure';
+        }
+
+        return `<span class="sync-status-badge ${tone}">${escapeHtml(statusRaw)}</span>`;
+      }
+
+      function providerAccessStatusMarkup(provider) {
+        const badges = providerCardBadges(provider);
+        if (badges) {
+          return badges;
+        }
+        return syncStatusMarkup(provider?.last_sync_status);
+      }
+
+      function cadenceMarkup(rawCadence) {
+        const cadenceRaw = String(rawCadence || '').trim();
+        if (!cadenceRaw) {
+          return 'n/a';
+        }
+        if (cadenceRaw.toLowerCase() === 'none') {
+          return '<span class="cadence-value none">None</span>';
+        }
+        return escapeHtml(cadenceRaw);
+      }
+
+      function renderSummary(snapshot) {
+        const bedCapacity = snapshot.bed_capacity || {};
+        const providers = Array.isArray(snapshot.providers) ? snapshot.providers : [];
+        const derivedCapacityBeds = providers.reduce(
+          (sum, provider) => sum + Math.max(0, toNumber(provider.beds_total, toNumber(provider.beds_available, 0))),
+          0
+        );
+        const beds = derivedCapacityBeds > 0
+          ? derivedCapacityBeds
+          : Math.max(0, toNumber(bedCapacity.es_th_beds_available, 0));
+        const unsheltered = Math.max(0, toNumber(bedCapacity.unsheltered_people, 0));
+        const shortfall = Math.max(0, unsheltered - beds);
+        const ratio = beds > 0 ? unsheltered / beds : 0;
+        const normalized = ratio > 0 ? Math.min(1, ratio) : 0;
+
+        setText('kpi-beds', formatInteger(beds));
+        setText('kpi-unsheltered', formatInteger(unsheltered));
+        setText('kpi-shortfall', formatInteger(shortfall));
+        setText('kpi-ratio', formatPercent(ratio));
+
+        const shortfallElement = document.getElementById('kpi-shortfall');
+        if (shortfallElement) {
+          shortfallElement.classList.toggle('alert', shortfall > 0);
+        }
+
+        const ratioElement = document.getElementById('kpi-ratio');
+        if (ratioElement) {
+          ratioElement.style.color = pressureColorForRatio(normalized);
+        }
+
+        const pressureFill = document.getElementById('pressure-fill');
+        if (pressureFill) {
+          pressureFill.style.width = `${(normalized * 100).toFixed(1)}%`;
+        }
+
+      }
+
+      function renderOverallBedProgress(snapshot) {
+        const providers = Array.isArray(snapshot.providers) ? snapshot.providers : [];
+        const totalAvailableBeds = providers.reduce(
+          (sum, provider) => sum + Math.max(0, toNumber(provider.beds_available, 0)),
+          0
+        );
+        const totalCapacityBeds = providers.reduce(
+          (sum, provider) => sum + Math.max(0, toNumber(provider.beds_total, toNumber(provider.beds_available, 0))),
+          0
+        );
+
+        const baselineBeds = totalCapacityBeds > 0
+          ? totalCapacityBeds
+          : Math.max(0, toNumber(snapshot?.bed_capacity?.es_th_beds_available, 0));
+        const ratio = baselineBeds > 0 ? totalAvailableBeds / baselineBeds : 0;
+        const progressLabel = formatPercent(ratio);
+        const boundedRatio = Math.max(0, Math.min(1, ratio));
+        const bedsOccupied = Math.max(0, baselineBeds - totalAvailableBeds);
+        const availabilityRatio = baselineBeds > 0 ? totalAvailableBeds / baselineBeds : 0;
+
+        setText('overall-bed-count-primary', `${formatInteger(totalAvailableBeds)} / ${formatInteger(baselineBeds)} beds`);
+        setText('overall-bed-count-available', `${formatInteger(bedsOccupied)} beds occupied`);
+        setText('overall-bed-count-percent', progressLabel);
+
+        const availableElement = document.getElementById('overall-bed-count-available');
+        if (availableElement) {
+          availableElement.classList.toggle('danger', availabilityRatio < 0.05);
+        }
+
+        const fill = document.getElementById('overall-bed-count-fill');
+        if (fill) {
+          fill.style.width = `${(boundedRatio * 100).toFixed(1)}%`;
+          fill.classList.toggle('over', ratio > 1);
+          fill.classList.toggle('under', ratio < 1);
+        }
+      }
+
+      function renderProviderBedPanels(snapshot) {
+        const container = document.getElementById('provider-bed-count-grid');
+        if (!container) {
+          return;
+        }
+
+        const providers = Array.isArray(snapshot.providers) ? snapshot.providers : [];
+
+        const cards = providers.map((provider) => {
+          const name = escapeHtml(provider.name || 'Unknown provider');
+          const serviceArea = escapeHtml(provider.service_area || 'n/a');
+          const bedsAvailable = Math.max(0, toNumber(provider.beds_available, 0));
+          const totalBeds = Math.max(bedsAvailable, Math.max(0, toNumber(provider.beds_total, bedsAvailable)));
+          const percentOfFacility = totalBeds > 0 ? bedsAvailable / totalBeds : 0;
+          const fillWidth = Math.max(0, Math.min(100, percentOfFacility * 100));
+          const badges = providerCardBadges(provider);
+          const stats = providerCardStatsMarkup(provider);
+
+          return `<article class="provider-bed-card"><h3>${name}</h3>${badges}<p class="meta">${serviceArea}</p><p class="count">${formatInteger(bedsAvailable)} of ${formatInteger(totalBeds)} beds</p><div class="provider-bed-track" aria-hidden="true"><div class="provider-bed-fill" style="width:${fillWidth.toFixed(1)}%"></div></div>${stats}</article>`;
+        });
+
+        container.innerHTML = cards.join('') || '<p class="data-note">No provider bed counts available.</p>';
+      }
+
+      function renderProviders(snapshot) {
+        const body = document.getElementById('provider-table-body');
+        if (!body) {
+          return;
+        }
+
+        const providers = Array.isArray(snapshot.providers) ? snapshot.providers : [];
+        const rows = providers.map((provider) => {
+          const name = escapeHtml(provider.name || 'Unknown provider');
+          const serviceArea = escapeHtml(provider.service_area || 'n/a');
+          const accessMode = escapeHtml(provider.data_access_mode || 'n/a');
+          const accessDetails = escapeHtml(provider.access_details || 'n/a');
+          const cadence = cadenceMarkup(provider.cadence);
+          const contact = contactMarkup(provider);
+          const syncStatus = providerAccessStatusMarkup(provider);
+          const lastSyncRaw = provider.last_sync_at ? formatDateTime(provider.last_sync_at) : 'n/a';
+          const lastSync = escapeHtml(lastSyncRaw);
+          return `<tr><th scope="row">${name}</th><td>${serviceArea}</td><td>${accessMode}</td><td>${accessDetails}</td><td>${cadence}</td><td>${contact}</td><td>${syncStatus}</td><td>${lastSync}</td></tr>`;
+        });
+
+        body.innerHTML = rows.join('') || '<tr><td colspan="8">No provider access records available.</td></tr>';
+
+      }
+
+      function renderQueue(snapshot) {
+        const body = document.getElementById('queue-table-body');
+        if (!body) {
+          return;
+        }
+
+        const queueCounts = snapshot.queue_counts || {};
+        const rows = Object.keys(queueCounts).map((key) => {
+          const count = Math.max(0, toNumber(queueCounts[key], 0));
+          return `<tr><th scope="row">${asStageLabel(key)}</th><td>${formatInteger(count)}</td></tr>`;
+        });
+
+        body.innerHTML = rows.join('') || '<tr><td colspan="2">No queue counts available.</td></tr>';
+      }
+
+      function renderTransitions(snapshot) {
+        const body = document.getElementById('transition-table-body');
+        if (!body) {
+          return;
+        }
+
+        const transitions = Array.isArray(snapshot.transitions) ? snapshot.transitions : [];
+        const rows = transitions.map((entry) => {
+          const fromStage = asStageLabel(entry.from_stage);
+          const toStage = asStageLabel(entry.to_stage);
+          const count = Math.max(0, toNumber(entry.count, 0));
+          const medianDays = toNumber(entry.median_days, NaN);
+          const medianLabel = Number.isFinite(medianDays) ? String(medianDays) : 'n/a';
+          return `<tr><th scope="row">${fromStage} -> ${toStage}</th><td>${formatInteger(count)}</td><td>${medianLabel}</td></tr>`;
+        });
+
+        body.innerHTML = rows.join('') || '<tr><td colspan="3">No transition metrics available.</td></tr>';
+      }
+
+      function renderOutcomes(snapshot) {
+        const body = document.getElementById('outcomes-table-body');
+        if (!body) {
+          return;
+        }
+
+        const outcomes = snapshot.outcomes || {};
+        const rows = [
+          ['RRH placements', Math.max(0, toNumber(outcomes.rrh_placements, 0))],
+          ['Returns to homelessness (12 months)', Math.max(0, toNumber(outcomes.returns_to_homelessness_12m, 0))]
+        ].map(([label, value]) => `<tr><th scope="row">${label}</th><td>${formatInteger(value)}</td></tr>`);
+
+        body.innerHTML = rows.join('');
+
+        const note = (snapshot.data_quality && snapshot.data_quality.notes) ? snapshot.data_quality.notes : '';
+        setText('data-quality-note', note);
+      }
+
+      async function loadSnapshot() {
+        try {
+          const response = await fetch(DATA_URL, { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error(`Failed to load data (${response.status})`);
+          }
+
+          const json = await response.json();
+          if (!json || typeof json !== 'object') {
+            throw new Error('Invalid data payload');
+          }
+
+          return json;
+        } catch (error) {
+          console.warn('Falling back to embedded bedcount snapshot.', error);
+          return FALLBACK_SNAPSHOT;
+        }
+      }
+
+      async function init() {
+        state.snapshot = await loadSnapshot();
+        renderOverallBedProgress(state.snapshot);
+        renderProviderBedPanels(state.snapshot);
+        renderSummary(state.snapshot);
+        renderProviders(state.snapshot);
+        renderQueue(state.snapshot);
+        renderTransitions(state.snapshot);
+        renderOutcomes(state.snapshot);
+      }
+
+      init();
+    }());
+  </script>
+</body>
+</html>
